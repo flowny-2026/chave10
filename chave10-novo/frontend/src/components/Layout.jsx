@@ -23,6 +23,7 @@ const adminNav = [
   { to: '/admin/dashboard',  label: 'Dashboard',  icon: IC.dashboard },
   { to: '/admin/oficinas',   label: 'Oficinas',   icon: IC.oficinas },
   { to: '/admin/pagamentos', label: 'Pagamentos', icon: IC.pagamentos },
+  { to: '/admin/trocar-senha', label: 'Trocar Senha', icon: IC.configuracoes },
 ];
 
 const appNavPrincipal = [
@@ -220,7 +221,12 @@ function UserDropdown({ user, onLogout }) {
           <button className="udrop-item" onClick={() => { setOpen(false); navigate('/app/dashboard'); }}>
             {IC.dashboard} Dashboard
           </button>
-          {user?.perfil !== 'funcionario' && (
+          {user?.perfil === 'master_admin' && (
+            <button className="udrop-item" onClick={() => { setOpen(false); navigate('/admin/trocar-senha'); }}>
+              {IC.configuracoes} Trocar Senha
+            </button>
+          )}
+          {user?.perfil !== 'funcionario' && user?.perfil !== 'master_admin' && (
             <button className="udrop-item" onClick={() => { setOpen(false); navigate('/app/configuracoes'); }}>
               {IC.configuracoes} Configurações
             </button>

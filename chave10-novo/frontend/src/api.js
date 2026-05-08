@@ -35,6 +35,7 @@ export const api = {
   },
   admin: {
     dashboard: ()                    => get('/admin/dashboard'),
+    trocarSenha: (senha_atual, senha_nova) => post('/admin/trocar-senha', { senha_atual, senha_nova }),
     oficinas:  {
       list:    (status)              => get('/admin/oficinas' + (status ? '?status='+status : '')),
       create:  (data)                => post('/admin/oficinas', data),

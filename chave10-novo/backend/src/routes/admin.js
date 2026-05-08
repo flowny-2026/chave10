@@ -158,4 +158,45 @@ router.post('/renovar-lote', async (req,res) => {
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
+// TROCAR SENHA DO ADMIN
+router.post('/trocar-senha', async (req,res) => {
+  try {
+    const {senha_atual, senha_nova} = req.body;
+    
+    // Validações
+    if (!senha_atual || !senha_nova) {
+      return res.status(400).json({error:'Senha atual e nova senha são obrigatórias'});
+    }
+    if (senha_nova.length < 8) {
+      return res.status(400).json({error:'Nova senha deve ter no mínimo 8 caracteres'});
+    }
+    if (senha_nova === senha_atual) {
+      return res.status(400).json({error:'Nova senha deve ser diferente da atual'});
+    }
+
+    // Busca o usuário admin
+    const admin = await queryOne('SELECT * FROM usuarios WHERE id=$1 AND perfil=$2', [req.user.id, 'master_admin']);
+    if (!admin) {
+      return res.status(404).json({error:'Administrador não encontrado'});
+    }
+
+    // Verifica senha atual
+    const senhaCorreta = bcrypt.compareSync(senha_atual, admin.senha_hash);
+    if (!senhaCorreta) {
+      log.warn('troca_senha_falhou', {admin_id: admin.id, motivo: 'senha_atual_incorreta'});
+      return res.status(401).json({error:'Senha atual incorreta'});
+    }
+
+    // Atualiza senha
+    const novoHash = bcrypt.hashSync(senha_nova, 12);
+    await run('UPDATE usuarios SET senha_hash=$1 WHERE id=$2', [novoHash, admin.id]);
+    
+    log.info('senha_admin_alterada', {admin_id: admin.id, email: admin.email});
+    res.json({ok:true, message:'Senha alterada com sucesso'});
+  } catch(err){
+    log.error('admin_trocar_senha',err);
+    res.status(500).json({error:'Erro interno'});
+  }
+});
+
 module.exports = router;

@@ -8,6 +8,7 @@ import Layout from './components/Layout';
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminOficinas from './pages/admin/Oficinas';
 import AdminPagamentos from './pages/admin/Pagamentos';
+import AdminTrocarSenha from './pages/admin/TrocarSenha';
 import AppDashboard from './pages/app/Dashboard';
 import AppClientes from './pages/app/Clientes';
 import AppVeiculos from './pages/app/Veiculos';
@@ -56,6 +57,7 @@ export default function App() {
           <Route path="dashboard"  element={<AdminDashboard />} />
           <Route path="oficinas"   element={<AdminOficinas />} />
           <Route path="pagamentos" element={<AdminPagamentos />} />
+          <Route path="trocar-senha" element={<AdminTrocarSenha />} />
           <Route index element={<Navigate to="dashboard" replace />} />
         </Route>
 
