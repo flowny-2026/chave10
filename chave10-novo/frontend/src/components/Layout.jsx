@@ -218,7 +218,10 @@ function UserDropdown({ user, onLogout }) {
             </div>
           </div>
           <div className="udrop-divider" />
-          <button className="udrop-item" onClick={() => { setOpen(false); navigate('/app/dashboard'); }}>
+          <button className="udrop-item" onClick={() => { 
+            setOpen(false); 
+            navigate(user?.perfil === 'master_admin' ? '/admin/dashboard' : '/app/dashboard'); 
+          }}>
             {IC.dashboard} Dashboard
           </button>
           {user?.perfil === 'master_admin' && (
