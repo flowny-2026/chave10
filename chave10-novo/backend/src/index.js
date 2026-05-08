@@ -51,9 +51,10 @@ const loginLimiter = rateLimit({
 });
 
 // ── ROTAS ─────────────────────────────────────────────────────
-app.use('/api/auth',  loginLimiter, require('./routes/auth'));
-app.use('/api/admin', require('./routes/admin'));
-app.use('/api/app',   require('./routes/app'));
+app.use('/api/auth',   loginLimiter, require('./routes/auth'));
+app.use('/api/admin',  require('./routes/admin'));
+app.use('/api/app',    require('./routes/app'));
+app.use('/api/backup', require('./routes/backup'));
 
 // ── HEALTH CHECK ──────────────────────────────────────────────
 app.get('/health', (_, res) => res.json({ ok: true }));
@@ -80,10 +81,15 @@ app.use((err, req, res, next) => {
 // ── START ─────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;
 const { initDB } = require('./db');
+const { scheduleBackup } = require('./utils/backup');
 
 initDB()
   .then(() => {
     app.listen(PORT, () => console.log(`✅ Chave 10 backend rodando na porta ${PORT} [${process.env.NODE_ENV || 'development'}]`));
+    
+    // Configura backup automático (a cada 24 horas por padrão)
+    const backupInterval = parseInt(process.env.BACKUP_INTERVAL_HOURS) || 24;
+    scheduleBackup(backupInterval);
   })
   .catch(err => {
     console.error('❌ Erro ao inicializar banco:', err);
