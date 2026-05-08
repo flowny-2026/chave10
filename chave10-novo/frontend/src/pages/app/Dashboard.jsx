@@ -62,8 +62,83 @@ export default function AppDashboard() {
   const porDia = diasRestantes > 0 ? faltaMeta/diasRestantes : 0;
   const pctMeta = meta > 0 ? Math.min(100,(fat/meta)*100) : 0;
 
+  // Verificar status da assinatura
+  const user = getUser();
+  const dataVenc = user?.data_vencimento;
+  const statusAssinatura = user?.status_assinatura;
+  
+  let diasRestantesAssinatura = null;
+  let mostrarAviso = false;
+  let avisoTipo = 'warning'; // warning, danger, critical
+  let avisoMensagem = '';
+  
+  if (dataVenc && statusAssinatura !== 'blocked') {
+    const hoje = new Date();
+    const vencimento = new Date(dataVenc);
+    diasRestantesAssinatura = Math.ceil((vencimento - hoje) / (1000 * 60 * 60 * 24));
+    
+    if (statusAssinatura === 'overdue') {
+      mostrarAviso = true;
+      avisoTipo = 'critical';
+      avisoMensagem = '⚠️ Sua assinatura está vencida! Regularize agora para não perder o acesso.';
+    } else if (diasRestantesAssinatura <= 3 && diasRestantesAssinatura > 0) {
+      mostrarAviso = true;
+      avisoTipo = 'warning';
+      avisoMensagem = `⏰ Sua assinatura vence em ${diasRestantesAssinatura} dia${diasRestantesAssinatura > 1 ? 's' : ''}. Renove agora!`;
+    } else if (diasRestantesAssinatura === 0) {
+      mostrarAviso = true;
+      avisoTipo = 'danger';
+      avisoMensagem = '⚠️ Sua assinatura vence hoje! Renove agora para não perder o acesso.';
+    }
+  }
+
   return (
     <div>
+      {/* BANNER DE AVISO */}
+      {mostrarAviso && (
+        <div style={{
+          background: avisoTipo === 'critical' ? 'linear-gradient(135deg, #dc2626, #b91c1c)' : avisoTipo === 'danger' ? 'linear-gradient(135deg, #ea580c, #c2410c)' : 'linear-gradient(135deg, #f59e0b, #d97706)',
+          borderRadius: 'var(--r-lg)',
+          padding: '18px 24px',
+          marginBottom: 20,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 16,
+          flexWrap: 'wrap',
+          boxShadow: '0 4px 20px rgba(0,0,0,.15)',
+        }}>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 4 }}>
+              {avisoMensagem}
+            </div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,.8)' }}>
+              Acesse a página de planos para renovar sua assinatura e continuar usando o sistema.
+            </div>
+          </div>
+          <button 
+            onClick={() => navigate('/app/planos')} 
+            style={{
+              background: '#fff',
+              color: avisoTipo === 'critical' ? '#dc2626' : avisoTipo === 'danger' ? '#ea580c' : '#f59e0b',
+              border: 'none',
+              borderRadius: 'var(--r-sm)',
+              padding: '11px 22px',
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(0,0,0,.15)',
+              transition: 'transform .15s',
+              whiteSpace: 'nowrap',
+            }}
+            onMouseOver={e => e.target.style.transform = 'translateY(-2px)'}
+            onMouseOut={e => e.target.style.transform = 'translateY(0)'}
+          >
+            💳 Ver Planos
+          </button>
+        </div>
+      )}
+      
       {/* HERO */}
       {!isFuncionario && (
       <div style={{background:'linear-gradient(135deg,var(--brand) 0%,var(--brand-mid) 100%)',borderRadius:'var(--r-lg)',padding:'28px 32px',marginBottom:24,position:'relative',overflow:'hidden'}}>

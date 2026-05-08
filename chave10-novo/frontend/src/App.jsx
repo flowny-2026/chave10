@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Cadastro from './pages/Cadastro';
 import AdminLogin from './pages/AdminLogin';
@@ -33,7 +34,7 @@ function PrivateRoute({ children, adminOnly = false, noFuncionario = false }) {
   return children;
 }
 
-function RootRedirect() {
+function AppRedirect() {
   const user = getUser();
   if (!user) return <Navigate to="/login" replace />;
   if (user.perfil === 'master_admin') return <Navigate to="/admin/dashboard" replace />;
@@ -44,7 +45,8 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<RootRedirect />} />
+        <Route path="/" element={<Landing />} />
+        <Route path="/app-redirect" element={<AppRedirect />} />
         <Route path="/login" element={<Login />} />
         <Route path="/cadastro" element={<Cadastro />} />
         <Route path="/admin/login" element={<AdminLogin />} />
