@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api';
+import { useLocalPagination } from '../../hooks/usePagination';
+import Pagination from '../../components/Pagination';
 
 const EMPTY = { marca: '', modelo: '', ano: '', placa: '', km: '', cliente_id: '' };
 
@@ -13,7 +15,7 @@ function fmt(v) {
 }
 
 export default function AppVeiculos() {
-  const [veiculos, setVeiculos] = useState([]);
+  const [allVeiculos, setAllVeiculos] = useState([]);
   const [clientes, setClientes] = useState([]);
   const [search, setSearch] = useState('');
   const [modal, setModal] = useState(null); // null | 'form' | 'historico'
@@ -21,6 +23,27 @@ export default function AppVeiculos() {
   const [editing, setEditing] = useState(null);
   const [historico, setHistorico] = useState({ veiculo: null, ordens: [] });
   const [toast, setToast] = useState({ msg: '', type: '' });
+
+  // Filtra veículos baseado na busca
+  const filteredVeiculos = allVeiculos.filter(v => {
+    if (!search) return true;
+    const searchLower = search.toLowerCase();
+    return (
+      v.marca?.toLowerCase().includes(searchLower) ||
+      v.modelo?.toLowerCase().includes(searchLower) ||
+      v.placa?.toLowerCase().includes(searchLower)
+    );
+  });
+
+  // Paginação local
+  const {
+    data: veiculos,
+    currentPage,
+    totalPages,
+    totalItems,
+    itemsPerPage,
+    goToPage
+  } = useLocalPagination(filteredVeiculos, 10);
 
   function showToast(msg, type = 'success') {
     setToast({ msg, type });
@@ -30,11 +53,8 @@ export default function AppVeiculos() {
   async function load(q) {
     try {
       const data = await api.app.veiculos.list();
-      const filtered = q
-        ? data.filter(v => `${v.marca||''} ${v.modelo||''} ${v.placa||''}`.toLowerCase().includes(q.toLowerCase()))
-        : data;
-      setVeiculos(filtered);
-    } catch { setVeiculos([]); }
+      setAllVeiculos(data);
+    } catch { setAllVeiculos([]); }
   }
 
   useEffect(() => {
@@ -71,7 +91,7 @@ export default function AppVeiculos() {
       if (editing) await api.app.veiculos.update(editing, payload);
       else await api.app.veiculos.create(payload);
       setModal(null);
-      load(search);
+      load();
       showToast(editing ? 'Veículo atualizado!' : 'Veículo salvo!');
     } catch (err) {
       showToast(err.error || 'Erro ao salvar', 'error');
@@ -82,14 +102,13 @@ export default function AppVeiculos() {
     if (!window.confirm('Deseja excluir este veículo?')) return;
     try {
       await api.app.veiculos.remove(id);
-      load(search);
+      load();
       showToast('Veículo excluído');
     } catch { showToast('Erro ao excluir', 'error'); }
   }
 
   function handleSearch(e) {
     setSearch(e.target.value);
-    load(e.target.value);
   }
 
   const STATUS_LABEL = { em_andamento: 'Em andamento', finalizado: 'Finalizado' };
@@ -100,7 +119,7 @@ export default function AppVeiculos() {
       <div className="page-header">
         <div>
           <div className="page-title">Veículos</div>
-          <div className="page-subtitle">{veiculos.length} cadastrado(s)</div>
+          <div className="page-subtitle">{totalItems} cadastrado(s){search && ` (${filteredVeiculos.length} encontrado(s))`}</div>
         </div>
         <button className="btn btn-primary" onClick={openCreate}>+ Novo Veículo</button>
       </div>
@@ -114,35 +133,45 @@ export default function AppVeiculos() {
 
       <div className="card">
         {veiculos.length ? (
-          <div className="table-wrapper">
-            <table>
-              <thead>
-                <tr><th>Veículo</th><th>Placa</th><th>Ano</th><th>KM</th><th>Proprietário</th><th>Ações</th></tr>
-              </thead>
-              <tbody>
-                {veiculos.map(v => (
-                  <tr key={v.id}>
-                    <td><strong>{v.marca} {v.modelo}</strong></td>
-                    <td><span className="badge badge-gray">{v.placa || '—'}</span></td>
-                    <td>{v.ano || '—'}</td>
-                    <td>{v.km ? parseInt(v.km).toLocaleString('pt-BR') + ' km' : '—'}</td>
-                    <td>{v.cliente_nome || '—'}</td>
-                    <td>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button className="btn btn-outline btn-sm" onClick={() => openHistorico(v)}>📜 Histórico</button>
-                        <button className="btn btn-outline btn-sm" onClick={() => openEdit(v)}>✏️</button>
-                        <button className="btn btn-outline btn-sm" onClick={() => remove(v.id)}>🗑️</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <>
+            <div className="table-wrapper">
+              <table>
+                <thead>
+                  <tr><th>Veículo</th><th>Placa</th><th>Ano</th><th>KM</th><th>Proprietário</th><th>Ações</th></tr>
+                </thead>
+                <tbody>
+                  {veiculos.map(v => (
+                    <tr key={v.id}>
+                      <td><strong>{v.marca} {v.modelo}</strong></td>
+                      <td><span className="badge badge-gray">{v.placa || '—'}</span></td>
+                      <td>{v.ano || '—'}</td>
+                      <td>{v.km ? parseInt(v.km).toLocaleString('pt-BR') + ' km' : '—'}</td>
+                      <td>{v.cliente_nome || '—'}</td>
+                      <td>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button className="btn btn-outline btn-sm" onClick={() => openHistorico(v)}>📜 Histórico</button>
+                          <button className="btn btn-outline btn-sm" onClick={() => openEdit(v)}>✏️</button>
+                          <button className="btn btn-outline btn-sm" onClick={() => remove(v.id)}>🗑️</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              itemsPerPage={itemsPerPage}
+              onPageChange={goToPage}
+            />
+          </>
         ) : (
           <div className="empty-state">
             <div className="empty-icon">🚗</div>
-            <p>Nenhum veículo encontrado</p>
+            <p>{search ? 'Nenhum veículo encontrado com esse termo' : 'Nenhum veículo encontrado'}</p>
             <button className="btn btn-primary" onClick={openCreate}>Cadastrar primeiro veículo</button>
           </div>
         )}

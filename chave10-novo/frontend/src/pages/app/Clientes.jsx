@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api';
+import { useLocalPagination } from '../../hooks/usePagination';
+import Pagination from '../../components/Pagination';
 
 const EMPTY = { nome: '', telefone: '', email: '', obs: '', endereco: '' };
 
@@ -9,12 +11,33 @@ function Toast({ msg, type }) {
 }
 
 export default function AppClientes() {
-  const [clientes, setClientes] = useState([]);
+  const [allClientes, setAllClientes] = useState([]);
   const [search, setSearch] = useState('');
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState(EMPTY);
   const [editing, setEditing] = useState(null);
   const [toast, setToast] = useState({ msg: '', type: '' });
+
+  // Filtra clientes baseado na busca
+  const filteredClientes = allClientes.filter(c => {
+    if (!search) return true;
+    const searchLower = search.toLowerCase();
+    return (
+      c.nome?.toLowerCase().includes(searchLower) ||
+      c.telefone?.toLowerCase().includes(searchLower) ||
+      c.email?.toLowerCase().includes(searchLower)
+    );
+  });
+
+  // Paginação local
+  const {
+    data: clientes,
+    currentPage,
+    totalPages,
+    totalItems,
+    itemsPerPage,
+    goToPage
+  } = useLocalPagination(filteredClientes, 10);
 
   function showToast(msg, type = 'success') {
     setToast({ msg, type });
@@ -24,8 +47,8 @@ export default function AppClientes() {
   async function load(q) {
     try {
       const data = await api.app.clientes.list(q);
-      setClientes(data);
-    } catch { setClientes([]); }
+      setAllClientes(data);
+    } catch { setAllClientes([]); }
   }
 
   useEffect(() => { load(); }, []);
@@ -44,7 +67,7 @@ export default function AppClientes() {
       if (editing) await api.app.clientes.update(editing, form);
       else await api.app.clientes.create(form);
       setModal(false);
-      load(search);
+      load();
       showToast(editing ? 'Cliente atualizado!' : 'Cliente salvo com sucesso!');
     } catch (err) {
       showToast(err.error || 'Erro ao salvar', 'error');
@@ -55,14 +78,13 @@ export default function AppClientes() {
     if (!window.confirm('Deseja excluir este cliente?')) return;
     try {
       await api.app.clientes.remove(id);
-      load(search);
+      load();
       showToast('Cliente excluído');
     } catch { showToast('Erro ao excluir', 'error'); }
   }
 
   function handleSearch(e) {
     setSearch(e.target.value);
-    load(e.target.value);
   }
 
   return (
@@ -70,7 +92,7 @@ export default function AppClientes() {
       <div className="page-header">
         <div>
           <div className="page-title">Clientes</div>
-          <div className="page-subtitle">{clientes.length} cadastrado(s)</div>
+          <div className="page-subtitle">{totalItems} cadastrado(s){search && ` (${filteredClientes.length} encontrado(s))`}</div>
         </div>
         <button className="btn btn-primary" onClick={openCreate}>+ Novo Cliente</button>
       </div>
@@ -84,33 +106,43 @@ export default function AppClientes() {
 
       <div className="card">
         {clientes.length ? (
-          <div className="table-wrapper">
-            <table>
-              <thead>
-                <tr><th>Nome</th><th>Telefone</th><th>Email</th><th>Veículos</th><th>Ações</th></tr>
-              </thead>
-              <tbody>
-                {clientes.map(c => (
-                  <tr key={c.id}>
-                    <td><strong>{c.nome}</strong></td>
-                    <td>{c.telefone || '—'}</td>
-                    <td>{c.email || '—'}</td>
-                    <td><span className="badge badge-blue">{c.total_veiculos || 0} veículo(s)</span></td>
-                    <td>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button className="btn btn-outline btn-sm" onClick={() => openEdit(c)}>✏️ Editar</button>
-                        <button className="btn btn-outline btn-sm" onClick={() => remove(c.id)}>🗑️</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <>
+            <div className="table-wrapper">
+              <table>
+                <thead>
+                  <tr><th>Nome</th><th>Telefone</th><th>Email</th><th>Veículos</th><th>Ações</th></tr>
+                </thead>
+                <tbody>
+                  {clientes.map(c => (
+                    <tr key={c.id}>
+                      <td><strong>{c.nome}</strong></td>
+                      <td>{c.telefone || '—'}</td>
+                      <td>{c.email || '—'}</td>
+                      <td><span className="badge badge-blue">{c.total_veiculos || 0} veículo(s)</span></td>
+                      <td>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button className="btn btn-outline btn-sm" onClick={() => openEdit(c)}>✏️ Editar</button>
+                          <button className="btn btn-outline btn-sm" onClick={() => remove(c.id)}>🗑️</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              itemsPerPage={itemsPerPage}
+              onPageChange={goToPage}
+            />
+          </>
         ) : (
           <div className="empty-state">
             <div className="empty-icon">👤</div>
-            <p>Nenhum cliente encontrado</p>
+            <p>{search ? 'Nenhum cliente encontrado com esse termo' : 'Nenhum cliente encontrado'}</p>
             <button className="btn btn-primary" onClick={openCreate}>Cadastrar primeiro cliente</button>
           </div>
         )}
