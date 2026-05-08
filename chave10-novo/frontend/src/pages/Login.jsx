@@ -143,7 +143,15 @@ export default function Login() {
               <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="admin@chave10.com" required autoFocus />
             </div>
             <div className="form-group" style={{ marginBottom: 24 }}>
-              <label>Senha</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <label>Senha</label>
+                <span 
+                  style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 600, cursor: 'pointer' }} 
+                  onClick={() => navigate('/esqueci-senha')}
+                >
+                  Esqueci a senha
+                </span>
+              </div>
               <input type="password" value={senha} onChange={e => setSenha(e.target.value)} placeholder="••••••••" required />
             </div>
             {erro && <div style={{ background: 'var(--danger-bg)', border: '1px solid rgba(220,38,38,.2)', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: 'var(--danger)', marginBottom: 16 }}>{erro}</div>}
@@ -212,7 +220,15 @@ export default function Login() {
               <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="seu@email.com" required />
             </div>
             <div className="form-group" style={{ marginBottom: 20 }}>
-              <label>Senha</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <label>Senha</label>
+                <span 
+                  style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600, cursor: 'pointer' }} 
+                  onClick={() => navigate('/esqueci-senha')}
+                >
+                  Esqueci a senha
+                </span>
+              </div>
               <input type="password" value={senha} onChange={e => setSenha(e.target.value)} placeholder="••••••••" required />
             </div>
             {erro && <p style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 12 }}>{erro}</p>}

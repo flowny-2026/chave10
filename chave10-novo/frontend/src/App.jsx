@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Cadastro from './pages/Cadastro';
+import EsqueciSenha from './pages/EsqueciSenha';
 import AdminLogin from './pages/AdminLogin';
 import Bloqueado from './pages/Bloqueado';
 import Layout from './components/Layout';
@@ -50,6 +51,7 @@ export default function App() {
         <Route path="/app-redirect" element={<AppRedirect />} />
         <Route path="/login" element={<Login />} />
         <Route path="/cadastro" element={<Cadastro />} />
+        <Route path="/esqueci-senha" element={<EsqueciSenha />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/bloqueado" element={<Bloqueado />} />
 
