@@ -1,4 +1,5 @@
 ﻿import { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../../api';
 
 const fmt = {
@@ -123,16 +124,23 @@ function gerarHTMLOS(os, clientes, veiculos, oficina) {
 
 export default function AppOS() {
   const isFuncionario = (() => { try { return JSON.parse(localStorage.getItem('c10_user'))?.perfil === 'funcionario'; } catch { return false; } })();
+  const [searchParams] = useSearchParams();
   const [osList, setOsList]     = useState([]);
   const [clientes, setClientes] = useState([]);
   const [veiculos, setVeiculos] = useState([]);
-  const [search, setSearch]     = useState('');
+  const [search, setSearch]     = useState(() => searchParams.get('q') || '');
   const [statusFiltro, setStatusFiltro] = useState('');
   const [modal, setModal]       = useState(null);
   const [form, setForm]         = useState({ cliente_id:'', veiculo_id:'', descricao:'', servicos:'', pecas_itens:[novaPeca()], valor_mo:'', data:new Date().toISOString().split('T')[0], status:'em_andamento', observacao:'' });
   const [editing, setEditing]   = useState(null);
   const [viewing, setViewing]   = useState(null);
   const [toast, setToast]       = useState({ msg:'', type:'' });
+
+  // Sincroniza search com query param quando a URL muda (ex: busca da topbar)
+  useEffect(() => {
+    const q = searchParams.get('q') || '';
+    setSearch(q);
+  }, [searchParams]);
 
   function showToast(msg, type='success') { setToast({msg,type}); setTimeout(()=>setToast({msg:'',type:''}),3000); }
 
@@ -217,7 +225,20 @@ export default function AppOS() {
   }
 
   const veiculosFiltrados = form.cliente_id ? veiculos.filter(v=>String(v.cliente_id)===String(form.cliente_id)) : veiculos;
-  const listaFiltrada = search ? osList.filter(o=>(o.cliente_nome||'').toLowerCase().includes(search.toLowerCase())||(o.veiculo_modelo||'').toLowerCase().includes(search.toLowerCase())||String(o.id).includes(search)||(o.descricao||'').toLowerCase().includes(search.toLowerCase())) : osList;
+  const listaFiltrada = search
+    ? osList.filter(o => {
+        const q = search.toLowerCase().replace(/[-\s]/g, '');
+        const placa = (o.placa || '').toLowerCase().replace(/[-\s]/g, '');
+        return (
+          (o.cliente_nome  || '').toLowerCase().includes(search.toLowerCase()) ||
+          (o.veiculo_modelo|| '').toLowerCase().includes(search.toLowerCase()) ||
+          (o.veiculo_marca || '').toLowerCase().includes(search.toLowerCase()) ||
+          placa.includes(q) ||
+          String(o.id).includes(search) ||
+          (o.descricao     || '').toLowerCase().includes(search.toLowerCase())
+        );
+      })
+    : osList;
 
   const totalForm = calcTotal(form.pecas_itens, form.valor_mo);
 

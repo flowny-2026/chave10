@@ -248,6 +248,7 @@ function UserDropdown({ user, onLogout }) {
 
 export default function Layout({ area }) {
   const [open, setOpen] = useState(false);
+  const [topbarSearch, setTopbarSearch] = useState('');
   const navigate = useNavigate();
   const user = getUser();
 
@@ -255,6 +256,13 @@ export default function Layout({ area }) {
     localStorage.removeItem('c10_token');
     localStorage.removeItem('c10_user');
     navigate(area === 'admin' ? '/admin/login' : '/login');
+  }
+
+  function handleTopbarSearch(e) {
+    e.preventDefault();
+    const q = topbarSearch.trim();
+    if (!q) return;
+    navigate(`/app/os?q=${encodeURIComponent(q)}`);
   }
 
   const NavItem = ({ item }) => (
@@ -343,12 +351,21 @@ export default function Layout({ area }) {
           </div>
 
           {area === 'app' && (
-            <div className="topbar-search">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-              </svg>
-              <input type="text" placeholder="Buscar cliente, OS, veículo..." />
-            </div>
+            <form className="topbar-search" onSubmit={handleTopbarSearch} style={{ display: 'contents' }}>
+              <div className="topbar-search">
+                <button type="submit" style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 0, color: 'inherit' }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                  </svg>
+                </button>
+                <input
+                  type="text"
+                  placeholder="Buscar cliente, OS, placa..."
+                  value={topbarSearch}
+                  onChange={e => setTopbarSearch(e.target.value)}
+                />
+              </div>
+            </form>
           )}
 
           <div className="topbar-right">
