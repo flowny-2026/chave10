@@ -349,6 +349,7 @@ export default function AppOS() {
                   <div className="os-card-bottom">
                     {!isFuncionario&&<span className="os-card-valor">{fmt.currency(total)}</span>}
                     <div className="os-card-actions">
+                      <button className="btn btn-outline btn-sm" onClick={e=>{e.stopPropagation();imprimir(os);}}>🖨️</button>
                       <button className="btn btn-outline btn-sm" onClick={e=>{e.stopPropagation();openEdit(os);}}>✏️</button>
                       <button className="btn btn-outline btn-sm" onClick={e=>{e.stopPropagation();enviarWhatsApp(os);}}>💬</button>
                       <button className="btn btn-outline btn-sm" onClick={e=>{e.stopPropagation();remove(os.id);}}>🗑️</button>
