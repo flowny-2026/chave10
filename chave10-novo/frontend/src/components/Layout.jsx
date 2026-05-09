@@ -491,6 +491,22 @@ export default function Layout({ area }) {
                 .filter(item => user?.perfil !== 'funcionario' || !['/app/financeiro', '/app/relatorios', '/app/configuracoes'].includes(item.to))
                 .map(item => <NavItem key={item.to} item={item} />)}
             </nav>
+            {/* Botão de assinar — só aparece no trial */}
+            {user?.plano === 'trial' && (
+              <div style={{ padding: '8px 12px 0' }}>
+                <NavLink to="/app/planos"
+                  className={({ isActive }) => 'nav-item' + (isActive ? ' active' : '')}
+                  onClick={() => setOpen(false)}
+                  style={{ background: 'linear-gradient(135deg,#F97316,#EA580C)', borderRadius: 8, color: '#fff' }}>
+                  <span className="nav-icon">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>
+                    </svg>
+                  </span>
+                  <span>🔥 Assinar Plano</span>
+                </NavLink>
+              </div>
+            )}
           </>
         )}
 
