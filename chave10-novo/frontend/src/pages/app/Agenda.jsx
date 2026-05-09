@@ -101,7 +101,7 @@ export default function AppAgenda() {
             {fmt.date(inicioSemana.toISOString().split('T')[0])} — {fmt.date(fimSemana.toISOString().split('T')[0])}
           </div>
         </div>
-        <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+        <div style={{display:'flex',gap:8}}>
           <button className="btn btn-outline btn-sm" onClick={()=>setSemanaOffset(o=>o-1)}>← Anterior</button>
           <button className="btn btn-outline btn-sm" onClick={()=>setSemanaOffset(0)}>Hoje</button>
           <button className="btn btn-outline btn-sm" onClick={()=>setSemanaOffset(o=>o+1)}>Próxima →</button>
@@ -111,57 +111,55 @@ export default function AppAgenda() {
 
       {/* Grade semanal */}
       <div className="card" style={{padding:0,overflow:'hidden',marginBottom:20}}>
-        <div style={{overflowX:'auto',WebkitOverflowScrolling:'touch'}}>
-          <div className="agenda-grid" style={{minWidth:560}}>
-            {/* Header */}
-            <div className="agenda-header-cell" style={{background:'var(--gray-50)'}}>Hora</div>
-            {diasSemana.map((d,i)=>{
-              const isToday = d.toDateString() === hoje.toDateString();
-              const qtd = eventosPorDia[i].length;
-              return (
-                <div key={i} className={`agenda-header-cell${isToday?' today':''}`}
-                  style={{cursor:'pointer'}} onClick={()=>openCreate(d.toISOString().split('T')[0])}>
-                  {DIAS[d.getDay()]}<br/>
-                  <strong style={{fontSize:16}}>{d.getDate()}</strong>
-                  {qtd > 0 && <div style={{fontSize:10,marginTop:2,background:'var(--accent)',color:'#fff',borderRadius:99,padding:'1px 6px',display:'inline-block'}}>{qtd}</div>}
-                </div>
-              );
-            })}
+        <div className="agenda-grid">
+          {/* Header */}
+          <div className="agenda-header-cell" style={{background:'var(--gray-50)'}}>Hora</div>
+          {diasSemana.map((d,i)=>{
+            const isToday = d.toDateString() === hoje.toDateString();
+            const qtd = eventosPorDia[i].length;
+            return (
+              <div key={i} className={`agenda-header-cell${isToday?' today':''}`}
+                style={{cursor:'pointer'}} onClick={()=>openCreate(d.toISOString().split('T')[0])}>
+                {DIAS[d.getDay()]}<br/>
+                <strong style={{fontSize:16}}>{d.getDate()}</strong>
+                {qtd > 0 && <div style={{fontSize:10,marginTop:2,background:'var(--accent)',color:'#fff',borderRadius:99,padding:'1px 6px',display:'inline-block'}}>{qtd}</div>}
+              </div>
+            );
+          })}
 
-            {/* Linhas de hora */}
-            {HORAS.map(h=>(
-              <React.Fragment key={h}>
-                <div className="agenda-time-cell">{h}:00</div>
-                {diasSemana.map((d,i)=>{
-                  const dateStr = d.toISOString().split('T')[0];
-                  const evs = eventosSemana.filter(e => {
-                    if (e.data !== dateStr) return false;
-                    if (!e.hora) return h === 8;
-                    const hEv = parseInt(e.hora.split(':')[0]);
-                    return hEv === h;
-                  });
-                  return (
-                    <div key={`${h}-${i}`} className="agenda-slot"
-                      onClick={()=>openCreate(dateStr, `${String(h).padStart(2,'0')}:00`)}
-                      style={{cursor:'pointer'}}>
-                      {evs.map(ev=>(
-                        <div key={ev.id} className="agenda-event orange"
-                          onClick={e=>{e.stopPropagation();}}
-                          title={`${ev.titulo}${ev.cliente_nome?' — '+ev.cliente_nome:''}`}
-                          style={{cursor:'default',position:'relative'}}>
-                          <span style={{flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                            {ev.hora&&<strong>{ev.hora.substring(0,5)} </strong>}{ev.titulo}
-                          </span>
-                          <button onClick={e=>{e.stopPropagation();remove(ev.id);}}
-                            style={{background:'none',border:'none',cursor:'pointer',color:'inherit',opacity:.7,padding:'0 2px',fontSize:13,lineHeight:1,flexShrink:0}}>×</button>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })}
-              </React.Fragment>
-            ))}
-          </div>
+          {/* Linhas de hora */}
+          {HORAS.map(h=>(
+            <React.Fragment key={h}>
+              <div className="agenda-time-cell">{h}:00</div>
+              {diasSemana.map((d,i)=>{
+                const dateStr = d.toISOString().split('T')[0];
+                const evs = eventosSemana.filter(e => {
+                  if (e.data !== dateStr) return false;
+                  if (!e.hora) return h === 8; // sem hora: coloca às 8h
+                  const hEv = parseInt(e.hora.split(':')[0]);
+                  return hEv === h;
+                });
+                return (
+                  <div key={`${h}-${i}`} className="agenda-slot"
+                    onClick={()=>openCreate(dateStr, `${String(h).padStart(2,'0')}:00`)}
+                    style={{cursor:'pointer'}}>
+                    {evs.map(ev=>(
+                      <div key={ev.id} className="agenda-event orange"
+                        onClick={e=>{e.stopPropagation();}}
+                        title={`${ev.titulo}${ev.cliente_nome?' — '+ev.cliente_nome:''}`}
+                        style={{cursor:'default',position:'relative'}}>
+                        <span style={{flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                          {ev.hora&&<strong>{ev.hora.substring(0,5)} </strong>}{ev.titulo}
+                        </span>
+                        <button onClick={e=>{e.stopPropagation();remove(ev.id);}}
+                          style={{background:'none',border:'none',cursor:'pointer',color:'inherit',opacity:.7,padding:'0 2px',fontSize:13,lineHeight:1,flexShrink:0}}>×</button>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+            </React.Fragment>
+          ))}
         </div>
       </div>
 
