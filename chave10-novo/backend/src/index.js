@@ -8,6 +8,30 @@ const rateLimit = require('express-rate-limit');
 
 const app = express();
 
+// ── CACHE SIMPLES EM MEMÓRIA ─────────────────────────────────
+const cache = new Map();
+function cacheMiddleware(ttlSeconds = 30) {
+  return (req, res, next) => {
+    if (req.method !== 'GET') return next();
+    const key = req.originalUrl + '|' + (req.user?.oficina_id || req.user?.id || '');
+    const cached = cache.get(key);
+    if (cached && Date.now() - cached.time < ttlSeconds * 1000) {
+      return res.json(cached.data);
+    }
+    const originalJson = res.json.bind(res);
+    res.json = (data) => {
+      cache.set(key, { data, time: Date.now() });
+      // Limpa cache se ficar muito grande (evita memory leak)
+      if (cache.size > 500) {
+        const oldest = [...cache.entries()].sort((a,b) => a[1].time - b[1].time).slice(0, 200);
+        oldest.forEach(([k]) => cache.delete(k));
+      }
+      return originalJson(data);
+    };
+    next();
+  };
+}
+
 // ── HELMET: headers de segurança HTTP ────────────────────────
 app.use(helmet());
 
@@ -58,7 +82,7 @@ const writeLimiter = rateLimit({
 // ── ROTAS ─────────────────────────────────────────────────────
 app.use('/api/auth',   loginLimiter, require('./routes/auth'));
 app.use('/api/admin',  writeLimiter, require('./routes/admin'));
-app.use('/api/app',    writeLimiter, require('./routes/app'));
+app.use('/api/app',    writeLimiter, cacheMiddleware(15), require('./routes/app'));
 app.use('/api/backup', require('./routes/backup'));
 
 // ── HEALTH CHECK ──────────────────────────────────────────────

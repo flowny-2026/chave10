@@ -4,6 +4,10 @@ const bcrypt = require('bcryptjs');
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  // Otimização: limita conexões para não estourar o plano free
+  max: 10,                    // máx 10 conexões simultâneas (free tier suporta ~20)
+  idleTimeoutMillis: 30000,   // fecha conexão ociosa após 30s
+  connectionTimeoutMillis: 5000, // timeout de 5s para conectar
 });
 
 // Helper: executa query e retorna rows
@@ -213,6 +217,29 @@ async function initDB() {
   // Migration: adiciona logo e endereco em oficinas se não existir
   await pool.query(`ALTER TABLE oficinas ADD COLUMN IF NOT EXISTS logo TEXT;`).catch(() => {});
   await pool.query(`ALTER TABLE oficinas ADD COLUMN IF NOT EXISTS endereco TEXT;`).catch(() => {});
+
+  // ── ÍNDICES para performance ──────────────────────────────
+  const indices = [
+    'CREATE INDEX IF NOT EXISTS idx_usuarios_email ON usuarios(email)',
+    'CREATE INDEX IF NOT EXISTS idx_usuarios_oficina ON usuarios(oficina_id)',
+    'CREATE INDEX IF NOT EXISTS idx_clientes_oficina ON clientes(oficina_id)',
+    'CREATE INDEX IF NOT EXISTS idx_clientes_nome ON clientes(oficina_id, nome)',
+    'CREATE INDEX IF NOT EXISTS idx_veiculos_oficina ON veiculos(oficina_id)',
+    'CREATE INDEX IF NOT EXISTS idx_veiculos_cliente ON veiculos(cliente_id)',
+    'CREATE INDEX IF NOT EXISTS idx_os_oficina ON ordens_servico(oficina_id)',
+    'CREATE INDEX IF NOT EXISTS idx_os_status ON ordens_servico(oficina_id, status)',
+    'CREATE INDEX IF NOT EXISTS idx_os_data ON ordens_servico(oficina_id, data)',
+    'CREATE INDEX IF NOT EXISTS idx_os_cliente ON ordens_servico(cliente_id)',
+    'CREATE INDEX IF NOT EXISTS idx_lembretes_oficina ON lembretes(oficina_id, data_previsao)',
+    'CREATE INDEX IF NOT EXISTS idx_estoque_oficina ON estoque(oficina_id)',
+    'CREATE INDEX IF NOT EXISTS idx_despesas_oficina ON despesas(oficina_id, data)',
+    'CREATE INDEX IF NOT EXISTS idx_orcamentos_oficina ON orcamentos(oficina_id)',
+    'CREATE INDEX IF NOT EXISTS idx_agenda_oficina ON agenda(oficina_id, data)',
+    'CREATE INDEX IF NOT EXISTS idx_pagos_oficina ON pagamentos_os(oficina_id, data_pagamento)',
+    'CREATE INDEX IF NOT EXISTS idx_parcelas_oficina ON parcelas_receber(oficina_id, data_recebimento)',
+    'CREATE INDEX IF NOT EXISTS idx_oficinas_status ON oficinas(status_assinatura)',
+  ];
+  for (const idx of indices) { await pool.query(idx).catch(() => {}); }
 
   // Cria master_admin se não existir
   const admin = await queryOne("SELECT id FROM usuarios WHERE perfil = 'master_admin'");
