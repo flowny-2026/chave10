@@ -1,51 +1,58 @@
-// Service Worker para PWA
-const CACHE_NAME = 'chave10-v1';
-const urlsToCache = [
-  '/',
+// Service Worker para PWA — Network-first para HTML/JS, cache-first para assets estáticos
+const CACHE_NAME = 'chave10-v2';
+const STATIC_ASSETS = [
   '/logo-icon.png',
-  '/logo-white-refined.png'
+  '/logo-white-refined.png',
+  '/favicon.ico'
 ];
 
-// Instalação do Service Worker
+// Instalação
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('Cache aberto');
-        return cache.addAll(urlsToCache);
-      })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
   );
   self.skipWaiting();
 });
 
-// Ativação do Service Worker
+// Ativação — limpa caches antigos
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('Removendo cache antigo:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
+    caches.keys().then((names) =>
+      Promise.all(names.filter(n => n !== CACHE_NAME).map(n => caches.delete(n)))
+    )
   );
   self.clients.claim();
 });
 
-// Interceptação de requisições
+// Fetch — network-first para navegação e JS, cache-first para imagens
 self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  const url = new URL(request.url);
+
+  // Ignora requisições não-GET e de APIs
+  if (request.method !== 'GET') return;
+  if (url.pathname.startsWith('/api')) return;
+
+  // Imagens e fontes: cache-first
+  if (request.destination === 'image' || request.destination === 'font') {
+    event.respondWith(
+      caches.match(request).then(cached => cached || fetch(request).then(res => {
+        const clone = res.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(request, clone));
+        return res;
+      }))
+    );
+    return;
+  }
+
+  // HTML, JS, CSS: network-first (sempre busca a versão nova)
   event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Retorna do cache se disponível, senão busca da rede
-        return response || fetch(event.request);
+    fetch(request)
+      .then(res => {
+        const clone = res.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(request, clone));
+        return res;
       })
-      .catch(() => {
-        // Se offline e não está no cache, retorna página offline
-        return caches.match('/');
-      })
+      .catch(() => caches.match(request).then(cached => cached || caches.match('/')))
   );
 });
