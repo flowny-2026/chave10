@@ -402,13 +402,13 @@ function ParcelasHojeAlert() {
       position: 'fixed', inset: 0, zIndex: 1002,
       background: 'rgba(0,0,0,0.55)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: 20,
+      padding: 16,
       animation: 'fadeIn .2s ease',
     }}>
       <div style={{
         background: '#fff', borderRadius: 16, maxWidth: 440, width: '100%',
         boxShadow: '0 24px 64px rgba(0,0,0,0.25)', overflow: 'hidden',
-        animation: 'slideUp .25s ease',
+        animation: 'slideUp .25s ease', margin: '0 auto',
       }}>
         <div style={{
           background: 'linear-gradient(135deg,#059669,#10b981)',

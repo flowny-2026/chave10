@@ -543,7 +543,7 @@ export default function AppOS() {
                 {/* Formas de pagamento */}
                 <div style={{marginBottom:16}}>
                   <label style={{fontSize:12,fontWeight:700,color:'var(--gray-600)',marginBottom:8,display:'block'}}>Forma de pagamento *</label>
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(130px, 1fr))',gap:8}}>
                     {[
                       {v:'pix',icon:'📱',label:'PIX'},
                       {v:'dinheiro',icon:'💵',label:'Dinheiro'},

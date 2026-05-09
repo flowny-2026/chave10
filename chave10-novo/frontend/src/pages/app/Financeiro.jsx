@@ -179,9 +179,9 @@ export default function AppFinanceiro() {
         return (
           <div className="card" style={{marginBottom:20}}>
             <div className="card-header"><div className="card-title">📊 Formas de pagamento do mês</div></div>
-            <div style={{display:'flex',alignItems:'center',gap:32,flexWrap:'wrap'}}>
+            <div style={{display:'flex',alignItems:'center',gap:24,flexWrap:'wrap',justifyContent:'center'}}>
               {/* Pizza SVG */}
-              <svg viewBox="0 0 100 100" width="160" height="160" style={{flexShrink:0}}>
+              <svg viewBox="0 0 100 100" style={{width:140,height:140,flexShrink:0,maxWidth:'40%'}}>
                 {arcs.map(a => <path key={a.forma} d={a.path} fill={a.color} stroke="#fff" strokeWidth="1" />)}
                 <circle cx="50" cy="50" r="20" fill="#fff" />
                 <text x="50" y="48" textAnchor="middle" fontSize="7" fontWeight="700" fill="#374151">{entries.length}</text>
@@ -310,13 +310,13 @@ export default function AppFinanceiro() {
                         const isAtrasado = p.data_recebimento < hojeStr;
                         return (
                           <tr key={p.id} style={{background:isHoje?'#F0FDF4':isAtrasado?'#FEF2F2':''}}>
-                            <td style={{fontWeight:isHoje||isAtrasado?700:400,color:isAtrasado?'var(--danger)':isHoje?'var(--success)':'var(--gray-600)'}}>{fmt.date(p.data_recebimento)}</td>
-                            <td>{p.cliente_nome||'—'}</td>
+                            <td style={{fontWeight:isHoje||isAtrasado?700:400,color:isAtrasado?'var(--danger)':isHoje?'var(--success)':'var(--gray-600)',whiteSpace:'nowrap'}}>{fmt.date(p.data_recebimento)}</td>
+                            <td style={{maxWidth:120,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.cliente_nome||'—'}</td>
                             <td><strong style={{color:'var(--brand)'}}>#{String(p.os_id).padStart(4,'0')}</strong></td>
-                            <td>{p.numero_parcela}ª parcela</td>
-                            <td><strong style={{color:'var(--success)'}}>{fmt.currency(p.valor)}</strong></td>
+                            <td>{p.numero_parcela}ª</td>
+                            <td><strong style={{color:'var(--success)',whiteSpace:'nowrap'}}>{fmt.currency(p.valor)}</strong></td>
                             <td>{isAtrasado?<span className="badge badge-red">Atrasado</span>:isHoje?<span className="badge badge-green">Hoje</span>:<span className="badge badge-gray">Agendado</span>}</td>
-                            <td><button className="btn btn-success btn-sm" onClick={()=>marcarRecebido(p.id)} title="Marcar como recebido">✓ Recebido</button></td>
+                            <td><button className="btn btn-success btn-sm" onClick={()=>marcarRecebido(p.id)} title="Marcar como recebido">✓</button></td>
                           </tr>
                         );
                       })}
