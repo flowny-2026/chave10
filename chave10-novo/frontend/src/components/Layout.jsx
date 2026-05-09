@@ -493,17 +493,34 @@ export default function Layout({ area }) {
             </nav>
             {/* Botão de assinar — só aparece no trial */}
             {(user?.plano === 'trial' || !user?.plano) && user?.perfil !== 'master_admin' && (
-              <div style={{ padding: '8px 12px 0' }}>
-                <NavLink to="/app/planos"
-                  className={({ isActive }) => 'nav-item' + (isActive ? ' active' : '')}
+              <div style={{ padding: '10px 12px 4px' }}>
+                <NavLink
+                  to="/app/planos"
                   onClick={() => setOpen(false)}
-                  style={{ background: 'linear-gradient(135deg,#F97316,#EA580C)', borderRadius: 8, color: '#fff' }}>
-                  <span className="nav-icon">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>
-                    </svg>
-                  </span>
-                  <span>🔥 Assinar Plano</span>
+                  style={({ isActive }) => ({
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 9,
+                    padding: '10px 14px',
+                    borderRadius: 8,
+                    background: isActive
+                      ? 'rgba(249,115,22,.18)'
+                      : 'rgba(249,115,22,.1)',
+                    border: '1px solid rgba(249,115,22,.3)',
+                    textDecoration: 'none',
+                    transition: 'background .15s',
+                  })}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F97316" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+                  </svg>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#F97316', lineHeight: 1.2 }}>Assinar Plano</div>
+                    <div style={{ fontSize: 10, color: 'rgba(249,115,22,.7)', lineHeight: 1.2 }}>R$29/mês — oferta limitada</div>
+                  </div>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#F97316" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 'auto' }}>
+                    <polyline points="9 18 15 12 9 6"/>
+                  </svg>
                 </NavLink>
               </div>
             )}

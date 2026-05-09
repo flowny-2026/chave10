@@ -22,6 +22,7 @@ import AppRelatorios from './pages/app/Relatorios';
 import AppLembretes from './pages/app/Lembretes';
 import AppEstoque from './pages/app/Estoque';
 import AppConfiguracoes from './pages/app/Configuracoes';
+import AppPlanos from './pages/app/Planos';
 
 function getUser() {
   try { return JSON.parse(localStorage.getItem('c10_user')); } catch { return null; }
@@ -76,6 +77,7 @@ export default function App() {
           <Route path="lembretes"    element={<AppLembretes />} />
           <Route path="estoque"      element={<AppEstoque />} />
           <Route path="configuracoes" element={<PrivateRoute noFuncionario><AppConfiguracoes /></PrivateRoute>} />
+          <Route path="planos"        element={<AppPlanos />} />
           <Route index element={<Navigate to="dashboard" replace />} />
         </Route>
 
