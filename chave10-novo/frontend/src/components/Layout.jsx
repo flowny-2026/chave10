@@ -492,7 +492,7 @@ export default function Layout({ area }) {
                 .map(item => <NavItem key={item.to} item={item} />)}
             </nav>
             {/* Botão de assinar — só aparece no trial */}
-            {user?.plano === 'trial' && (
+            {(user?.plano === 'trial' || !user?.plano) && user?.perfil !== 'master_admin' && (
               <div style={{ padding: '8px 12px 0' }}>
                 <NavLink to="/app/planos"
                   className={({ isActive }) => 'nav-item' + (isActive ? ' active' : '')}

@@ -17,7 +17,7 @@ function useVagas() {
 
 export default function AppPlanos() {
   const user = getUser();
-  const isTrial = user?.plano === 'trial' || user?.status_assinatura === 'active' && !user?.plano;
+  const isTrial = user?.plano === 'trial' || !user?.plano;
   const vagas = useVagas();
 
   const [diasRestantes, setDiasRestantes] = useState(null);

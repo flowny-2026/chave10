@@ -53,6 +53,7 @@ router.post('/login', validateLogin, async (req, res) => {
         oficina_id:usuario.oficina_id,
         data_vencimento: oficina.data_vencimento,
         status_assinatura: oficina.status_assinatura,
+        plano: oficina.plano,
       }
     });
   } catch(err) { log.error('auth_login',err); res.status(500).json({error:'Erro interno'}); }
@@ -136,6 +137,7 @@ router.post('/google', async (req, res) => {
         oficina_id: usuario.oficina_id,
         data_vencimento: oficina.data_vencimento,
         status_assinatura: oficina.status_assinatura,
+        plano: oficina.plano,
       },
     });
   } catch (err) {
