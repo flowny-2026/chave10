@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { maskDocumento, maskPhone } from '../../utils/validation';
+import ImportarClientes from '../../components/ImportarClientes';
 
 const KEY = 'c10_oficina';
 function getOficina() { try { return JSON.parse(localStorage.getItem(KEY))||{}; } catch { return {}; } }
@@ -81,6 +82,8 @@ export default function AppConfiguracoes() {
           </div>
         </form>
       </div>
+
+      <ImportarClientes onImportado={() => {}} />
     </div>
   );
 }
