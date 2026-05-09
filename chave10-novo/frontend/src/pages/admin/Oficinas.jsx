@@ -448,29 +448,37 @@ export default function AdminOficinas() {
         </div>
       )}
 
-      {/* Usuários pendentes (sem oficina) */}
+      {/* Todos os usuários */}
       {pendentes.length > 0 && (
         <div className="card" style={{marginTop:24}}>
           <div className="card-header">
-            <div className="card-title">⏳ Usuários pendentes ({pendentes.length})</div>
-            <span style={{fontSize:12,color:'var(--gray-400)'}}>Criaram conta mas não completaram o cadastro da oficina</span>
+            <div className="card-title">👥 Todos os usuários ({pendentes.length})</div>
           </div>
           <div className="table-wrapper">
             <table>
-              <thead><tr><th>Nome</th><th>Email</th><th>Perfil</th><th>Último acesso</th><th>Ações</th></tr></thead>
+              <thead><tr><th>Nome</th><th>Email</th><th>Oficina ID</th><th>Perfil</th><th>Ações</th></tr></thead>
               <tbody>
                 {pendentes.map(u=>(
-                  <tr key={u.id}>
+                  <tr key={u.id} style={{background: !u.oficina_id ? '#FFFBEB' : ''}}>
                     <td><strong>{u.nome}</strong></td>
                     <td style={{fontSize:12,color:'var(--gray-500)'}}>{u.email}</td>
+                    <td>{u.oficina_id ? <span className="badge badge-blue">#{u.oficina_id}</span> : <span className="badge badge-yellow">Sem oficina</span>}</td>
                     <td><span className="badge badge-gray">{u.perfil}</span></td>
-                    <td style={{fontSize:12,color:'var(--gray-400)'}}>{u.ultimo_acesso ? fmt.date(u.ultimo_acesso.split('T')[0]) : '—'}</td>
                     <td>
-                      <button className="btn btn-danger btn-sm" onClick={async()=>{
-                        if(!window.confirm(`Deletar usuário ${u.nome} (${u.email})?`)) return;
-                        try { await api.admin.usuarios.remove(u.id); loadPendentes(); showToast('Usuário deletado'); }
-                        catch { showToast('Erro ao deletar','error'); }
-                      }}>🗑️ Deletar</button>
+                      <div style={{display:'flex',gap:4}}>
+                        {u.oficina_id && (
+                          <button className="btn btn-outline btn-sm" onClick={async()=>{
+                            if(!window.confirm(`Desvincular ${u.nome} da oficina #${u.oficina_id}?`)) return;
+                            try { await api.admin.usuarios.desvincular(u.id); loadPendentes(); showToast('Usuário desvinculado'); }
+                            catch { showToast('Erro','error'); }
+                          }}>🔗 Desvincular</button>
+                        )}
+                        <button className="btn btn-danger btn-sm" onClick={async()=>{
+                          if(!window.confirm(`Deletar usuário ${u.nome} (${u.email})?`)) return;
+                          try { await api.admin.usuarios.remove(u.id); loadPendentes(); showToast('Usuário deletado'); }
+                          catch { showToast('Erro ao deletar','error'); }
+                        }}>🗑️</button>
+                      </div>
                     </td>
                   </tr>
                 ))}

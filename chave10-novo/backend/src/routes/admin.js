@@ -202,7 +202,7 @@ router.post('/trocar-senha', async (req,res) => {
 // USUÁRIOS PENDENTES (sem oficina)
 router.get('/usuarios-pendentes', async (req,res) => {
   try {
-    const rows = await query("SELECT id, nome, email, perfil, ultimo_acesso FROM usuarios WHERE oficina_id IS NULL AND perfil != 'master_admin' ORDER BY id DESC");
+    const rows = await query("SELECT id, nome, email, perfil, oficina_id, ultimo_acesso FROM usuarios WHERE perfil != 'master_admin' ORDER BY id DESC");
     res.json(rows);
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
