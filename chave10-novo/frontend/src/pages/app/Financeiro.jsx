@@ -19,6 +19,7 @@ export default function AppFinanceiro() {
   const [mesIdx, setMesIdx] = useState(0); // 0 = mês atual
   const [ordens, setOrdens]     = useState([]);
   const [despesas, setDespesas] = useState([]);
+  const [parcelas, setParcelas] = useState([]);
   const [modal, setModal]       = useState(false);
   const [form, setForm]         = useState(EMPTY_DESP);
   const [editing, setEditing]   = useState(null);
@@ -46,7 +47,22 @@ export default function AppFinanceiro() {
     } catch { setDespesas([]); }
   }
 
-  useEffect(()=>{ loadOrdens(); },[]);
+  async function loadParcelas() {
+    try {
+      const data = await api.app.parcelasReceber.list();
+      setParcelas(Array.isArray(data)?data:[]);
+    } catch { setParcelas([]); }
+  }
+
+  async function marcarRecebido(id) {
+    try {
+      await api.app.parcelasReceber.marcarRecebido(id);
+      loadParcelas();
+      showToast('Parcela marcada como recebida!');
+    } catch { showToast('Erro ao marcar','error'); }
+  }
+
+  useEffect(()=>{ loadOrdens(); loadParcelas(); },[]);
   useEffect(()=>{ loadDespesas(); },[mesIdx]);
 
   async function saveDespesa(e) {
@@ -166,6 +182,70 @@ export default function AppFinanceiro() {
           ) : <div className="empty-state" style={{padding:32}}><div className="empty-icon">💰</div><p>Nenhuma receita este mês</p></div>}
         </div>
       </div>
+
+      {/* Parcelas a receber */}
+      {parcelas.filter(p=>!p.recebido).length > 0 && (
+        <div className="card" style={{marginBottom:20}}>
+          <div className="card-header">
+            <div className="card-title">💳 Parcelas a receber</div>
+            <span style={{fontSize:12,color:'var(--gray-400)'}}>{parcelas.filter(p=>!p.recebido).length} pendente(s)</span>
+          </div>
+          {(() => {
+            const hojeStr = new Date().toISOString().split('T')[0];
+            const pendentes = parcelas.filter(p=>!p.recebido).sort((a,b)=>a.data_recebimento.localeCompare(b.data_recebimento));
+            const parcelasHoje = pendentes.filter(p=>p.data_recebimento===hojeStr);
+            const parcelasAtrasadas = pendentes.filter(p=>p.data_recebimento<hojeStr);
+            const parcelasProximas = pendentes.filter(p=>p.data_recebimento>hojeStr).slice(0,10);
+            const totalHoje = parcelasHoje.reduce((s,p)=>s+parseFloat(p.valor||0),0);
+            const totalAtrasado = parcelasAtrasadas.reduce((s,p)=>s+parseFloat(p.valor||0),0);
+
+            return (
+              <div>
+                {/* Alerta do dia */}
+                {(parcelasHoje.length > 0 || parcelasAtrasadas.length > 0) && (
+                  <div style={{background:'#F0FDF4',border:'1px solid #BBF7D0',borderRadius:'var(--r-sm)',padding:'12px 16px',marginBottom:16}}>
+                    {parcelasHoje.length > 0 && (
+                      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:parcelasAtrasadas.length?8:0}}>
+                        <span style={{fontSize:18}}>🔔</span>
+                        <span style={{fontSize:13,fontWeight:600,color:'#166534'}}>Hoje você recebe <strong>{fmt.currency(totalHoje)}</strong> ({parcelasHoje.length} parcela{parcelasHoje.length>1?'s':''})</span>
+                      </div>
+                    )}
+                    {parcelasAtrasadas.length > 0 && (
+                      <div style={{display:'flex',alignItems:'center',gap:8}}>
+                        <span style={{fontSize:18}}>⚠️</span>
+                        <span style={{fontSize:13,fontWeight:600,color:'#B91C1C'}}>{parcelasAtrasadas.length} parcela{parcelasAtrasadas.length>1?'s':''} atrasada{parcelasAtrasadas.length>1?'s':''} — {fmt.currency(totalAtrasado)}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="table-wrapper">
+                  <table>
+                    <thead><tr><th>Data</th><th>Cliente</th><th>OS</th><th>Parcela</th><th>Valor</th><th>Status</th><th></th></tr></thead>
+                    <tbody>
+                      {[...parcelasAtrasadas, ...parcelasHoje, ...parcelasProximas].map(p => {
+                        const isHoje = p.data_recebimento === hojeStr;
+                        const isAtrasado = p.data_recebimento < hojeStr;
+                        return (
+                          <tr key={p.id} style={{background:isHoje?'#F0FDF4':isAtrasado?'#FEF2F2':''}}>
+                            <td style={{fontWeight:isHoje||isAtrasado?700:400,color:isAtrasado?'var(--danger)':isHoje?'var(--success)':'var(--gray-600)'}}>{fmt.date(p.data_recebimento)}</td>
+                            <td>{p.cliente_nome||'—'}</td>
+                            <td><strong style={{color:'var(--brand)'}}>#{String(p.os_id).padStart(4,'0')}</strong></td>
+                            <td>{p.numero_parcela}ª parcela</td>
+                            <td><strong style={{color:'var(--success)'}}>{fmt.currency(p.valor)}</strong></td>
+                            <td>{isAtrasado?<span className="badge badge-red">Atrasado</span>:isHoje?<span className="badge badge-green">Hoje</span>:<span className="badge badge-gray">Agendado</span>}</td>
+                            <td><button className="btn btn-success btn-sm" onClick={()=>marcarRecebido(p.id)} title="Marcar como recebido">✓ Recebido</button></td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
 
       {/* Tabela de despesas */}
       <div className="card">

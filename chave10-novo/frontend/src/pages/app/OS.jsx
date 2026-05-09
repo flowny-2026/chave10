@@ -250,6 +250,14 @@ export default function AppOS() {
     window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`, '_blank');
   }
 
+  function openView(os) {
+    setViewing(os);
+    setModal('ver');
+    // Carrega pagamentos da OS
+    api.app.os.pagamentos(os.id).then(data => setViewPagamentos(data||[])).catch(()=>setViewPagamentos([]));
+  }
+  const [viewPagamentos, setViewPagamentos] = useState([]);
+
   const veiculosFiltrados = form.cliente_id ? veiculos.filter(v=>String(v.cliente_id)===String(form.cliente_id)) : veiculos;
   const listaFiltrada = search
     ? osList.filter(o => {
@@ -304,7 +312,7 @@ export default function AppOS() {
                       <td><span className={`badge ${STATUS_CLASS[os.status]||'badge-gray'}`}>{STATUS_LABEL[os.status]||os.status}</span></td>
                       <td>
                         <div style={{display:'flex',gap:4}}>
-                          <button className="btn btn-outline btn-sm" onClick={()=>{setViewing(os);setModal('ver');}}>👁️</button>
+                          <button className="btn btn-outline btn-sm" onClick={()=>openView(os)}>👁️</button>
                           <button className="btn btn-outline btn-sm" onClick={()=>imprimir(os)} title="Imprimir">🖨️</button>
                           <button className="btn btn-outline btn-sm" onClick={()=>enviarWhatsApp(os)} title="WhatsApp">💬</button>
                           <button className="btn btn-outline btn-sm" onClick={()=>openEdit(os)}>✏️</button>
@@ -466,6 +474,40 @@ export default function AppOS() {
                 </div>
                 </>
                 )}
+
+                {/* Histórico de pagamento */}
+                {viewPagamentos.length > 0 && (
+                  <div style={{marginBottom:16}}>
+                    <div style={{fontSize:11,fontWeight:700,color:'var(--gray-400)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:8}}>💳 Pagamento registrado</div>
+                    {viewPagamentos.map(pag => {
+                      const formaLabel = {pix:'PIX',dinheiro:'Dinheiro',debito:'Débito',credito:'Crédito'}[pag.forma]||pag.forma;
+                      return (
+                        <div key={pag.id} style={{background:'var(--gray-50)',borderRadius:'var(--r-sm)',padding:'12px 14px',border:'1px solid var(--gray-200)',marginBottom:8}}>
+                          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+                            <span style={{fontSize:13,fontWeight:700,color:'var(--gray-800)'}}>
+                              {pag.forma==='pix'?'📱':pag.forma==='dinheiro'?'💵':'💳'} {formaLabel}
+                              {pag.forma==='credito'&&pag.parcelas>1?` ${pag.parcelas}x`:''}
+                              {pag.bandeira?` · ${pag.bandeira.charAt(0).toUpperCase()+pag.bandeira.slice(1)}`:''}
+                            </span>
+                            <span style={{fontSize:13,fontWeight:700,color:'var(--success)'}}>{fmt.currency(pag.valor_total)}</span>
+                          </div>
+                          {pag.taxa_maquininha > 0 && (
+                            <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--gray-500)'}}>
+                              <span>Taxa {pag.taxa_maquininha}% → Líquido:</span>
+                              <span style={{fontWeight:600,color:'var(--gray-700)'}}>{fmt.currency(pag.valor_liquido)}</span>
+                            </div>
+                          )}
+                          {pag.forma==='credito'&&pag.parcelas>1&&(
+                            <div style={{fontSize:12,color:'var(--gray-500)',marginTop:4}}>
+                              {pag.parcelas}x de {fmt.currency(pag.valor_parcela)} (recebimento a cada 30 dias)
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
                 <div className="form-actions">
                   <button className="btn btn-outline" onClick={()=>setModal(null)}>Fechar</button>
                   <button className="btn btn-outline" onClick={()=>imprimir(viewing)}>🖨️ Imprimir</button>

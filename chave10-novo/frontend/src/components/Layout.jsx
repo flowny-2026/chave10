@@ -367,6 +367,98 @@ function VencimentoAlert() {
   );
 }
 
+// ── Popup de parcelas a receber hoje ─────────────────────────
+function ParcelasHojeAlert() {
+  const [parcelas, setParcelas] = useState([]);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const hojeStr = new Date().toISOString().split('T')[0];
+    api.app.parcelasReceber.list()
+      .then(data => {
+        const dodia = (data || []).filter(p => !p.recebido && p.data_recebimento === hojeStr);
+        if (dodia.length > 0) {
+          setParcelas(dodia);
+          // Só mostra 1x por sessão
+          const key = 'c10_parcelas_alert_' + hojeStr;
+          if (!sessionStorage.getItem(key)) {
+            setVisible(true);
+            sessionStorage.setItem(key, '1');
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  if (!visible || parcelas.length === 0) return null;
+
+  const fmt = {
+    currency: v => 'R$ ' + parseFloat(v || 0).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.'),
+  };
+  const total = parcelas.reduce((s, p) => s + parseFloat(p.valor || 0), 0);
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 1002,
+      background: 'rgba(0,0,0,0.55)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: 20,
+      animation: 'fadeIn .2s ease',
+    }}>
+      <div style={{
+        background: '#fff', borderRadius: 16, maxWidth: 440, width: '100%',
+        boxShadow: '0 24px 64px rgba(0,0,0,0.25)', overflow: 'hidden',
+        animation: 'slideUp .25s ease',
+      }}>
+        <div style={{
+          background: 'linear-gradient(135deg,#059669,#10b981)',
+          padding: '24px 28px 20px', textAlign: 'center',
+        }}>
+          <div style={{ fontSize: 44, marginBottom: 8 }}>💰</div>
+          <div style={{ fontFamily: 'Poppins,sans-serif', fontSize: 19, fontWeight: 800, color: '#fff', marginBottom: 4 }}>
+            Hoje você recebe {fmt.currency(total)}!
+          </div>
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>
+            {parcelas.length} parcela{parcelas.length > 1 ? 's' : ''} de cartão caindo na conta
+          </div>
+        </div>
+
+        <div style={{ padding: '16px 24px', maxHeight: 220, overflowY: 'auto' }}>
+          {parcelas.map(p => (
+            <div key={p.id} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '10px 12px', background: '#F0FDF4', borderRadius: 8,
+              marginBottom: 6, border: '1px solid #BBF7D0',
+            }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#1F2937' }}>
+                  OS #{String(p.os_id).padStart(4, '0')} · {p.cliente_nome || '—'}
+                </div>
+                <div style={{ fontSize: 11, color: '#6B7280' }}>{p.numero_parcela}ª parcela</div>
+              </div>
+              <span style={{ fontSize: 14, fontWeight: 700, color: '#059669' }}>{fmt.currency(p.valor)}</span>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ padding: '0 24px 24px', display: 'flex', gap: 10 }}>
+          <button onClick={() => setVisible(false)} style={{
+            flex: 1, padding: '11px 0', borderRadius: 8,
+            border: '1.5px solid #E5E7EB', background: '#fff',
+            fontSize: 14, fontWeight: 600, color: '#6B7280', cursor: 'pointer',
+          }}>Fechar</button>
+          <button onClick={() => { setVisible(false); window.location.href = '/app/financeiro'; }} style={{
+            flex: 2, padding: '11px 0', borderRadius: 8, border: 'none',
+            background: 'linear-gradient(135deg,#059669,#10b981)',
+            fontSize: 14, fontWeight: 700, color: '#fff', cursor: 'pointer',
+            boxShadow: '0 2px 8px rgba(5,150,105,.35)',
+          }}>💳 Ver no Financeiro</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function UserDropdown({ user, onLogout }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -463,6 +555,7 @@ export default function Layout({ area }) {
       {open && <div className="sidebar-overlay open" onClick={() => setOpen(false)} />}
       {area === 'app' && user?.perfil !== 'master_admin' && <VencimentoAlert />}
       {area === 'app' && <BoletoAlert />}
+      {area === 'app' && user?.perfil !== 'funcionario' && <ParcelasHojeAlert />}
 
       <aside className={`sidebar${open ? ' open' : ''}`}>
         <div className="sidebar-brand">
