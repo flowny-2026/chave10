@@ -15,25 +15,20 @@ app.use(helmet());
 const allowedOrigins = process.env.NODE_ENV === 'production'
   ? [
       process.env.FRONTEND_URL,
-      // Aceita qualquer subdomínio da Vercel e Railway
+      process.env.FRONTEND_URL_2, // domínio extra opcional
     ].filter(Boolean)
   : ['http://localhost:5173', 'http://localhost:3000'];
+
+if (process.env.NODE_ENV === 'production' && allowedOrigins.length === 0) {
+  console.error('❌ FATAL: FRONTEND_URL não definido. Configure a variável de ambiente.');
+  process.exit(1);
+}
 
 app.use(cors({
   origin(origin, cb) {
     if (!origin) return cb(null, true); // Postman, mobile, server-to-server
-    // Em produção aceita: FRONTEND_URL definido, *.vercel.app, *.railway.app, github.io
-    if (process.env.NODE_ENV === 'production') {
-      if (
-        allowedOrigins.includes(origin) ||
-        origin.endsWith('.vercel.app') ||
-        origin.endsWith('.railway.app') ||
-        origin.endsWith('.github.io')
-      ) return cb(null, true);
-      return cb(new Error('CORS: origem não permitida'));
-    }
     if (allowedOrigins.includes(origin)) return cb(null, true);
-    cb(new Error('CORS: origem não permitida'));
+    return cb(new Error('CORS: origem não permitida'));
   },
   credentials: true,
 }));
@@ -50,10 +45,20 @@ const loginLimiter = rateLimit({
   message: { error: 'Muitas tentativas de login. Tente novamente em 15 minutos.' },
 });
 
+// ── RATE LIMIT: proteção geral para rotas de escrita ─────────
+const writeLimiter = rateLimit({
+  windowMs: 60 * 1000,       // 1 minuto
+  max: 120,                  // máx 120 requisições por IP por minuto
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Muitas requisições. Tente novamente em instantes.' },
+  skip: (req) => req.method === 'GET', // só aplica em POST, PUT, PATCH, DELETE
+});
+
 // ── ROTAS ─────────────────────────────────────────────────────
 app.use('/api/auth',   loginLimiter, require('./routes/auth'));
-app.use('/api/admin',  require('./routes/admin'));
-app.use('/api/app',    require('./routes/app'));
+app.use('/api/admin',  writeLimiter, require('./routes/admin'));
+app.use('/api/app',    writeLimiter, require('./routes/app'));
 app.use('/api/backup', require('./routes/backup'));
 
 // ── HEALTH CHECK ──────────────────────────────────────────────
@@ -62,7 +67,8 @@ app.get('/health', (_, res) => res.json({ ok: true }));
 // ── SEED DEMO (protegido por chave secreta) ───────────────────
 app.get('/seed-demo', async (req, res) => {
   const chave = req.query.chave;
-  const SEED_KEY = process.env.SEED_KEY || 'chave10seed2026';
+  const SEED_KEY = process.env.SEED_KEY;
+  if (!SEED_KEY) return res.status(503).json({ error: 'Seed desabilitado em produção' });
   if (chave !== SEED_KEY) return res.status(403).json({ error: 'Chave inválida' });
 
   try {

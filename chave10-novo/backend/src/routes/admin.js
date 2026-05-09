@@ -2,7 +2,7 @@ const router = require('express').Router();
 const bcrypt = require('bcryptjs');
 const { query, queryOne, run } = require('../db');
 const { authMiddleware, masterAdminOnly } = require('../middleware/auth');
-const { validateOficina, validateUsuario, validatePagamento } = require('../middleware/validate');
+const { validateOficina, validateUsuario, validatePagamento, validateId } = require('../middleware/validate');
 const log = require('../utils/logger');
 
 router.use(authMiddleware, masterAdminOnly);
@@ -56,7 +56,7 @@ router.post('/oficinas', validateOficina, async (req,res) => {
   } catch(err){if(err.code==='23505')return res.status(400).json({error:'Email já cadastrado'});res.status(500).json({error:'Erro interno'});}
 });
 
-router.put('/oficinas/:id', validateOficina, async (req,res) => {
+router.put('/oficinas/:id', validateId, validateOficina, async (req,res) => {
   try {
     const {nome,responsavel,telefone,email,plano,status_assinatura,data_vencimento,observacoes,logo,endereco}=req.body;
     await run("UPDATE oficinas SET nome=COALESCE($1,nome),responsavel=COALESCE($2,responsavel),telefone=COALESCE($3,telefone),email=COALESCE($4,email),plano=COALESCE($5,plano),status_assinatura=COALESCE($6,status_assinatura),data_vencimento=COALESCE($7,data_vencimento),observacoes=COALESCE($8,observacoes),logo=COALESCE($9,logo),endereco=COALESCE($10,endereco) WHERE id=$11",[nome,responsavel||null,telefone||null,email,plano||null,status_assinatura||null,data_vencimento||null,observacoes||null,logo||null,endereco||null,req.params.id]);
@@ -64,7 +64,7 @@ router.put('/oficinas/:id', validateOficina, async (req,res) => {
   } catch(err){if(err.code==='23505')return res.status(400).json({error:'Email já cadastrado'});res.status(500).json({error:'Erro interno'});}
 });
 
-router.patch('/oficinas/:id/status', async (req,res) => {
+router.patch('/oficinas/:id/status', validateId, async (req,res) => {
   try {
     const {status}=req.body;
     if(!['active','pending','overdue','blocked'].includes(status)) return res.status(400).json({error:'Status inválido'});
@@ -73,17 +73,17 @@ router.patch('/oficinas/:id/status', async (req,res) => {
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
-router.delete('/oficinas/:id', async (req,res) => {
+router.delete('/oficinas/:id', validateId, async (req,res) => {
   try { await run('DELETE FROM oficinas WHERE id=$1',[req.params.id]); res.json({ok:true}); }
   catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
-router.get('/oficinas/:id/usuarios', async (req,res) => {
+router.get('/oficinas/:id/usuarios', validateId, async (req,res) => {
   try { res.json(await query('SELECT id,nome,email,perfil,ativo,ultimo_acesso FROM usuarios WHERE oficina_id=$1',[req.params.id])); }
   catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
-router.get('/oficinas/:id/detalhes', async (req,res) => {
+router.get('/oficinas/:id/detalhes', validateId, async (req,res) => {
   try {
     const id=req.params.id;
     const [oficina,usuarios,pagamentos,clientes,veiculos,os,fat] = await Promise.all([

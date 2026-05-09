@@ -125,6 +125,16 @@ function validatePagamento(req, res, next) {
   next();
 }
 
+// Middleware: valida parâmetro :id como inteiro positivo
+function validateId(req, res, next) {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({ error: 'ID inválido' });
+  }
+  req.params.id = id;
+  next();
+}
+
 module.exports = {
   validateLogin,
   validateOficina,
@@ -133,4 +143,5 @@ module.exports = {
   validateVeiculo,
   validateOS,
   validatePagamento,
+  validateId,
 };

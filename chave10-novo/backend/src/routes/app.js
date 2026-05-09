@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const { query, queryOne, run } = require('../db');
 const { authMiddleware, oficinaSelf, naoFuncionario } = require('../middleware/auth');
-const { validateCliente, validateVeiculo, validateOS } = require('../middleware/validate');
+const { validateCliente, validateVeiculo, validateOS, validateId } = require('../middleware/validate');
 const log = require('../utils/logger');
 
 router.use(authMiddleware, oficinaSelf);
@@ -57,7 +57,7 @@ router.post('/clientes', validateCliente, async (req,res) => {
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
-router.put('/clientes/:id', validateCliente, async (req,res) => {
+router.put('/clientes/:id', validateId, validateCliente, async (req,res) => {
   try {
     const {nome,telefone,email,obs,endereco}=req.body;
     await run("UPDATE clientes SET nome=COALESCE($1,nome),telefone=COALESCE($2,telefone),email=COALESCE($3,email),obs=COALESCE($4,obs),endereco=COALESCE($5,endereco) WHERE id=$6 AND oficina_id=$7",[nome,telefone||null,email||null,obs||null,endereco||null,req.params.id,oid(req)]);
@@ -65,7 +65,7 @@ router.put('/clientes/:id', validateCliente, async (req,res) => {
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
-router.delete('/clientes/:id', async (req,res) => {
+router.delete('/clientes/:id', validateId, async (req,res) => {
   try { await run('DELETE FROM clientes WHERE id=$1 AND oficina_id=$2',[req.params.id,oid(req)]); res.json({ok:true}); }
   catch(err){res.status(500).json({error:'Erro interno'});}
 });
@@ -90,7 +90,7 @@ router.post('/veiculos', validateVeiculo, async (req,res) => {
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
-router.put('/veiculos/:id', validateVeiculo, async (req,res) => {
+router.put('/veiculos/:id', validateId, validateVeiculo, async (req,res) => {
   try {
     const {cliente_id,placa,modelo,marca,ano,km}=req.body;
     await run("UPDATE veiculos SET cliente_id=COALESCE($1,cliente_id),placa=COALESCE($2,placa),modelo=COALESCE($3,modelo),marca=COALESCE($4,marca),ano=COALESCE($5,ano),km=COALESCE($6,km) WHERE id=$7 AND oficina_id=$8",[cliente_id||null,placa||null,modelo,marca||null,ano||null,km||null,req.params.id,oid(req)]);
@@ -98,7 +98,7 @@ router.put('/veiculos/:id', validateVeiculo, async (req,res) => {
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
-router.delete('/veiculos/:id', async (req,res) => {
+router.delete('/veiculos/:id', validateId, async (req,res) => {
   try { await run('DELETE FROM veiculos WHERE id=$1 AND oficina_id=$2',[req.params.id,oid(req)]); res.json({ok:true}); }
   catch(err){res.status(500).json({error:'Erro interno'});}
 });
@@ -142,7 +142,7 @@ router.post('/os', validateOS, async (req,res) => {
   } catch(err){log.error('app_post_os',err);res.status(500).json({error:'Erro interno'});}
 });
 
-router.put('/os/:id', async (req,res) => {
+router.put('/os/:id', validateId, async (req,res) => {
   try {
     const {descricao,servicos,pecas,pecas_itens,valor_mo,valor_pecas,status,observacao,cliente_id,veiculo_id,data}=req.body;
     const isFuncionario = req.user?.perfil === 'funcionario';
@@ -156,7 +156,7 @@ router.put('/os/:id', async (req,res) => {
   } catch(err){log.error('app_put_os',err);res.status(500).json({error:'Erro interno'});}
 });
 
-router.patch('/os/:id/status', async (req,res) => {
+router.patch('/os/:id/status', validateId, async (req,res) => {
   try {
     const {status}=req.body;
     if(!['em_andamento','finalizado'].includes(status)) return res.status(400).json({error:'Status inválido'});
@@ -165,7 +165,7 @@ router.patch('/os/:id/status', async (req,res) => {
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
-router.delete('/os/:id', async (req,res) => {
+router.delete('/os/:id', validateId, async (req,res) => {
   try { await run('DELETE FROM ordens_servico WHERE id=$1 AND oficina_id=$2',[req.params.id,oid(req)]); res.json({ok:true}); }
   catch(err){res.status(500).json({error:'Erro interno'});}
 });
@@ -185,7 +185,7 @@ router.post('/lembretes', async (req,res) => {
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
-router.put('/lembretes/:id', async (req,res) => {
+router.put('/lembretes/:id', validateId, async (req,res) => {
   try {
     const {veiculo_id,tipo,descricao,data_previsao,km_previsao,visto}=req.body;
     await run("UPDATE lembretes SET veiculo_id=COALESCE($1,veiculo_id),tipo=COALESCE($2,tipo),descricao=COALESCE($3,descricao),data_previsao=COALESCE($4,data_previsao),km_previsao=COALESCE($5,km_previsao),visto=COALESCE($6,visto) WHERE id=$7 AND oficina_id=$8",[veiculo_id||null,tipo||null,descricao||null,data_previsao||null,km_previsao||null,visto!=null?visto:null,req.params.id,oid(req)]);
@@ -193,7 +193,7 @@ router.put('/lembretes/:id', async (req,res) => {
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
-router.delete('/lembretes/:id', async (req,res) => {
+router.delete('/lembretes/:id', validateId, async (req,res) => {
   try { await run('DELETE FROM lembretes WHERE id=$1 AND oficina_id=$2',[req.params.id,oid(req)]); res.json({ok:true}); }
   catch(err){res.status(500).json({error:'Erro interno'});}
 });
@@ -229,7 +229,7 @@ router.post('/estoque', async (req,res) => {
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
-router.put('/estoque/:id', async (req,res) => {
+router.put('/estoque/:id', validateId, async (req,res) => {
   try {
     const {nome,categoria,tipo,marca,aplicacao,quantidade,estoque_min,preco,data_compra,obs,codigo_barras}=req.body;
     const isFuncionario = req.user?.perfil === 'funcionario';
@@ -241,7 +241,7 @@ router.put('/estoque/:id', async (req,res) => {
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
-router.delete('/estoque/:id', async (req,res) => {
+router.delete('/estoque/:id', validateId, async (req,res) => {
   try { await run('DELETE FROM estoque WHERE id=$1 AND oficina_id=$2',[req.params.id,oid(req)]); res.json({ok:true}); }
   catch(err){res.status(500).json({error:'Erro interno'});}
 });
@@ -266,7 +266,7 @@ router.post('/despesas', naoFuncionario, async (req,res) => {
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
-router.put('/despesas/:id', naoFuncionario, async (req,res) => {
+router.put('/despesas/:id', naoFuncionario, validateId, async (req,res) => {
   try {
     const {descricao,categoria,valor,data,vencimento,pago,obs}=req.body;
     await run("UPDATE despesas SET descricao=COALESCE($1,descricao),categoria=COALESCE($2,categoria),valor=COALESCE($3,valor),data=COALESCE($4,data),vencimento=COALESCE($5,vencimento),pago=COALESCE($6,pago),obs=COALESCE($7,obs) WHERE id=$8 AND oficina_id=$9",[descricao||null,categoria||null,valor||null,data||null,vencimento||null,pago!=null?pago:null,obs||null,req.params.id,oid(req)]);
@@ -274,7 +274,7 @@ router.put('/despesas/:id', naoFuncionario, async (req,res) => {
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
-router.delete('/despesas/:id', naoFuncionario, async (req,res) => {
+router.delete('/despesas/:id', naoFuncionario, validateId, async (req,res) => {
   try { await run('DELETE FROM despesas WHERE id=$1 AND oficina_id=$2',[req.params.id,oid(req)]); res.json({ok:true}); }
   catch(err){res.status(500).json({error:'Erro interno'});}
 });
@@ -312,7 +312,7 @@ router.post('/orcamentos', async (req,res) => {
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
-router.put('/orcamentos/:id', async (req,res) => {
+router.put('/orcamentos/:id', validateId, async (req,res) => {
   try {
     const {descricao,servicos,pecas_itens,valor_mo,desconto,status,validade,obs,cliente_id,veiculo_id}=req.body;
     const isFuncionario = req.user?.perfil === 'funcionario';
@@ -329,7 +329,7 @@ router.put('/orcamentos/:id', async (req,res) => {
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
-router.patch('/orcamentos/:id/status', async (req,res) => {
+router.patch('/orcamentos/:id/status', validateId, async (req,res) => {
   try {
     const {status}=req.body;
     if(!['pendente','aprovado','rejeitado'].includes(status)) return res.status(400).json({error:'Status inválido'});
@@ -338,7 +338,7 @@ router.patch('/orcamentos/:id/status', async (req,res) => {
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
-router.delete('/orcamentos/:id', async (req,res) => {
+router.delete('/orcamentos/:id', validateId, async (req,res) => {
   try { await run('DELETE FROM orcamentos WHERE id=$1 AND oficina_id=$2',[req.params.id,oid(req)]); res.json({ok:true}); }
   catch(err){res.status(500).json({error:'Erro interno'});}
 });
@@ -363,7 +363,7 @@ router.post('/agenda', async (req,res) => {
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
-router.delete('/agenda/:id', async (req,res) => {
+router.delete('/agenda/:id', validateId, async (req,res) => {
   try { await run('DELETE FROM agenda WHERE id=$1 AND oficina_id=$2',[req.params.id,oid(req)]); res.json({ok:true}); }
   catch(err){res.status(500).json({error:'Erro interno'});}
 });
