@@ -99,7 +99,11 @@ export default function AppMensagens() {
         </div>
       </div>
 
-      <div style={{display:'grid',gridTemplateColumns:'340px 1fr',gap:20,alignItems:'start'}}>
+      <div style={{display:'grid',gridTemplateColumns:'min(340px, 100%) 1fr',gap:20,alignItems:'start'}}
+           className="mensagens-layout"
+           data-mobile-col="true">
+        {/* aplica coluna única no mobile via CSS */}
+        <style>{`@media(max-width:768px){[data-mobile-col]{grid-template-columns:1fr!important;}}`}</style>
 
         {/* PAINEL ESQUERDO */}
         <div style={{display:'flex',flexDirection:'column',gap:16}}>
