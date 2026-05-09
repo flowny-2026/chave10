@@ -1,5 +1,6 @@
 ﻿import { useState, useRef, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import PWAInstallButton from './PWAInstallButton';
 
 // SVG Icons
 const IC = {
@@ -384,6 +385,9 @@ export default function Layout({ area }) {
       </div>
 
       {/* Bottom Navigation removido a pedido do usuário */}
+
+      {/* Botão de instalação PWA — aparece após login, some após instalar */}
+      <PWAInstallButton />
     </div>
   );
 }
