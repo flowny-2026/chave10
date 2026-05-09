@@ -2,6 +2,7 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import PWAInstallButton from './PWAInstallButton';
 import GlobalSearch from './GlobalSearch';
+import { api } from '../api';
 
 // SVG Icons
 const IC = {
@@ -48,6 +49,183 @@ const appNavGestao = [
 
 function getUser() {
   try { return JSON.parse(localStorage.getItem('c10_user')); } catch { return null; }
+}
+
+// ── Popup de aviso de boletos/contas a vencer ────────────────
+function BoletoAlert() {
+  const user = getUser();
+  const [boletos, setBoletos] = useState([]);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    // Só exibe para perfis que têm acesso ao financeiro
+    if (!user || user.perfil === 'funcionario' || user.perfil === 'master_admin') return;
+
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const amanha = new Date(hoje);
+    amanha.setDate(amanha.getDate() + 1);
+
+    const toISO = d => d.toISOString().split('T')[0];
+
+    // Busca despesas dos próximos 2 dias
+    api.app.despesas.list(toISO(hoje), toISO(amanha))
+      .then(data => {
+        const pendentes = (data || []).filter(d =>
+          !d.pago && d.vencimento && (d.vencimento === toISO(hoje) || d.vencimento === toISO(amanha))
+        );
+        if (pendentes.length > 0) {
+          setBoletos(pendentes);
+          setVisible(true);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  if (!visible || boletos.length === 0) return null;
+
+  const fmt = {
+    currency: v => 'R$ ' + parseFloat(v || 0).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.'),
+    date: iso => { if (!iso) return '-'; const [y, m, d] = iso.split('-'); return `${d}/${m}/${y}`; },
+  };
+
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  const toISO = d => d.toISOString().split('T')[0];
+  const hojeStr = toISO(hoje);
+
+  const venceHoje   = boletos.filter(d => d.vencimento === hojeStr);
+  const venceAmanha = boletos.filter(d => d.vencimento !== hojeStr);
+  const totalValor  = boletos.reduce((s, d) => s + parseFloat(d.valor || 0), 0);
+  const temHoje     = venceHoje.length > 0;
+
+  const CAT_ICONS = {
+    'Aluguel': '🏠', 'Energia': '⚡', 'Água': '💧', 'Internet': '🌐',
+    'Folha de pagamento': '👥', 'Peças/Estoque': '🔩', 'Ferramentas': '🔧',
+    'Boleto/Financiamento': '📄', 'Impostos': '🏛️', 'Marketing': '📣',
+    'Combustível': '⛽', 'Manutenção': '🛠️', 'Outros': '📦',
+  };
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 1001,
+      background: 'rgba(0,0,0,0.55)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: 20,
+      animation: 'fadeIn .2s ease',
+    }}>
+      <div style={{
+        background: '#fff',
+        borderRadius: 16,
+        maxWidth: 460,
+        width: '100%',
+        boxShadow: '0 24px 64px rgba(0,0,0,0.25)',
+        overflow: 'hidden',
+        animation: 'slideUp .25s ease',
+      }}>
+        {/* Topo */}
+        <div style={{
+          background: temHoje
+            ? 'linear-gradient(135deg,#dc2626,#ef4444)'
+            : 'linear-gradient(135deg,#d97706,#f59e0b)',
+          padding: '24px 28px 20px',
+          textAlign: 'center',
+        }}>
+          <div style={{ fontSize: 44, marginBottom: 8 }}>{temHoje ? '🚨' : '⚠️'}</div>
+          <div style={{ fontFamily: 'Poppins,sans-serif', fontSize: 19, fontWeight: 800, color: '#fff', marginBottom: 4 }}>
+            {temHoje
+              ? `${venceHoje.length} conta${venceHoje.length > 1 ? 's' : ''} vence${venceHoje.length > 1 ? 'm' : ''} hoje!`
+              : `${boletos.length} conta${boletos.length > 1 ? 's' : ''} vence${boletos.length > 1 ? 'm' : ''} amanhã!`}
+          </div>
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>
+            Total pendente: <strong>{fmt.currency(totalValor)}</strong>
+          </div>
+        </div>
+
+        {/* Lista de boletos */}
+        <div style={{ padding: '16px 24px', maxHeight: 260, overflowY: 'auto' }}>
+          {venceHoje.length > 0 && (
+            <>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#dc2626', textTransform: 'uppercase', letterSpacing: '.6px', marginBottom: 8 }}>
+                Vence hoje
+              </div>
+              {venceHoje.map(d => (
+                <div key={d.id} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '10px 12px', background: '#FEF2F2', borderRadius: 8,
+                  marginBottom: 6, border: '1px solid #FECACA',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 18 }}>{CAT_ICONS[d.categoria] || '📦'}</span>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1F2937' }}>{d.descricao}</div>
+                      <div style={{ fontSize: 11, color: '#9CA3AF' }}>{d.categoria}</div>
+                    </div>
+                  </div>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: '#dc2626' }}>{fmt.currency(d.valor)}</span>
+                </div>
+              ))}
+            </>
+          )}
+
+          {venceAmanha.length > 0 && (
+            <>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#d97706', textTransform: 'uppercase', letterSpacing: '.6px', marginBottom: 8, marginTop: venceHoje.length > 0 ? 12 : 0 }}>
+                Vence amanhã
+              </div>
+              {venceAmanha.map(d => (
+                <div key={d.id} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '10px 12px', background: '#FFFBEB', borderRadius: 8,
+                  marginBottom: 6, border: '1px solid #FDE68A',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 18 }}>{CAT_ICONS[d.categoria] || '📦'}</span>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1F2937' }}>{d.descricao}</div>
+                      <div style={{ fontSize: 11, color: '#9CA3AF' }}>{d.categoria} · vence {fmt.date(d.vencimento)}</div>
+                    </div>
+                  </div>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: '#d97706' }}>{fmt.currency(d.valor)}</span>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+
+        {/* Ações */}
+        <div style={{ padding: '0 24px 24px', display: 'flex', gap: 10 }}>
+          <button
+            onClick={() => setVisible(false)}
+            style={{
+              flex: 1, padding: '11px 0', borderRadius: 8,
+              border: '1.5px solid #E5E7EB', background: '#fff',
+              fontSize: 14, fontWeight: 600, color: '#6B7280', cursor: 'pointer',
+            }}
+          >
+            Fechar
+          </button>
+          <button
+            onClick={() => {
+              setVisible(false);
+              window.location.href = '/app/financeiro';
+            }}
+            style={{
+              flex: 2, padding: '11px 0', borderRadius: 8,
+              border: 'none',
+              background: temHoje
+                ? 'linear-gradient(135deg,#dc2626,#ef4444)'
+                : 'linear-gradient(135deg,#d97706,#f59e0b)',
+              fontSize: 14, fontWeight: 700, color: '#fff',
+              cursor: 'pointer',
+              boxShadow: temHoje ? '0 2px 8px rgba(220,38,38,.35)' : '0 2px 8px rgba(217,119,6,.35)',
+            }}
+          >
+            💰 Ver no Financeiro
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ── Popup de aviso de vencimento ─────────────────────────────
@@ -281,6 +459,7 @@ export default function Layout({ area }) {
     <div className="app-shell">
       {open && <div className="sidebar-overlay open" onClick={() => setOpen(false)} />}
       {area === 'app' && user?.perfil !== 'master_admin' && <VencimentoAlert />}
+      {area === 'app' && <BoletoAlert />}
 
       <aside className={`sidebar${open ? ' open' : ''}`}>
         <div className="sidebar-brand">
