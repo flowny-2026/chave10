@@ -35,8 +35,6 @@ export default function Cadastro() {
     }
   }, []);
 
-  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-
   // Form de dados pessoais com validação
   const formPessoal = useForm(
     { nome: '', email: '', senha: '', confirmarSenha: '' },
