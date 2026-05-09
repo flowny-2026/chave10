@@ -93,7 +93,7 @@ async function seed() {
   }
 
   // ── 2. Cria oficina demo ──────────────────────────────────
-  const vencimento = d(365); // 1 ano de validade
+  const vencimento = d(365); // 1 ano — conta demo sempre disponível
   const oficina = await q1(
     `INSERT INTO oficinas(nome, responsavel, telefone, email, plano, status_assinatura, data_vencimento, endereco, logo)
      VALUES($1,$2,$3,$4,'mensal','active',$5,$6,$7) RETURNING id`,
