@@ -1,6 +1,5 @@
 import { useState, useRef } from 'react';
 import Papa from 'papaparse';
-import * as XLSX from 'xlsx';
 import { api } from '../api';
 
 // Colunas que o sistema aceita
@@ -32,8 +31,9 @@ function lerArquivo(file) {
       });
     } else if (ext === 'xlsx' || ext === 'xls') {
       const reader = new FileReader();
-      reader.onload = e => {
+      reader.onload = async e => {
         try {
+          const XLSX = await import('xlsx');
           const wb = XLSX.read(e.target.result, { type: 'array' });
           const ws = wb.Sheets[wb.SheetNames[0]];
           const data = XLSX.utils.sheet_to_json(ws, { defval: '' });
