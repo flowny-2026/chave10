@@ -71,7 +71,11 @@ export default function FormInput({
           autoFocus={autoFocus}
           maxLength={maxLength}
           className={showError ? 'error' : ''}
-          style={isPassword ? { paddingRight: 40 } : undefined}
+          style={{
+            ...(isPassword ? { paddingRight: 40 } : {}),
+            fontSize: '16px', // evita zoom no iOS
+            minHeight: '46px',
+          }}
           {...props}
         />
         {isPassword && (

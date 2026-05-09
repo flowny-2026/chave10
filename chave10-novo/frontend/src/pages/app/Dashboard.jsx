@@ -96,24 +96,24 @@ export default function AppDashboard() {
     <div>
       {/* BANNER DE AVISO */}
       {mostrarAviso && (
-        <div style={{
+        <div className="aviso-banner" style={{
           background: avisoTipo === 'critical' ? 'linear-gradient(135deg, #dc2626, #b91c1c)' : avisoTipo === 'danger' ? 'linear-gradient(135deg, #ea580c, #c2410c)' : 'linear-gradient(135deg, #f59e0b, #d97706)',
           borderRadius: 'var(--r-lg)',
-          padding: '18px 24px',
-          marginBottom: 20,
+          padding: '16px 20px',
+          marginBottom: 16,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: 16,
+          gap: 12,
           flexWrap: 'wrap',
           boxShadow: '0 4px 20px rgba(0,0,0,.15)',
         }}>
-          <div style={{ flex: 1, minWidth: 200 }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 4 }}>
+          <div style={{ flex: 1, minWidth: 180 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 3 }}>
               {avisoMensagem}
             </div>
-            <div style={{ fontSize: 13, color: 'rgba(255,255,255,.8)' }}>
-              Acesse a página de planos para renovar sua assinatura e continuar usando o sistema.
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,.8)' }}>
+              Acesse a página de planos para renovar.
             </div>
           </div>
           <button 
@@ -121,18 +121,11 @@ export default function AppDashboard() {
             style={{
               background: '#fff',
               color: avisoTipo === 'critical' ? '#dc2626' : avisoTipo === 'danger' ? '#ea580c' : '#f59e0b',
-              border: 'none',
-              borderRadius: 'var(--r-sm)',
-              padding: '11px 22px',
-              fontSize: 14,
-              fontWeight: 700,
-              cursor: 'pointer',
+              border: 'none', borderRadius: 'var(--r-sm)',
+              padding: '10px 20px', fontSize: 13, fontWeight: 700,
+              cursor: 'pointer', whiteSpace: 'nowrap',
               boxShadow: '0 2px 8px rgba(0,0,0,.15)',
-              transition: 'transform .15s',
-              whiteSpace: 'nowrap',
             }}
-            onMouseOver={e => e.target.style.transform = 'translateY(-2px)'}
-            onMouseOut={e => e.target.style.transform = 'translateY(0)'}
           >
             💳 Ver Planos
           </button>
@@ -141,54 +134,57 @@ export default function AppDashboard() {
       
       {/* HERO */}
       {!isFuncionario && (
-      <div style={{background:'linear-gradient(135deg,var(--brand) 0%,var(--brand-mid) 100%)',borderRadius:'var(--r-lg)',padding:'28px 32px',marginBottom:24,position:'relative',overflow:'hidden'}}>
+      <div style={{background:'linear-gradient(135deg,var(--brand) 0%,var(--brand-mid) 100%)',borderRadius:'var(--r-lg)',padding:'24px 20px',marginBottom:20,position:'relative',overflow:'hidden'}}>
         <div style={{position:'absolute',inset:0,background:'radial-gradient(ellipse at 80% 50%,rgba(249,115,22,.18),transparent 60%)',pointerEvents:'none'}} />
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:20,position:'relative',zIndex:1}}>
-          <div>
-            <div style={{fontSize:12,fontWeight:600,color:'rgba(255,255,255,.5)',textTransform:'uppercase',letterSpacing:'.8px',marginBottom:6}}>Faturamento do mês</div>
-            <div style={{fontFamily:'Poppins,sans-serif',fontSize:38,fontWeight:800,color:'#fff',lineHeight:1,marginBottom:10}}>{fmt.currency(fat)}</div>
-            <div style={{fontSize:13,color:'rgba(255,255,255,.6)',marginBottom:meta>0?14:4}}>
-              {stats.finalizadasHoje||0} OS finalizada(s) hoje · {stats.emAndamento||0} em andamento
-            </div>
-            {meta > 0 ? (
-              <div>
-                <div style={{display:'flex',justifyContent:'space-between',marginBottom:5}}>
-                  <span style={{fontSize:12,color:'rgba(255,255,255,.5)'}}>Meta: {fmt.currency(meta)}</span>
-                  <span style={{fontSize:12,fontWeight:700,color:pctMeta>=100?'#4ade80':'rgba(255,255,255,.8)'}}>{pctMeta.toFixed(1)}%</span>
-                </div>
-                <div style={{height:6,background:'rgba(255,255,255,.15)',borderRadius:99,overflow:'hidden',width:320,maxWidth:'100%'}}>
-                  <div style={{height:'100%',width:`${pctMeta}%`,background:pctMeta>=100?'#4ade80':'var(--accent)',borderRadius:99}} />
-                </div>
-                <div style={{marginTop:8,fontSize:13,color:'rgba(255,255,255,.7)'}}>
-                  {pctMeta>=100 ? '🏆 Meta atingida! Parabéns!' : `Hoje você precisa faturar ${fmt.currency(porDia)} para bater a meta`}
-                </div>
+        <div style={{position:'relative',zIndex:1}}>
+          {/* Linha superior: faturamento + botão */}
+          <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:12,flexWrap:'wrap'}}>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:11,fontWeight:600,color:'rgba(255,255,255,.5)',textTransform:'uppercase',letterSpacing:'.8px',marginBottom:4}}>Faturamento do mês</div>
+              <div style={{fontFamily:'Poppins,sans-serif',fontSize:'clamp(26px,6vw,38px)',fontWeight:800,color:'#fff',lineHeight:1,marginBottom:8}}>{fmt.currency(fat)}</div>
+              <div style={{fontSize:12,color:'rgba(255,255,255,.6)',marginBottom:meta>0?12:4}}>
+                {stats.finalizadasHoje||0} OS finalizada(s) hoje · {stats.emAndamento||0} em andamento
               </div>
-            ) : (
-              <button onClick={()=>{setMetaInput('');setShowMeta(true);}} style={{background:'rgba(255,255,255,.12)',color:'#fff',border:'1px solid rgba(255,255,255,.2)',borderRadius:'var(--r-sm)',padding:'6px 14px',fontSize:13,cursor:'pointer'}}>
-                🎯 Definir meta mensal
-              </button>
-            )}
-          </div>
-          <div style={{display:'flex',flexDirection:'column',gap:10,alignItems:'flex-end'}}>
-            <button className="btn btn-primary" onClick={()=>navigate('/app/os')} style={{fontSize:15,padding:'14px 22px',boxShadow:'0 4px 20px rgba(249,115,22,.5)'}}>
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-              Nova Ordem de Serviço
-            </button>
-            <div style={{display:'flex',gap:8}}>
-              {[{label:'OS abertas',val:stats.emAndamento||0,color:(stats.emAndamento||0)>0?'#fbbf24':'#fff'},{label:'Clientes',val:stats.totalClientes||0,color:'#fff'}].map(item=>(
-                <div key={item.label} style={{background:'rgba(255,255,255,.1)',borderRadius:'var(--r-sm)',padding:'10px 14px',textAlign:'center',minWidth:80}}>
-                  <div style={{fontSize:10,color:'rgba(255,255,255,.45)',marginBottom:3,textTransform:'uppercase',letterSpacing:'.5px'}}>{item.label}</div>
-                  <div style={{fontSize:15,fontWeight:800,color:item.color}}>{item.val}</div>
+              {meta > 0 ? (
+                <div>
+                  <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
+                    <span style={{fontSize:11,color:'rgba(255,255,255,.5)'}}>Meta: {fmt.currency(meta)}</span>
+                    <span style={{fontSize:11,fontWeight:700,color:pctMeta>=100?'#4ade80':'rgba(255,255,255,.8)'}}>{pctMeta.toFixed(1)}%</span>
+                  </div>
+                  <div style={{height:6,background:'rgba(255,255,255,.15)',borderRadius:99,overflow:'hidden'}}>
+                    <div style={{height:'100%',width:`${pctMeta}%`,background:pctMeta>=100?'#4ade80':'var(--accent)',borderRadius:99,transition:'width .6s ease'}} />
+                  </div>
+                  <div style={{marginTop:6,fontSize:12,color:'rgba(255,255,255,.7)'}}>
+                    {pctMeta>=100 ? '🏆 Meta atingida! Parabéns!' : `Fature ${fmt.currency(porDia)}/dia para bater a meta`}
+                  </div>
+                </div>
+              ) : (
+                <button onClick={()=>{setMetaInput('');setShowMeta(true);}} style={{background:'rgba(255,255,255,.12)',color:'#fff',border:'1px solid rgba(255,255,255,.2)',borderRadius:'var(--r-sm)',padding:'6px 14px',fontSize:12,cursor:'pointer'}}>
+                  🎯 Definir meta mensal
+                </button>
+              )}
+            </div>
+            {/* Mini stats — lado direito no desktop, embaixo no mobile */}
+            <div style={{display:'flex',gap:8,flexShrink:0}}>
+              {[{label:'Em aberto',val:stats.emAndamento||0,color:(stats.emAndamento||0)>0?'#fbbf24':'#fff'},{label:'Clientes',val:stats.totalClientes||0,color:'#fff'}].map(item=>(
+                <div key={item.label} style={{background:'rgba(255,255,255,.1)',borderRadius:'var(--r-sm)',padding:'10px 12px',textAlign:'center',minWidth:72}}>
+                  <div style={{fontSize:9,color:'rgba(255,255,255,.45)',marginBottom:3,textTransform:'uppercase',letterSpacing:'.5px'}}>{item.label}</div>
+                  <div style={{fontSize:16,fontWeight:800,color:item.color}}>{item.val}</div>
                 </div>
               ))}
               {meta > 0 && (
-                <button onClick={()=>{setMetaInput(meta);setShowMeta(true);}} style={{background:'rgba(255,255,255,.1)',borderRadius:'var(--r-sm)',padding:'10px 14px',textAlign:'center',minWidth:80,border:'none',cursor:'pointer',color:'#fff'}}>
-                  <div style={{fontSize:10,color:'rgba(255,255,255,.45)',marginBottom:3,textTransform:'uppercase',letterSpacing:'.5px'}}>Meta</div>
+                <button onClick={()=>{setMetaInput(meta);setShowMeta(true);}} style={{background:'rgba(255,255,255,.1)',borderRadius:'var(--r-sm)',padding:'10px 12px',textAlign:'center',minWidth:72,border:'none',cursor:'pointer',color:'#fff'}}>
+                  <div style={{fontSize:9,color:'rgba(255,255,255,.45)',marginBottom:3,textTransform:'uppercase',letterSpacing:'.5px'}}>Meta</div>
                   <div style={{fontSize:12,fontWeight:700}}>✏️ Editar</div>
                 </button>
               )}
             </div>
           </div>
+          {/* Botão Nova OS — largura total no mobile */}
+          <button className="btn btn-primary" onClick={()=>navigate('/app/os')} style={{marginTop:16,width:'100%',justifyContent:'center',fontSize:14,padding:'13px 20px',boxShadow:'0 4px 20px rgba(249,115,22,.5)'}}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+            Nova Ordem de Serviço
+          </button>
         </div>
       </div>
       )}
@@ -216,7 +212,7 @@ export default function AppDashboard() {
       </div>
 
       {/* GRÁFICO + OS RECENTES */}
-      <div style={{display:'grid',gridTemplateColumns: isFuncionario ? '1fr' : '1fr 1fr',gap:20,marginBottom:20}}>
+      <div style={{display:'grid',gridTemplateColumns: isFuncionario ? '1fr' : 'minmax(0,1fr) minmax(0,1fr)',gap:16,marginBottom:20}}>
         {!isFuncionario && (
         <div className="card">
           <div className="card-header"><div className="card-title">📈 Faturamento mensal</div></div>
@@ -233,11 +229,11 @@ export default function AppDashboard() {
             : recentes.map(os=>(
               <div key={os.id} className="dash-os-row">
                 <div className="dash-os-num">#{String(os.id).padStart(4,'0')}</div>
-                <div className="dash-os-info">
-                  <div className="dash-os-cliente">{os.cliente_nome||'—'}</div>
+                <div className="dash-os-info" style={{minWidth:0}}>
+                  <div className="dash-os-cliente" style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{os.cliente_nome||'—'}</div>
                   <div className="dash-os-veiculo">{os.veiculo_modelo||'—'}{os.placa?` · ${os.placa}`:''}</div>
                 </div>
-                <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:4}}>
+                <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:4,flexShrink:0}}>
                   <span className={`badge ${STATUS_CLASS[os.status]||'badge-gray'}`}>{STATUS_LABEL[os.status]||os.status}</span>
                   {!isFuncionario && <span style={{fontSize:12,fontWeight:700,color:'var(--gray-600)'}}>{fmt.currency(os.valor)}</span>}
                 </div>

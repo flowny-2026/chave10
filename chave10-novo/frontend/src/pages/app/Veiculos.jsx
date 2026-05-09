@@ -134,7 +134,8 @@ export default function AppVeiculos() {
       <div className="card">
         {veiculos.length ? (
           <>
-            <div className="table-wrapper">
+            {/* Tabela — desktop */}
+            <div className="table-wrapper desktop-table">
               <table>
                 <thead>
                   <tr><th>Veículo</th><th>Placa</th><th>Ano</th><th>KM</th><th>Proprietário</th><th>Ações</th></tr>
@@ -159,7 +160,46 @@ export default function AppVeiculos() {
                 </tbody>
               </table>
             </div>
-            
+
+            {/* Cards — mobile */}
+            <div className="mobile-card-list">
+              {veiculos.map(v => (
+                <div key={v.id} className="mobile-card">
+                  <div className="mobile-card-header">
+                    <div className="mobile-card-avatar orange">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="mobile-card-title">{v.marca} {v.modelo}</div>
+                      <div className="mobile-card-sub" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                        <span className="veiculo-card-placa">{v.placa || '—'}</span>
+                        {v.ano && <span style={{ fontSize: 12, color: 'var(--gray-400)' }}>{v.ano}</span>}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mobile-card-body">
+                    {v.cliente_nome && (
+                      <div className="mobile-card-row">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        {v.cliente_nome}
+                      </div>
+                    )}
+                    {v.km && (
+                      <div className="mobile-card-row">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        {parseInt(v.km).toLocaleString('pt-BR')} km
+                      </div>
+                    )}
+                  </div>
+                  <div className="mobile-card-footer">
+                    <button className="btn btn-outline btn-sm" onClick={() => openHistorico(v)}>📜 Histórico</button>
+                    <button className="btn btn-outline btn-sm" onClick={() => openEdit(v)} style={{ flex: 'none', minWidth: 44 }}>✏️</button>
+                    <button className="btn btn-outline btn-sm" onClick={() => remove(v.id)} style={{ flex: 'none', minWidth: 44 }}>🗑️</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}
