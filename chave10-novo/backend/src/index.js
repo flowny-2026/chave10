@@ -59,6 +59,21 @@ app.use('/api/backup', require('./routes/backup'));
 // ── HEALTH CHECK ──────────────────────────────────────────────
 app.get('/health', (_, res) => res.json({ ok: true }));
 
+// ── SEED DEMO (protegido por chave secreta) ───────────────────
+app.get('/seed-demo', async (req, res) => {
+  const chave = req.query.chave;
+  const SEED_KEY = process.env.SEED_KEY || 'chave10seed2026';
+  if (chave !== SEED_KEY) return res.status(403).json({ error: 'Chave inválida' });
+
+  try {
+    const seed = require('./scripts/seed-demo');
+    await seed();
+    res.json({ ok: true, message: 'Conta demo criada! Email: teste@teste.com | Senha: demo1234' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── HANDLER DE ERROS GLOBAL ───────────────────────────────────
 // Nunca expõe stack trace para o cliente
 // eslint-disable-next-line no-unused-vars

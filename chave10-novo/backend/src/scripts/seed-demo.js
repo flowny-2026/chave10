@@ -1,8 +1,7 @@
 /**
  * Script de seed para conta de demonstração
- * Cria uma oficina demo com dados realistas: clientes, veículos, OS, orçamentos, estoque, despesas, agenda
- *
- * Uso: node src/scripts/seed-demo.js
+ * Pode ser executado via CLI: node src/scripts/seed-demo.js
+ * Ou via HTTP: GET /seed-demo?chave=chave10seed2026
  */
 
 require('dotenv').config({ path: require('path').join(__dirname, '../../.env') });
@@ -10,17 +9,15 @@ require('dotenv').config({ path: require('path').join(__dirname, '../../.env') }
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-});
+function getPool() {
+  return new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  });
+}
 
 const DEMO_EMAIL = 'teste@teste.com';
 const DEMO_SENHA = 'demo1234';
-
-async function q(text, params) { const r = await pool.query(text, params); return r.rows; }
-async function q1(text, params) { const r = await pool.query(text, params); return r.rows[0] || null; }
-async function run(text, params) { return pool.query(text, params); }
 
 // ── Dados de demonstração ────────────────────────────────────
 
@@ -78,6 +75,11 @@ const DESPESAS = [
 ];
 
 async function seed() {
+  const pool = getPool();
+  async function q(text, params) { const r = await pool.query(text, params); return r.rows; }
+  async function q1(text, params) { const r = await pool.query(text, params); return r.rows[0] || null; }
+  async function run(text, params) { return pool.query(text, params); }
+
   console.log('🌱 Iniciando seed da conta demo...\n');
 
   // ── 1. Remove conta demo anterior se existir ──────────────
@@ -375,8 +377,12 @@ async function seed() {
   await pool.end();
 }
 
-seed().catch(err => {
-  console.error('❌ Erro no seed:', err.message);
-  pool.end();
-  process.exit(1);
-});
+module.exports = seed;
+
+// Execução direta via CLI
+if (require.main === module) {
+  seed().catch(err => {
+    console.error('❌ Erro no seed:', err.message);
+    process.exit(1);
+  });
+}
