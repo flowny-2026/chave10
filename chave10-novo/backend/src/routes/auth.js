@@ -36,7 +36,12 @@ router.post('/login', validateLogin, async (req, res) => {
     }
 
     const oficina = await queryOne('SELECT * FROM oficinas WHERE id=$1', [usuario.oficina_id]);
-    if (!oficina) { log.loginFail({email,motivo:'oficina não encontrada',ip}); return res.status(403).json({error:'Oficina não encontrada'}); }
+    if (!oficina) {
+      // Oficina foi deletada — limpa vínculo
+      await run('UPDATE usuarios SET oficina_id=NULL WHERE id=$1', [usuario.id]);
+      log.loginFail({email,motivo:'oficina deletada, vínculo limpo',ip});
+      return res.status(403).json({error:'needsOficina', needsOficina: true});
+    }
     if (oficina.status_assinatura==='blocked') { log.loginFail({email,motivo:'bloqueada',ip}); return res.status(403).json({error:'blocked'}); }
     if (oficina.status_assinatura==='overdue')  { log.loginFail({email,motivo:'overdue',ip});   return res.status(403).json({error:'overdue'}); }
 
@@ -116,7 +121,12 @@ router.post('/google', async (req, res) => {
 
     // Usuário com oficina — verifica status da assinatura
     const oficina = await queryOne('SELECT * FROM oficinas WHERE id=$1', [usuario.oficina_id]);
-    if (!oficina) return res.status(403).json({ error: 'Oficina não encontrada' });
+    if (!oficina) {
+      // Oficina foi deletada — limpa o vínculo e pede nova oficina
+      await run('UPDATE usuarios SET oficina_id=NULL WHERE id=$1', [usuario.id]);
+      const token = jwt.sign({ id: usuario.id, perfil: 'admin_oficina', oficina_id: null, nome: usuario.nome }, SECRET, { expiresIn: '2h' });
+      return res.json({ token, needsOficina: true });
+    }
     if (oficina.status_assinatura === 'blocked') return res.status(403).json({ error: 'blocked' });
     if (oficina.status_assinatura === 'overdue')  return res.status(403).json({ error: 'overdue' });
 
@@ -162,8 +172,14 @@ router.post('/google-register', async (req, res) => {
       // Já tem conta — faz login normal
       if (existe.oficina_id) {
         const oficina = await queryOne('SELECT * FROM oficinas WHERE id=$1', [existe.oficina_id]);
-        if (oficina?.status_assinatura === 'blocked') return res.status(403).json({ error: 'blocked' });
-        if (oficina?.status_assinatura === 'overdue')  return res.status(403).json({ error: 'overdue' });
+        if (!oficina) {
+          // Oficina deletada — limpa vínculo e pede nova oficina
+          await run('UPDATE usuarios SET oficina_id=NULL WHERE id=$1', [existe.id]);
+          const token = jwt.sign({ id: existe.id, perfil: 'admin_oficina', oficina_id: null, nome: existe.nome }, SECRET, { expiresIn: '2h' });
+          return res.json({ token, needsOficina: true });
+        }
+        if (oficina.status_assinatura === 'blocked') return res.status(403).json({ error: 'blocked' });
+        if (oficina.status_assinatura === 'overdue')  return res.status(403).json({ error: 'overdue' });
         await run('UPDATE usuarios SET ultimo_acesso=$1 WHERE id=$2', [new Date().toISOString(), existe.id]);
         const token = jwt.sign({ id: existe.id, perfil: existe.perfil, oficina_id: existe.oficina_id, nome: existe.nome }, SECRET, { expiresIn: '8h' });
         return res.json({ token, needsOficina: false, usuario: { id: existe.id, nome: existe.nome, email, perfil: existe.perfil, oficina_id: existe.oficina_id } });
