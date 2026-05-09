@@ -260,37 +260,73 @@ export default function AppOrcamentos() {
 
       <div className="card">
         {listaFiltrada.length ? (
-          <div className="table-wrapper">
-            <table>
-              <thead><tr><th>Nº</th><th>Cliente</th><th>Veículo</th><th>Descrição</th>{!isFuncionario&&<th>Total</th>}<th>Validade</th><th>Status</th><th>Ações</th></tr></thead>
-              <tbody>
-                {listaFiltrada.map(orc => {
-                  const totalPecas = (orc.pecas_itens||[]).reduce((s,p)=>s+(parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1),0);
-                  const total = (parseFloat(orc.valor_mo)||0)+totalPecas-(parseFloat(orc.desconto)||0);
-                  return (
-                    <tr key={orc.id}>
-                      <td><strong style={{color:'var(--brand)'}}>{orc.numero||`#${orc.id}`}</strong></td>
-                      <td>{orc.cliente_nome||'—'}</td>
-                      <td>{orc.veiculo_modelo||'—'}{orc.placa&&<small style={{display:'block',color:'var(--gray-400)'}}>{orc.placa}</small>}</td>
-                      <td style={{maxWidth:180,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{orc.descricao||'—'}</td>
-                      {!isFuncionario&&<td><strong>{fmt.currency(total)}</strong></td>}
-                      <td style={{color:'var(--gray-500)',fontSize:12}}>{fmt.date(orc.validade)}</td>
-                      <td><span className={`badge ${STATUS_CLASS[orc.status]||'badge-gray'}`}>{STATUS_LABEL[orc.status]||orc.status}</span></td>
-                      <td>
-                        <div style={{display:'flex',gap:4}}>
-                          <button className="btn btn-outline btn-sm" onClick={()=>{setViewing(orc);setModal('ver');}}>👁️</button>
-                          <button className="btn btn-outline btn-sm" onClick={()=>imprimir(orc)} title="Imprimir">🖨️</button>
-                          <button className="btn btn-outline btn-sm" onClick={()=>enviarWhatsApp(orc)} title="WhatsApp">💬</button>
-                          <button className="btn btn-outline btn-sm" onClick={()=>openEdit(orc)}>✏️</button>
-                          <button className="btn btn-outline btn-sm" onClick={()=>remove(orc.id)}>🗑️</button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <>
+          {/* Tabela desktop */}
+          <div className="os-table-desktop">
+            <div className="table-wrapper">
+              <table>
+                <thead><tr><th>Nº</th><th>Cliente</th><th>Veículo</th><th>Descrição</th>{!isFuncionario&&<th>Total</th>}<th>Validade</th><th>Status</th><th>Ações</th></tr></thead>
+                <tbody>
+                  {listaFiltrada.map(orc => {
+                    const totalPecas = (orc.pecas_itens||[]).reduce((s,p)=>s+(parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1),0);
+                    const total = (parseFloat(orc.valor_mo)||0)+totalPecas-(parseFloat(orc.desconto)||0);
+                    return (
+                      <tr key={orc.id}>
+                        <td><strong style={{color:'var(--brand)'}}>{orc.numero||`#${orc.id}`}</strong></td>
+                        <td>{orc.cliente_nome||'—'}</td>
+                        <td>{orc.veiculo_modelo||'—'}{orc.placa&&<small style={{display:'block',color:'var(--gray-400)'}}>{orc.placa}</small>}</td>
+                        <td style={{maxWidth:180,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{orc.descricao||'—'}</td>
+                        {!isFuncionario&&<td><strong>{fmt.currency(total)}</strong></td>}
+                        <td style={{color:'var(--gray-500)',fontSize:12}}>{fmt.date(orc.validade)}</td>
+                        <td><span className={`badge ${STATUS_CLASS[orc.status]||'badge-gray'}`}>{STATUS_LABEL[orc.status]||orc.status}</span></td>
+                        <td>
+                          <div style={{display:'flex',gap:4}}>
+                            <button className="btn btn-outline btn-sm" onClick={()=>{setViewing(orc);setModal('ver');}}>👁️</button>
+                            <button className="btn btn-outline btn-sm" onClick={()=>imprimir(orc)} title="Imprimir">🖨️</button>
+                            <button className="btn btn-outline btn-sm" onClick={()=>enviarWhatsApp(orc)} title="WhatsApp">💬</button>
+                            <button className="btn btn-outline btn-sm" onClick={()=>openEdit(orc)}>✏️</button>
+                            <button className="btn btn-outline btn-sm" onClick={()=>remove(orc.id)}>🗑️</button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
+
+          {/* Cards mobile */}
+          <div className="os-cards-mobile">
+            {listaFiltrada.map(orc => {
+              const totalPecas = (orc.pecas_itens||[]).reduce((s,p)=>s+(parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1),0);
+              const total = (parseFloat(orc.valor_mo)||0)+totalPecas-(parseFloat(orc.desconto)||0);
+              return (
+                <div key={orc.id} className="os-card-mobile" onClick={()=>{setViewing(orc);setModal('ver');}}>
+                  <div className="os-card-top">
+                    <div className="os-card-num">{orc.numero||`#${orc.id}`}</div>
+                    <span className={`badge ${STATUS_CLASS[orc.status]||'badge-gray'}`}>{STATUS_LABEL[orc.status]||orc.status}</span>
+                  </div>
+                  <div className="os-card-cliente">{orc.cliente_nome||'Sem cliente'}</div>
+                  <div className="os-card-info">
+                    <span>{orc.veiculo_modelo||'—'}{orc.placa?` · ${orc.placa}`:''}</span>
+                    <span>Val: {fmt.date(orc.validade)}</span>
+                  </div>
+                  {orc.descricao&&<div className="os-card-desc">{orc.descricao}</div>}
+                  <div className="os-card-bottom">
+                    {!isFuncionario&&<span className="os-card-valor">{fmt.currency(total)}</span>}
+                    <div className="os-card-actions">
+                      <button className="btn btn-outline btn-sm" onClick={e=>{e.stopPropagation();imprimir(orc);}}>🖨️</button>
+                      <button className="btn btn-outline btn-sm" onClick={e=>{e.stopPropagation();openEdit(orc);}}>✏️</button>
+                      <button className="btn btn-outline btn-sm" onClick={e=>{e.stopPropagation();enviarWhatsApp(orc);}}>💬</button>
+                      <button className="btn btn-outline btn-sm" onClick={e=>{e.stopPropagation();remove(orc.id);}}>🗑️</button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          </>
         ) : (
           <div className="empty-state"><div className="empty-icon">📄</div><p>Nenhum orçamento encontrado</p><button className="btn btn-primary" onClick={openCreate}>Criar primeiro orçamento</button></div>
         )}
