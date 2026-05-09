@@ -49,6 +49,9 @@ export const api = {
     renovarLote:(data)               => post('/admin/renovar-lote', data),
     usuarios: {
       create:  (data)                => post('/admin/usuarios', data),
+      pendentes: ()                  => get('/admin/usuarios-pendentes'),
+      desvincular: (id)              => patch('/admin/usuarios/'+id+'/desvincular', {}),
+      remove:  (id)                  => del('/admin/usuarios/'+id),
     },
     pagamentos: {
       list:    (oficina_id)          => get('/admin/pagamentos' + (oficina_id ? '?oficina_id='+oficina_id : '')),

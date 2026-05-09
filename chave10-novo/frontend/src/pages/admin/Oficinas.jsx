@@ -28,6 +28,7 @@ export default function AdminOficinas() {
   const [userForm, setUserForm]       = useState(EMPTY_USR);
   const [pagForm, setPagForm]         = useState(EMPTY_PAG);
   const [loteForm, setLoteForm]       = useState({ novo_vencimento:'', valor:'', forma_pagamento:'pix' });
+  const [pendentes, setPendentes]     = useState([]);
   const [editing, setEditing]         = useState(null);
   const [selectedOf, setSelectedOf]   = useState(null);
   const [detalhes, setDetalhes]       = useState(null);
@@ -42,7 +43,12 @@ export default function AdminOficinas() {
     } catch { setOficinas([]); }
   }
 
-  useEffect(()=>{ load(); },[filterStatus]);
+  async function loadPendentes() {
+    try { setPendentes(await api.admin.usuarios.pendentes()); }
+    catch { setPendentes([]); }
+  }
+
+  useEffect(()=>{ load(); loadPendentes(); },[filterStatus]);
 
   async function abrirDetalhes(o) {
     setSelectedOf(o); setModal('detalhes'); setDetalhes(null);
@@ -438,6 +444,38 @@ export default function AdminOficinas() {
                 </div>
               </form>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Usuários pendentes (sem oficina) */}
+      {pendentes.length > 0 && (
+        <div className="card" style={{marginTop:24}}>
+          <div className="card-header">
+            <div className="card-title">⏳ Usuários pendentes ({pendentes.length})</div>
+            <span style={{fontSize:12,color:'var(--gray-400)'}}>Criaram conta mas não completaram o cadastro da oficina</span>
+          </div>
+          <div className="table-wrapper">
+            <table>
+              <thead><tr><th>Nome</th><th>Email</th><th>Perfil</th><th>Último acesso</th><th>Ações</th></tr></thead>
+              <tbody>
+                {pendentes.map(u=>(
+                  <tr key={u.id}>
+                    <td><strong>{u.nome}</strong></td>
+                    <td style={{fontSize:12,color:'var(--gray-500)'}}>{u.email}</td>
+                    <td><span className="badge badge-gray">{u.perfil}</span></td>
+                    <td style={{fontSize:12,color:'var(--gray-400)'}}>{u.ultimo_acesso ? fmt.date(u.ultimo_acesso.split('T')[0]) : '—'}</td>
+                    <td>
+                      <button className="btn btn-danger btn-sm" onClick={async()=>{
+                        if(!window.confirm(`Deletar usuário ${u.nome} (${u.email})?`)) return;
+                        try { await api.admin.usuarios.remove(u.id); loadPendentes(); showToast('Usuário deletado'); }
+                        catch { showToast('Erro ao deletar','error'); }
+                      }}>🗑️ Deletar</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

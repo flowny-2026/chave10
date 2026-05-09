@@ -199,4 +199,30 @@ router.post('/trocar-senha', async (req,res) => {
   }
 });
 
+// USUÁRIOS PENDENTES (sem oficina)
+router.get('/usuarios-pendentes', async (req,res) => {
+  try {
+    const rows = await query("SELECT id, nome, email, perfil, ultimo_acesso FROM usuarios WHERE oficina_id IS NULL AND perfil != 'master_admin' ORDER BY id DESC");
+    res.json(rows);
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// DESVINCULAR USUÁRIO DE OFICINA
+router.patch('/usuarios/:id/desvincular', validateId, async (req,res) => {
+  try {
+    await run('UPDATE usuarios SET oficina_id=NULL WHERE id=$1', [req.params.id]);
+    res.json({ok:true});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// DELETAR USUÁRIO
+router.delete('/usuarios/:id', validateId, async (req,res) => {
+  try {
+    const user = await queryOne('SELECT perfil FROM usuarios WHERE id=$1', [req.params.id]);
+    if (user?.perfil === 'master_admin') return res.status(403).json({error:'Não é possível deletar o admin master'});
+    await run('DELETE FROM usuarios WHERE id=$1', [req.params.id]);
+    res.json({ok:true});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
 module.exports = router;
