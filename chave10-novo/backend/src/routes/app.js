@@ -420,6 +420,14 @@ router.get('/os/:id/pagamentos', validateId, async (req,res) => {
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
+// Todos os pagamentos de OS da oficina (para gráficos)
+router.get('/pagamentos-os', async (req,res) => {
+  try {
+    const rows = await query('SELECT * FROM pagamentos_os WHERE oficina_id=$1 ORDER BY data_pagamento DESC', [oid(req)]);
+    res.json(rows);
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+}););
+
 // AGENDA
 router.get('/agenda', async (req,res) => {
   try {

@@ -20,6 +20,7 @@ export default function AppFinanceiro() {
   const [ordens, setOrdens]     = useState([]);
   const [despesas, setDespesas] = useState([]);
   const [parcelas, setParcelas] = useState([]);
+  const [pagamentosOS, setPagamentosOS] = useState([]);
   const [modal, setModal]       = useState(false);
   const [form, setForm]         = useState(EMPTY_DESP);
   const [editing, setEditing]   = useState(null);
@@ -54,6 +55,13 @@ export default function AppFinanceiro() {
     } catch { setParcelas([]); }
   }
 
+  async function loadPagamentosOS() {
+    try {
+      const data = await api.app.pagamentosOS.list();
+      setPagamentosOS(Array.isArray(data)?data:[]);
+    } catch { setPagamentosOS([]); }
+  }
+
   async function marcarRecebido(id) {
     try {
       await api.app.parcelasReceber.marcarRecebido(id);
@@ -62,7 +70,7 @@ export default function AppFinanceiro() {
     } catch { showToast('Erro ao marcar','error'); }
   }
 
-  useEffect(()=>{ loadOrdens(); loadParcelas(); },[]);
+  useEffect(()=>{ loadOrdens(); loadParcelas(); loadPagamentosOS(); },[]);
   useEffect(()=>{ loadDespesas(); },[mesIdx]);
 
   async function saveDespesa(e) {
@@ -134,6 +142,80 @@ export default function AppFinanceiro() {
           <div style={{fontSize:12,color:'var(--gray-400)',marginTop:6}}>Margem: {receita>0?((lucro/receita)*100).toFixed(1):0}%</div>
         </div>
       </div>
+
+      {/* Gráfico de formas de pagamento */}
+      {(() => {
+        const pagMes = pagamentosOS.filter(p => p.data_pagamento >= inicioMes && p.data_pagamento <= fimMes);
+        if (!pagMes.length) return null;
+        const formas = { pix:0, dinheiro:0, debito:0, credito:0 };
+        pagMes.forEach(p => { if (formas[p.forma] !== undefined) formas[p.forma] += parseFloat(p.valor_total||0); });
+        const total = Object.values(formas).reduce((s,v)=>s+v,0);
+        if (total === 0) return null;
+
+        const cores = { pix:'#00B4D8', dinheiro:'#10b981', debito:'#8b5cf6', credito:'#f59e0b' };
+        const labels = { pix:'PIX', dinheiro:'Dinheiro', debito:'Débito', credito:'Crédito' };
+        const icons = { pix:'📱', dinheiro:'💵', debito:'💳', credito:'💳' };
+        const entries = Object.entries(formas).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+
+        // Gera arcos SVG
+        let startAngle = 0;
+        const arcs = entries.map(([forma, valor]) => {
+          const pct = valor / total;
+          const angle = pct * 360;
+          const endAngle = startAngle + angle;
+          const largeArc = angle > 180 ? 1 : 0;
+          const rad = (a) => (a - 90) * Math.PI / 180;
+          const x1 = 50 + 40 * Math.cos(rad(startAngle));
+          const y1 = 50 + 40 * Math.sin(rad(startAngle));
+          const x2 = 50 + 40 * Math.cos(rad(endAngle));
+          const y2 = 50 + 40 * Math.sin(rad(endAngle));
+          const path = pct >= 0.999
+            ? `M 50 10 A 40 40 0 1 1 49.99 10 Z`
+            : `M 50 50 L ${x1} ${y1} A 40 40 0 ${largeArc} 1 ${x2} ${y2} Z`;
+          startAngle = endAngle;
+          return { forma, path, color: cores[forma] };
+        });
+
+        return (
+          <div className="card" style={{marginBottom:20}}>
+            <div className="card-header"><div className="card-title">📊 Formas de pagamento do mês</div></div>
+            <div style={{display:'flex',alignItems:'center',gap:32,flexWrap:'wrap'}}>
+              {/* Pizza SVG */}
+              <svg viewBox="0 0 100 100" width="160" height="160" style={{flexShrink:0}}>
+                {arcs.map(a => <path key={a.forma} d={a.path} fill={a.color} stroke="#fff" strokeWidth="1" />)}
+                <circle cx="50" cy="50" r="20" fill="#fff" />
+                <text x="50" y="48" textAnchor="middle" fontSize="7" fontWeight="700" fill="#374151">{entries.length}</text>
+                <text x="50" y="57" textAnchor="middle" fontSize="5" fill="#9CA3AF">formas</text>
+              </svg>
+              {/* Legenda */}
+              <div style={{flex:1,display:'flex',flexDirection:'column',gap:10}}>
+                {entries.map(([forma, valor]) => {
+                  const pct = (valor/total*100).toFixed(1);
+                  return (
+                    <div key={forma} style={{display:'flex',alignItems:'center',gap:10}}>
+                      <div style={{width:12,height:12,borderRadius:3,background:cores[forma],flexShrink:0}} />
+                      <div style={{flex:1}}>
+                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                          <span style={{fontSize:13,fontWeight:600,color:'var(--gray-700)'}}>{icons[forma]} {labels[forma]}</span>
+                          <span style={{fontSize:13,fontWeight:700,color:'var(--gray-800)'}}>{fmt.currency(valor)}</span>
+                        </div>
+                        <div style={{height:4,background:'var(--gray-100)',borderRadius:99,marginTop:4,overflow:'hidden'}}>
+                          <div style={{height:'100%',width:`${pct}%`,background:cores[forma],borderRadius:99}} />
+                        </div>
+                        <div style={{fontSize:11,color:'var(--gray-400)',marginTop:2}}>{pct}% do total</div>
+                      </div>
+                    </div>
+                  );
+                })}
+                <div style={{borderTop:'1px solid var(--gray-100)',paddingTop:8,marginTop:4,display:'flex',justifyContent:'space-between',fontSize:13}}>
+                  <span style={{fontWeight:600,color:'var(--gray-600)'}}>Total recebido</span>
+                  <span style={{fontWeight:800,color:'var(--brand)'}}>{fmt.currency(total)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Despesas por categoria + Últimas receitas */}
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:20,marginBottom:20}}>

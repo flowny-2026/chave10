@@ -112,5 +112,8 @@ export const api = {
       list:    ()                    => get('/app/parcelas-receber'),
       marcarRecebido: (id)           => patch('/app/parcelas-receber/'+id+'/recebido', {}),
     },
+    pagamentosOS: {
+      list:    ()                    => get('/app/pagamentos-os'),
+    },
   },
 };
