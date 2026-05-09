@@ -6,27 +6,22 @@ function getUser() {
   try { return JSON.parse(localStorage.getItem('c10_user')); } catch { return null; }
 }
 
-// Contador regressivo de vagas — persiste no localStorage para parecer real
-function useVagas() {
-  const [vagas, setVagas] = useState(() => {
-    const v = localStorage.getItem('c10_vagas');
-    return v ? parseInt(v) : 7; // começa em 7 de 10
-  });
-  return vagas;
-}
-
 export default function AppPlanos() {
   const user = getUser();
   const isTrial = user?.plano === 'trial' || !user?.plano;
-  const vagas = useVagas();
-
   const [diasRestantes, setDiasRestantes] = useState(null);
+  const [dataVencFormatada, setDataVencFormatada] = useState('');
 
   useEffect(() => {
     if (user?.data_vencimento) {
       const hoje = new Date();
-      const venc = new Date(user.data_vencimento);
-      setDiasRestantes(Math.ceil((venc - hoje) / (1000 * 60 * 60 * 24)));
+      hoje.setHours(0, 0, 0, 0);
+      const venc = new Date(user.data_vencimento + 'T00:00:00');
+      const dias = Math.ceil((venc - hoje) / (1000 * 60 * 60 * 24));
+      setDiasRestantes(dias);
+      // Formata a data de vencimento
+      const [y, m, d] = user.data_vencimento.split('-');
+      setDataVencFormatada(`${d}/${m}/${y}`);
     }
   }, []);
 
@@ -64,7 +59,7 @@ export default function AppPlanos() {
             </div>
             <div style={{ fontSize: 13, color: 'rgba(255,255,255,.65)' }}>
               {diasRestantes > 0
-                ? `Restam ${diasRestantes} dia${diasRestantes > 1 ? 's' : ''} de trial. Assine agora e não perca o acesso.`
+                ? `Seu trial vence em ${dataVencFormatada} — ${diasRestantes} dia${diasRestantes > 1 ? 's' : ''} restante${diasRestantes > 1 ? 's' : ''}. Assine agora e não perca o acesso.`
                 : 'Seu trial venceu. Assine agora para continuar usando.'}
             </div>
           </div>
@@ -109,7 +104,6 @@ export default function AppPlanos() {
         boxShadow: '0 8px 40px rgba(249,115,22,.15)',
         overflow: 'hidden',
         marginBottom: 24,
-        position: 'relative',
       }}>
         {/* Faixa topo */}
         <div style={{
@@ -140,34 +134,18 @@ export default function AppPlanos() {
           </div>
         </div>
 
-        {/* Urgência */}
+        {/* Urgência — sem barra de vagas */}
         <div style={{
           background: '#FFF3E0',
           borderBottom: '1px solid #FED7AA',
           padding: '10px 32px',
           display: 'flex',
           alignItems: 'center',
-          gap: 10,
-          flexWrap: 'wrap',
+          gap: 8,
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 16 }}>🔥</span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#C2410C' }}>
-              Apenas para os 10 primeiros clientes
-            </span>
-          </div>
-          <div style={{ display: 'flex', gap: 6, marginLeft: 'auto', flexWrap: 'wrap' }}>
-            {Array.from({ length: 10 }).map((_, i) => (
-              <div key={i} style={{
-                width: 20, height: 20, borderRadius: 4,
-                background: i < (10 - vagas) ? '#F97316' : '#E5E7EB',
-                border: i < (10 - vagas) ? '1px solid #EA580C' : '1px solid #D1D5DB',
-                transition: 'background .3s',
-              }} title={i < (10 - vagas) ? 'Vaga ocupada' : 'Vaga disponível'} />
-            ))}
-          </div>
-          <span style={{ fontSize: 12, color: '#9A3412', fontWeight: 600 }}>
-            {vagas} vaga{vagas !== 1 ? 's' : ''} restante{vagas !== 1 ? 's' : ''}
+          <span style={{ fontSize: 16 }}>🔥</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: '#C2410C' }}>
+            Apenas para os 10 primeiros clientes — vagas promocionais limitadas
           </span>
         </div>
 
@@ -247,33 +225,11 @@ export default function AppPlanos() {
         </div>
       </div>
 
-      {/* SOCIAL PROOF */}
-      <div style={{
-        background: 'linear-gradient(135deg, #1E3A5F, #1e3a5f)',
-        borderRadius: 14,
-        padding: '24px 28px',
-        marginBottom: 24,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 20,
-        flexWrap: 'wrap',
-      }}>
-        <div style={{ fontSize: 36 }}>💬</div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 14, fontStyle: 'italic', color: 'rgba(255,255,255,.85)', lineHeight: 1.6, marginBottom: 8 }}>
-            "Antes eu controlava tudo no papel e perdia muito tempo. Com o Chave 10 ficou muito mais fácil — abro OS, mando orçamento pelo WhatsApp e ainda vejo quanto faturei no mês."
-          </div>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,.5)', fontWeight: 600 }}>
-            — João Carlos, Mecânico há 12 anos
-          </div>
-        </div>
-      </div>
-
       {/* FAQ */}
       <div style={{ background: '#F9FAFB', borderRadius: 14, padding: '24px 28px' }}>
         <div style={{ fontSize: 15, fontWeight: 700, color: '#1E3A5F', marginBottom: 18 }}>❓ Dúvidas frequentes</div>
         {[
-          { p: 'Como funciona o pagamento?', r: 'Clique no botão acima, fale com a gente pelo WhatsApp e enviamos o link de pagamento. Aceitamos PIX, cartão e boleto.' },
+          { p: 'Como funciona o pagamento?', r: 'Pagamento somente via PIX. Após entrar em contato pelo WhatsApp, enviamos a chave PIX para você realizar o pagamento e ativar o plano.' },
           { p: 'Posso cancelar a qualquer momento?', r: 'Sim, sem fidelidade. Cancele quando quiser pelo WhatsApp, sem burocracia.' },
           { p: 'O que acontece com meus dados se eu cancelar?', r: 'Seus dados ficam salvos por 30 dias. Se voltar, tudo estará lá.' },
           { p: 'Funciona no celular?', r: 'Sim! O sistema é responsivo e pode ser instalado como app no celular (PWA).' },
