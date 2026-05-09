@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "backup": "node -e \"require('./src/utils/backup').backupDatabase().then(r => console.log(r))\""
+    "backup": "node -e \"require('./src/utils/backup').backupDatabase().then(r => console.log(r))\"",
+    "seed:demo": "node src/scripts/seed-demo.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
