@@ -4,6 +4,16 @@ const KEY = 'c10_oficina';
 function getOficina() { try { return JSON.parse(localStorage.getItem(KEY))||{}; } catch { return {}; } }
 function setOficina(data) { localStorage.setItem(KEY, JSON.stringify(data)); }
 
+// Definido FORA do componente para evitar re-criação a cada render (bug de perda de foco)
+function F({ label, type = 'text', placeholder, value, onChange }) {
+  return (
+    <div className="form-group">
+      <label>{label}</label>
+      <input type={type} value={value || ''} onChange={onChange} placeholder={placeholder} />
+    </div>
+  );
+}
+
 export default function AppConfiguracoes() {
   const [of, setOf] = useState(getOficina);
   const [saved, setSaved] = useState(false);
@@ -25,13 +35,6 @@ export default function AppConfiguracoes() {
   }
 
   function removeLogo() { const novo={...of}; delete novo.logo; setOf(novo); setOficina(novo); }
-
-  const F = ({label, id, type='text', placeholder, value, onChange}) => (
-    <div className="form-group">
-      <label>{label}</label>
-      <input id={id} type={type} value={value||''} onChange={onChange} placeholder={placeholder} />
-    </div>
-  );
 
   return (
     <div>
