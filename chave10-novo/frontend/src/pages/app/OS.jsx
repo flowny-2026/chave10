@@ -295,36 +295,70 @@ export default function AppOS() {
       </div>
       <div className="card">
         {listaFiltrada.length ? (
-          <div className="table-wrapper">
-            <table>
-              <thead><tr><th>OS</th><th>Data</th><th>Cliente</th><th>Veículo</th><th>Problema</th>{!isFuncionario&&<th>Total</th>}<th>Status</th><th>Ações</th></tr></thead>
-              <tbody>
-                {listaFiltrada.map(os => {
-                  const total = parseFloat(os.valor_mo||0)+parseFloat(os.valor_pecas||0)||parseFloat(os.valor||0);
-                  return (
-                    <tr key={os.id}>
-                      <td><strong style={{color:'var(--brand)'}}>#{String(os.id).padStart(4,'0')}</strong></td>
-                      <td style={{color:'var(--gray-500)',fontSize:12}}>{fmt.date(os.data)}</td>
-                      <td>{os.cliente_nome||'—'}</td>
-                      <td><div>{os.veiculo_modelo||'—'}</div>{os.placa&&<small style={{color:'var(--gray-400)'}}>{os.placa}</small>}</td>
-                      <td style={{maxWidth:180,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{os.descricao}</td>
-                      {!isFuncionario&&<td><strong>{fmt.currency(total)}</strong></td>}
-                      <td><span className={`badge ${STATUS_CLASS[os.status]||'badge-gray'}`}>{STATUS_LABEL[os.status]||os.status}</span></td>
-                      <td>
-                        <div style={{display:'flex',gap:4}}>
-                          <button className="btn btn-outline btn-sm" onClick={()=>openView(os)}>👁️</button>
-                          <button className="btn btn-outline btn-sm" onClick={()=>imprimir(os)} title="Imprimir">🖨️</button>
-                          <button className="btn btn-outline btn-sm" onClick={()=>enviarWhatsApp(os)} title="WhatsApp">💬</button>
-                          <button className="btn btn-outline btn-sm" onClick={()=>openEdit(os)}>✏️</button>
-                          <button className="btn btn-outline btn-sm" onClick={()=>remove(os.id)}>🗑️</button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <>
+          {/* Tabela desktop */}
+          <div className="os-table-desktop">
+            <div className="table-wrapper">
+              <table>
+                <thead><tr><th>OS</th><th>Data</th><th>Cliente</th><th>Veículo</th><th>Problema</th>{!isFuncionario&&<th>Total</th>}<th>Status</th><th>Ações</th></tr></thead>
+                <tbody>
+                  {listaFiltrada.map(os => {
+                    const total = parseFloat(os.valor_mo||0)+parseFloat(os.valor_pecas||0)||parseFloat(os.valor||0);
+                    return (
+                      <tr key={os.id}>
+                        <td><strong style={{color:'var(--brand)'}}>#{String(os.id).padStart(4,'0')}</strong></td>
+                        <td style={{color:'var(--gray-500)',fontSize:12}}>{fmt.date(os.data)}</td>
+                        <td>{os.cliente_nome||'—'}</td>
+                        <td><div>{os.veiculo_modelo||'—'}</div>{os.placa&&<small style={{color:'var(--gray-400)'}}>{os.placa}</small>}</td>
+                        <td style={{maxWidth:180,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{os.descricao}</td>
+                        {!isFuncionario&&<td><strong>{fmt.currency(total)}</strong></td>}
+                        <td><span className={`badge ${STATUS_CLASS[os.status]||'badge-gray'}`}>{STATUS_LABEL[os.status]||os.status}</span></td>
+                        <td>
+                          <div style={{display:'flex',gap:4}}>
+                            <button className="btn btn-outline btn-sm" onClick={()=>openView(os)}>👁️</button>
+                            <button className="btn btn-outline btn-sm" onClick={()=>imprimir(os)} title="Imprimir">🖨️</button>
+                            <button className="btn btn-outline btn-sm" onClick={()=>enviarWhatsApp(os)} title="WhatsApp">💬</button>
+                            <button className="btn btn-outline btn-sm" onClick={()=>openEdit(os)}>✏️</button>
+                            <button className="btn btn-outline btn-sm" onClick={()=>remove(os.id)}>🗑️</button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
+
+          {/* Cards mobile */}
+          <div className="os-cards-mobile">
+            {listaFiltrada.map(os => {
+              const total = parseFloat(os.valor_mo||0)+parseFloat(os.valor_pecas||0)||parseFloat(os.valor||0);
+              return (
+                <div key={os.id} className="os-card-mobile" onClick={()=>openView(os)}>
+                  <div className="os-card-top">
+                    <div className="os-card-num">#{String(os.id).padStart(4,'0')}</div>
+                    <span className={`badge ${STATUS_CLASS[os.status]||'badge-gray'}`}>{STATUS_LABEL[os.status]||os.status}</span>
+                  </div>
+                  <div className="os-card-cliente">{os.cliente_nome||'Sem cliente'}</div>
+                  <div className="os-card-info">
+                    <span>{os.veiculo_modelo||'—'}{os.placa?` · ${os.placa}`:''}</span>
+                    <span>{fmt.date(os.data)}</span>
+                  </div>
+                  <div className="os-card-desc">{os.descricao}</div>
+                  <div className="os-card-bottom">
+                    {!isFuncionario&&<span className="os-card-valor">{fmt.currency(total)}</span>}
+                    <div className="os-card-actions">
+                      <button className="btn btn-outline btn-sm" onClick={e=>{e.stopPropagation();openEdit(os);}}>✏️</button>
+                      <button className="btn btn-outline btn-sm" onClick={e=>{e.stopPropagation();enviarWhatsApp(os);}}>💬</button>
+                      <button className="btn btn-outline btn-sm" onClick={e=>{e.stopPropagation();remove(os.id);}}>🗑️</button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          </>
         ) : (
           <div className="empty-state"><div className="empty-icon">📋</div><p>Nenhuma ordem encontrada</p><button className="btn btn-primary" onClick={openCreate}>Criar primeira OS</button></div>
         )}
