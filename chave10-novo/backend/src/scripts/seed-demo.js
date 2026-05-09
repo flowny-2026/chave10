@@ -15,7 +15,7 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 
-const DEMO_EMAIL = 'demo@chave10.com.br';
+const DEMO_EMAIL = 'teste@teste.com';
 const DEMO_SENHA = 'demo1234';
 
 async function q(text, params) { const r = await pool.query(text, params); return r.rows; }
