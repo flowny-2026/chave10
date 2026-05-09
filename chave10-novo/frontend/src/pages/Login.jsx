@@ -28,7 +28,7 @@ function LoginLoader() {
     ];
     const pick = arr => arr[Math.floor(Math.random() * arr.length)];
     const steps = allSteps.map(pick);
-    const timings = [400, 800, 600, 700, 500];
+    const timings = [200, 350, 300, 350, 200];
     let elapsed = 0;
     steps.forEach((s, i) => {
       elapsed += timings[i];
@@ -86,7 +86,7 @@ export default function Login() {
     setTimeout(() => {
       if (usuario.perfil === 'master_admin') navigate('/admin/dashboard');
       else navigate('/app/dashboard');
-    }, 3200);
+    }, 1500); // reduzido de 3200ms para 1500ms
   }
 
   async function handleLogin(e) {
