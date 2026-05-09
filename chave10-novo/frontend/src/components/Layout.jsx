@@ -426,7 +426,7 @@ function UserDropdown({ user, onLogout }) {
 }
 
 // URL de suporte WhatsApp
-const SUPORTE_WA = 'https://wa.me/5516992915540?text=Olá,%20preciso%20de%20suporte%20com%20o%20Chave%2010.';
+const SUPORTE_WA = 'https://wa.me/5516992383821?text=Olá,%20preciso%20de%20suporte%20com%20o%20Chave%2010.';
 
 export default function Layout({ area }) {
   const [open, setOpen] = useState(false);
