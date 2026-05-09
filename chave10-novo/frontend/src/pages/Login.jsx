@@ -109,8 +109,14 @@ export default function Login() {
     setErro('');
     setLoading(true);
     try {
-      const { token, usuario } = await api.auth.googleLogin(credential);
-      afterLogin(token, usuario);
+      const result = await api.auth.googleLogin(credential);
+      // Novo usuário sem oficina — redireciona para completar cadastro
+      if (result.needsOficina) {
+        localStorage.setItem('c10_token_temp', result.token);
+        navigate('/cadastro?step=2');
+        return;
+      }
+      afterLogin(result.token, result.usuario);
     } catch (err) {
       setLoading(false);
       if (err.error === 'blocked' || err.error === 'overdue') {

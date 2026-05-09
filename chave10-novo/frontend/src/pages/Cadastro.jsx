@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import { api } from '../api';
 import { useForm } from '../hooks/useForm';
@@ -10,16 +10,30 @@ import {
   validateName, 
   validatePhone,
   validateRequired,
-  formatPhone,
-  formatCNPJ,
-  formatCPF
+  maskPhone,
+  maskDocumento,
 } from '../utils/validation';
 
 export default function Cadastro() {
-  const [step, setStep] = useState(1); // 1=dados pessoais, 2=dados oficina
+  const [searchParams] = useSearchParams();
+  const [step, setStep] = useState(1);
   const [erro, setErro] = useState('');
   const [tempToken, setTempToken] = useState(null);
   const navigate = useNavigate();
+
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+  // Se veio do login Google com ?step=2, pula direto para dados da oficina
+  useEffect(() => {
+    if (searchParams.get('step') === '2') {
+      const token = localStorage.getItem('c10_token_temp');
+      if (token) {
+        setTempToken(token);
+        localStorage.removeItem('c10_token_temp');
+        setStep(2);
+      }
+    }
+  }, []);
 
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
@@ -131,7 +145,7 @@ export default function Cadastro() {
               onChange={formOficina.handleChange}
               onBlur={formOficina.handleBlur}
               placeholder="00.000.000/0000-00"
-              mask={(v) => v.length <= 14 ? formatCPF(v) : formatCNPJ(v)}
+              mask={maskDocumento}
             />
             
             <FormInput
@@ -143,7 +157,7 @@ export default function Cadastro() {
               onChange={formOficina.handleChange}
               onBlur={formOficina.handleBlur}
               placeholder="(00) 00000-0000"
-              mask={formatPhone}
+              mask={maskPhone}
               required
             />
             

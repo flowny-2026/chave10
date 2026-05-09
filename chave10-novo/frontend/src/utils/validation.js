@@ -231,6 +231,28 @@ export function validateFields(fields, rules) {
 }
 
 /**
+ * Máscara de CPF/CNPJ com limite de dígitos
+ * Detecta automaticamente pelo tamanho: até 11 dígitos = CPF, até 14 = CNPJ
+ */
+export function maskDocumento(v) {
+  if (!v) return '';
+  const digits = v.replace(/\D/g, '').slice(0, 14); // máx 14 dígitos (CNPJ)
+  if (digits.length <= 11) return formatCPF(digits);
+  return formatCNPJ(digits);
+}
+
+/**
+ * Máscara de telefone com limite de dígitos
+ * Fixo: (XX) XXXX-XXXX — 10 dígitos
+ * Celular: (XX) XXXXX-XXXX — 11 dígitos
+ */
+export function maskPhone(v) {
+  if (!v) return '';
+  const digits = v.replace(/\D/g, '').slice(0, 11); // máx 11 dígitos
+  return formatPhone(digits);
+}
+
+/**
  * Formata CPF: 123.456.789-01
  */
 export function formatCPF(cpf) {

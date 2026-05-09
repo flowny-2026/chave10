@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../../api';
 import { useLocalPagination } from '../../hooks/usePagination';
 import Pagination from '../../components/Pagination';
+import { maskPhone } from '../../utils/validation';
 
 const EMPTY = { nome: '', telefone: '', email: '', obs: '', endereco: '' };
 
@@ -164,7 +165,7 @@ export default function AppClientes() {
                   </div>
                   <div className="form-group">
                     <label>Telefone</label>
-                    <input value={form.telefone} onChange={e => setForm(f => ({ ...f, telefone: e.target.value }))} placeholder="(11) 99999-0000" />
+                    <input value={form.telefone} onChange={e => setForm(f => ({ ...f, telefone: maskPhone(e.target.value) }))} placeholder="(11) 99999-0000" />
                   </div>
                   <div className="form-group">
                     <label>Email</label>

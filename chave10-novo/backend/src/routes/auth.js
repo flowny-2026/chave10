@@ -82,6 +82,68 @@ router.post('/register', async (req, res) => {
   }
 });
 
+// LOGIN COM GOOGLE (login + registro automático numa rota só)
+router.post('/google', async (req, res) => {
+  const { credential } = req.body;
+  if (!credential) return res.status(400).json({ error: 'Token Google não fornecido' });
+  if (!process.env.GOOGLE_CLIENT_ID) return res.status(500).json({ error: 'Google OAuth não configurado no servidor' });
+
+  try {
+    await atualizarVencidos();
+
+    const ticket = await googleClient.verifyIdToken({ idToken: credential, audience: process.env.GOOGLE_CLIENT_ID });
+    const { email, name: nome } = ticket.getPayload();
+
+    const usuario = await queryOne('SELECT * FROM usuarios WHERE email=$1 AND ativo=1', [email]);
+
+    // Usuário não existe — cria conta nova e pede dados da oficina
+    if (!usuario) {
+      const hash = bcrypt.hashSync(Math.random().toString(36), 10);
+      const r = await queryOne(
+        "INSERT INTO usuarios(oficina_id, nome, email, senha_hash, perfil, ativo) VALUES(NULL, $1, $2, $3, 'admin_oficina', 1) RETURNING id",
+        [nome, email, hash]
+      );
+      const token = jwt.sign({ id: r.id, perfil: 'admin_oficina', oficina_id: null, nome }, SECRET, { expiresIn: '2h' });
+      return res.status(201).json({ token, needsOficina: true });
+    }
+
+    // Usuário existe mas sem oficina
+    if (!usuario.oficina_id) {
+      const token = jwt.sign({ id: usuario.id, perfil: 'admin_oficina', oficina_id: null, nome: usuario.nome }, SECRET, { expiresIn: '2h' });
+      return res.json({ token, needsOficina: true });
+    }
+
+    // Usuário com oficina — verifica status da assinatura
+    const oficina = await queryOne('SELECT * FROM oficinas WHERE id=$1', [usuario.oficina_id]);
+    if (!oficina) return res.status(403).json({ error: 'Oficina não encontrada' });
+    if (oficina.status_assinatura === 'blocked') return res.status(403).json({ error: 'blocked' });
+    if (oficina.status_assinatura === 'overdue')  return res.status(403).json({ error: 'overdue' });
+
+    await run('UPDATE usuarios SET ultimo_acesso=$1 WHERE id=$2', [new Date().toISOString(), usuario.id]);
+    const token = jwt.sign(
+      { id: usuario.id, perfil: usuario.perfil, oficina_id: usuario.oficina_id, nome: usuario.nome },
+      SECRET,
+      { expiresIn: '8h' }
+    );
+    log.loginOk({ email, perfil: usuario.perfil, oficina_id: usuario.oficina_id, via: 'google' });
+    return res.json({
+      token,
+      usuario: {
+        id: usuario.id,
+        nome: usuario.nome,
+        email: usuario.email,
+        perfil: usuario.perfil,
+        oficina_id: usuario.oficina_id,
+        data_vencimento: oficina.data_vencimento,
+        status_assinatura: oficina.status_assinatura,
+      },
+    });
+  } catch (err) {
+    log.error('auth_google_login', err);
+    res.status(500).json({ error: 'Erro ao autenticar com Google' });
+  }
+});
+
 // REGISTRO COM GOOGLE
 router.post('/google-register', async (req, res) => {
   const { credential } = req.body;
