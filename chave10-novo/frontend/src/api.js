@@ -75,6 +75,8 @@ export const api = {
       update:  (id, data)            => put('/app/os/'+id, data),
       setStatus:(id, status)         => patch('/app/os/'+id+'/status', { status }),
       remove:  (id)                  => del('/app/os/'+id),
+      pagamento:(id, data)           => post('/app/os/'+id+'/pagamento', data),
+      pagamentos:(id)                => get('/app/os/'+id+'/pagamentos'),
     },
     orcamentos: {
       list:    ()                    => get('/app/orcamentos'),
@@ -105,6 +107,10 @@ export const api = {
       create:  (data)                => post('/app/despesas', data),
       update:  (id, data)            => put('/app/despesas/'+id, data),
       remove:  (id)                  => del('/app/despesas/'+id),
+    },
+    parcelasReceber: {
+      list:    ()                    => get('/app/parcelas-receber'),
+      marcarRecebido: (id)           => patch('/app/parcelas-receber/'+id+'/recebido', {}),
     },
   },
 };

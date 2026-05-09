@@ -343,6 +343,83 @@ router.delete('/orcamentos/:id', validateId, async (req,res) => {
   catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
+// PAGAMENTOS DE OS
+router.post('/os/:id/pagamento', validateId, async (req,res) => {
+  try {
+    const {forma, valor_total, parcelas, bandeira, taxa_maquininha, observacao} = req.body;
+    const formasValidas = ['pix','dinheiro','debito','credito'];
+    if (!forma || !formasValidas.includes(forma)) return res.status(400).json({error:'Forma de pagamento inválida'});
+    if (!valor_total || parseFloat(valor_total) <= 0) return res.status(400).json({error:'Valor inválido'});
+
+    const osId = req.params.id;
+    const id = oid(req);
+    const os = await queryOne('SELECT * FROM ordens_servico WHERE id=$1 AND oficina_id=$2', [osId, id]);
+    if (!os) return res.status(404).json({error:'OS não encontrada'});
+
+    const vTotal = parseFloat(valor_total);
+    const nParcelas = forma === 'credito' ? Math.min(Math.max(parseInt(parcelas)||1, 1), 10) : 1;
+    const taxa = (forma === 'credito' || forma === 'debito') ? (parseFloat(taxa_maquininha)||0) : 0;
+    const valorLiquido = vTotal - (vTotal * taxa / 100);
+    const valorParcela = forma === 'credito' ? valorLiquido / nParcelas : valorLiquido;
+    const hoje = new Date().toISOString().split('T')[0];
+
+    const r = await queryOne(
+      "INSERT INTO pagamentos_os(oficina_id, os_id, cliente_id, forma, valor_total, parcelas, bandeira, taxa_maquininha, valor_liquido, valor_parcela, data_pagamento, observacao) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id",
+      [id, osId, os.cliente_id, forma, vTotal, nParcelas, bandeira||null, taxa, valorLiquido, valorParcela, hoje, observacao||null]
+    );
+
+    // Cria registros de parcelas a receber para cartão
+    if (forma === 'credito') {
+      for (let i = 1; i <= nParcelas; i++) {
+        const dataReceb = new Date();
+        dataReceb.setDate(dataReceb.getDate() + (i * 30));
+        await run(
+          "INSERT INTO parcelas_receber(oficina_id, pagamento_os_id, os_id, cliente_id, numero_parcela, valor, data_recebimento) VALUES($1,$2,$3,$4,$5,$6,$7)",
+          [id, r.id, osId, os.cliente_id, i, valorParcela, dataReceb.toISOString().split('T')[0]]
+        );
+      }
+    } else if (forma === 'debito') {
+      const dataReceb = new Date();
+      dataReceb.setDate(dataReceb.getDate() + 1);
+      await run(
+        "INSERT INTO parcelas_receber(oficina_id, pagamento_os_id, os_id, cliente_id, numero_parcela, valor, data_recebimento) VALUES($1,$2,$3,$4,$5,$6,$7)",
+        [id, r.id, osId, os.cliente_id, 1, valorLiquido, dataReceb.toISOString().split('T')[0]]
+      );
+    }
+
+    // Finaliza a OS automaticamente
+    await run("UPDATE ordens_servico SET status='finalizado' WHERE id=$1 AND oficina_id=$2", [osId, id]);
+
+    res.status(201).json({id: r.id, valor_liquido: valorLiquido, parcelas: nParcelas, valor_parcela: valorParcela});
+  } catch(err){log.error('app_pagamento_os',err);res.status(500).json({error:'Erro interno'});}
+});
+
+// Parcelas a receber
+router.get('/parcelas-receber', async (req,res) => {
+  try {
+    const rows = await query(
+      "SELECT pr.*, c.nome as cliente_nome FROM parcelas_receber pr LEFT JOIN clientes c ON c.id=pr.cliente_id WHERE pr.oficina_id=$1 ORDER BY pr.data_recebimento",
+      [oid(req)]
+    );
+    res.json(rows);
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+router.patch('/parcelas-receber/:id/recebido', validateId, async (req,res) => {
+  try {
+    await run('UPDATE parcelas_receber SET recebido=1 WHERE id=$1 AND oficina_id=$2', [req.params.id, oid(req)]);
+    res.json({ok:true});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// Pagamentos de uma OS específica
+router.get('/os/:id/pagamentos', validateId, async (req,res) => {
+  try {
+    const rows = await query('SELECT * FROM pagamentos_os WHERE os_id=$1 AND oficina_id=$2 ORDER BY criado_em DESC', [req.params.id, oid(req)]);
+    res.json(rows);
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
 // AGENDA
 router.get('/agenda', async (req,res) => {
   try {

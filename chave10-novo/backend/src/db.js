@@ -173,6 +173,36 @@ async function initDB() {
       descricao TEXT,
       criado_em TEXT DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS pagamentos_os (
+      id SERIAL PRIMARY KEY,
+      oficina_id INTEGER NOT NULL REFERENCES oficinas(id) ON DELETE CASCADE,
+      os_id INTEGER NOT NULL REFERENCES ordens_servico(id) ON DELETE CASCADE,
+      cliente_id INTEGER REFERENCES clientes(id) ON DELETE SET NULL,
+      forma TEXT NOT NULL CHECK(forma IN ('pix','dinheiro','debito','credito')),
+      valor_total REAL NOT NULL,
+      parcelas INTEGER DEFAULT 1,
+      bandeira TEXT,
+      taxa_maquininha REAL DEFAULT 0,
+      valor_liquido REAL NOT NULL,
+      valor_parcela REAL,
+      data_pagamento TEXT NOT NULL,
+      observacao TEXT,
+      criado_em TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS parcelas_receber (
+      id SERIAL PRIMARY KEY,
+      oficina_id INTEGER NOT NULL REFERENCES oficinas(id) ON DELETE CASCADE,
+      pagamento_os_id INTEGER NOT NULL REFERENCES pagamentos_os(id) ON DELETE CASCADE,
+      os_id INTEGER NOT NULL REFERENCES ordens_servico(id) ON DELETE CASCADE,
+      cliente_id INTEGER REFERENCES clientes(id) ON DELETE SET NULL,
+      numero_parcela INTEGER NOT NULL,
+      valor REAL NOT NULL,
+      data_recebimento TEXT NOT NULL,
+      recebido INTEGER DEFAULT 0,
+      criado_em TEXT DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   // Migration: adiciona pecas_itens em orcamentos se não existir

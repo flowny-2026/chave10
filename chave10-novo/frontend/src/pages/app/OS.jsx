@@ -135,6 +135,7 @@ export default function AppOS() {
   const [editing, setEditing]   = useState(null);
   const [viewing, setViewing]   = useState(null);
   const [toast, setToast]       = useState({ msg:'', type:'' });
+  const [pagForm, setPagForm]   = useState({ os_id:null, forma:'', valor_total:0, parcelas:1, bandeira:'', taxa_maquininha:'', observacao:'' });
 
   // Sincroniza search com query param quando a URL muda (ex: busca da topbar)
   useEffect(() => {
@@ -183,7 +184,32 @@ export default function AppOS() {
     } catch (err) { showToast(err.error||'Erro ao salvar','error'); }
   }
 
-  async function finalizar(id) { await api.app.os.setStatus(id,'finalizado'); load(statusFiltro); setModal(null); showToast('OS finalizada!'); }
+  async function finalizar(id) {
+    // Abre modal de pagamento em vez de finalizar direto
+    const os = osList.find(o => o.id === id);
+    if (!os) return;
+    const total = (parseFloat(os.valor_mo)||0) + (parseFloat(os.valor_pecas)||0) || parseFloat(os.valor||0);
+    setPagForm({ os_id: id, forma: '', valor_total: total, parcelas: 1, bandeira: '', taxa_maquininha: '', observacao: '' });
+    setModal('pagamento');
+  }
+
+  async function confirmarPagamento(e) {
+    e.preventDefault();
+    if (!pagForm.forma) { showToast('Selecione a forma de pagamento','error'); return; }
+    try {
+      const res = await api.app.os.pagamento(pagForm.os_id, pagForm);
+      setModal(null);
+      load(statusFiltro);
+      const msg = pagForm.forma === 'credito' && pagForm.parcelas > 1
+        ? `OS finalizada! ${pagForm.parcelas}x de ${fmt.currency(res.valor_parcela)} — Líquido: ${fmt.currency(res.valor_liquido)}`
+        : `OS finalizada! Recebimento: ${fmt.currency(res.valor_liquido)}`;
+      showToast(msg);
+    } catch (err) { showToast(err.error||'Erro ao registrar pagamento','error'); }
+  }
+
+  const taxaCalculada = pagForm.taxa_maquininha && pagForm.valor_total
+    ? pagForm.valor_total - (pagForm.valor_total * parseFloat(pagForm.taxa_maquininha) / 100)
+    : pagForm.valor_total;
   async function reabrir(id)   { await api.app.os.setStatus(id,'em_andamento'); load(statusFiltro); showToast('OS reaberta'); }
   async function remove(id) {
     if (!window.confirm('Deseja excluir esta ordem de serviço?')) return;
@@ -455,6 +481,140 @@ export default function AppOS() {
       })()}
 
       <Toast msg={toast.msg} type={toast.type} />
+
+      {/* Modal Pagamento */}
+      {modal==='pagamento' && (
+        <div className="modal-overlay open">
+          <div className="modal" style={{maxWidth:520}}>
+            <div className="modal-header">
+              <h2>💳 Dar baixa — Forma de pagamento</h2>
+              <button className="modal-close" onClick={()=>setModal(null)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={confirmarPagamento}>
+                {/* Valor total */}
+                <div style={{background:'var(--brand-light)',borderRadius:'var(--r-sm)',padding:'14px 16px',marginBottom:20,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                  <span style={{fontSize:13,fontWeight:600,color:'var(--brand)'}}>Valor da OS</span>
+                  <span style={{fontFamily:'Poppins,sans-serif',fontSize:22,fontWeight:800,color:'var(--brand)'}}>{fmt.currency(pagForm.valor_total)}</span>
+                </div>
+
+                {/* Formas de pagamento */}
+                <div style={{marginBottom:16}}>
+                  <label style={{fontSize:12,fontWeight:700,color:'var(--gray-600)',marginBottom:8,display:'block'}}>Forma de pagamento *</label>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+                    {[
+                      {v:'pix',icon:'📱',label:'PIX'},
+                      {v:'dinheiro',icon:'💵',label:'Dinheiro'},
+                      {v:'debito',icon:'💳',label:'Débito'},
+                      {v:'credito',icon:'💳',label:'Crédito'},
+                    ].map(f=>(
+                      <button key={f.v} type="button" onClick={()=>setPagForm(p=>({...p,forma:f.v,parcelas:1,bandeira:'',taxa_maquininha:''}))}
+                        style={{padding:'14px 12px',borderRadius:'var(--r-sm)',border:pagForm.forma===f.v?'2px solid var(--accent)':'2px solid var(--gray-200)',background:pagForm.forma===f.v?'#FFF7ED':'#fff',cursor:'pointer',display:'flex',alignItems:'center',gap:8,fontSize:14,fontWeight:pagForm.forma===f.v?700:500,color:pagForm.forma===f.v?'var(--accent)':'var(--gray-700)',transition:'all .15s'}}>
+                        <span style={{fontSize:20}}>{f.icon}</span>{f.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Opções de crédito */}
+                {pagForm.forma==='credito' && (
+                  <div style={{background:'var(--gray-50)',borderRadius:'var(--r-sm)',padding:16,marginBottom:16,border:'1px solid var(--gray-200)'}}>
+                    <div className="form-grid" style={{gap:12}}>
+                      <div className="form-group">
+                        <label>Parcelas</label>
+                        <select value={pagForm.parcelas} onChange={e=>setPagForm(p=>({...p,parcelas:parseInt(e.target.value)}))}>
+                          {[1,2,3,4,5,6,7,8,9,10].map(n=>(
+                            <option key={n} value={n}>{n}x de {fmt.currency(pagForm.valor_total/n)}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>Bandeira</label>
+                        <select value={pagForm.bandeira} onChange={e=>setPagForm(p=>({...p,bandeira:e.target.value}))}>
+                          <option value="">Selecionar...</option>
+                          <option value="visa">Visa</option>
+                          <option value="mastercard">Mastercard</option>
+                          <option value="elo">Elo</option>
+                          <option value="amex">American Express</option>
+                          <option value="hipercard">Hipercard</option>
+                          <option value="outra">Outra</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>Taxa da maquininha (%)</label>
+                        <input type="number" step="0.01" min="0" max="99" placeholder="Ex: 3.5" value={pagForm.taxa_maquininha} onChange={e=>setPagForm(p=>({...p,taxa_maquininha:e.target.value}))} />
+                      </div>
+                    </div>
+                    {pagForm.taxa_maquininha && parseFloat(pagForm.taxa_maquininha) > 0 && (
+                      <div style={{marginTop:12,padding:'10px 12px',background:'#fff',borderRadius:'var(--r-sm)',border:'1px solid var(--gray-200)'}}>
+                        <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--gray-500)',marginBottom:4}}>
+                          <span>Taxa ({pagForm.taxa_maquininha}%)</span>
+                          <span style={{color:'var(--danger)'}}>- {fmt.currency(pagForm.valor_total * parseFloat(pagForm.taxa_maquininha) / 100)}</span>
+                        </div>
+                        <div style={{display:'flex',justifyContent:'space-between',fontSize:14,fontWeight:700}}>
+                          <span>Você recebe</span>
+                          <span style={{color:'var(--success)'}}>{fmt.currency(taxaCalculada)}</span>
+                        </div>
+                        {pagForm.parcelas > 1 && (
+                          <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--gray-500)',marginTop:4}}>
+                            <span>{pagForm.parcelas}x parcelas de</span>
+                            <span>{fmt.currency(taxaCalculada / pagForm.parcelas)}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Opções de débito */}
+                {pagForm.forma==='debito' && (
+                  <div style={{background:'var(--gray-50)',borderRadius:'var(--r-sm)',padding:16,marginBottom:16,border:'1px solid var(--gray-200)'}}>
+                    <div className="form-grid" style={{gap:12}}>
+                      <div className="form-group">
+                        <label>Bandeira</label>
+                        <select value={pagForm.bandeira} onChange={e=>setPagForm(p=>({...p,bandeira:e.target.value}))}>
+                          <option value="">Selecionar...</option>
+                          <option value="visa">Visa</option>
+                          <option value="mastercard">Mastercard</option>
+                          <option value="elo">Elo</option>
+                          <option value="outra">Outra</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>Taxa da maquininha (%)</label>
+                        <input type="number" step="0.01" min="0" max="99" placeholder="Ex: 1.5" value={pagForm.taxa_maquininha} onChange={e=>setPagForm(p=>({...p,taxa_maquininha:e.target.value}))} />
+                      </div>
+                    </div>
+                    {pagForm.taxa_maquininha && parseFloat(pagForm.taxa_maquininha) > 0 && (
+                      <div style={{marginTop:12,padding:'10px 12px',background:'#fff',borderRadius:'var(--r-sm)',border:'1px solid var(--gray-200)'}}>
+                        <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--gray-500)',marginBottom:4}}>
+                          <span>Taxa ({pagForm.taxa_maquininha}%)</span>
+                          <span style={{color:'var(--danger)'}}>- {fmt.currency(pagForm.valor_total * parseFloat(pagForm.taxa_maquininha) / 100)}</span>
+                        </div>
+                        <div style={{display:'flex',justifyContent:'space-between',fontSize:14,fontWeight:700}}>
+                          <span>Você recebe</span>
+                          <span style={{color:'var(--success)'}}>{fmt.currency(taxaCalculada)}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Observação */}
+                <div className="form-group" style={{marginBottom:20}}>
+                  <label>Observação (opcional)</label>
+                  <input value={pagForm.observacao} onChange={e=>setPagForm(p=>({...p,observacao:e.target.value}))} placeholder="Ex: Cliente pagou com 2 cartões..." />
+                </div>
+
+                <div className="form-actions">
+                  <button type="button" className="btn btn-outline" onClick={()=>setModal(null)}>Cancelar</button>
+                  <button type="submit" className="btn btn-primary" disabled={!pagForm.forma}>✅ Confirmar pagamento e finalizar</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
