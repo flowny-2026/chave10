@@ -426,7 +426,7 @@ router.get('/pagamentos-os', async (req,res) => {
     const rows = await query('SELECT * FROM pagamentos_os WHERE oficina_id=$1 ORDER BY data_pagamento DESC', [oid(req)]);
     res.json(rows);
   } catch(err){res.status(500).json({error:'Erro interno'});}
-}););
+});
 
 // AGENDA
 router.get('/agenda', async (req,res) => {
