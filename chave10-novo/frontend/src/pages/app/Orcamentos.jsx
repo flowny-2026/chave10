@@ -420,7 +420,7 @@ export default function AppOrcamentos() {
                 <button className="modal-close" onClick={()=>setModal(null)}>✕</button>
               </div>
               <div className="modal-body">
-                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:16}}>
+                <div className="os-view-fields">
                   {[
                     {l:'Cliente',v:viewing.cliente_nome||'—'},
                     {l:'Veículo',v:viewing.veiculo_modelo||'—'},
@@ -428,62 +428,68 @@ export default function AppOrcamentos() {
                     {l:'Validade',v:fmt.date(viewing.validade)},
                     {l:'Status',v:<span className={`badge ${STATUS_CLASS[viewing.status]||'badge-gray'}`}>{STATUS_LABEL[viewing.status]||viewing.status}</span>},
                   ].map(item=>(
-                    <div key={item.l}><div style={{fontSize:11,fontWeight:700,color:'var(--gray-400)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:3}}>{item.l}</div><div style={{fontSize:13.5,color:'var(--gray-800)'}}>{item.v}</div></div>
+                    <div key={item.l} className="os-view-field">
+                      <div className="os-view-label">{item.l}</div>
+                      <div className="os-view-value">{item.v}</div>
+                    </div>
                   ))}
                 </div>
 
                 {[{t:'Descrição / Problema',v:viewing.descricao},{t:'Serviços',v:viewing.servicos},{t:'Observações',v:viewing.obs}].filter(s=>s.v).map(s=>(
                   <div key={s.t} style={{marginBottom:12}}>
-                    <div style={{fontSize:11,fontWeight:700,color:'var(--gray-400)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:6}}>{s.t}</div>
-                    <div style={{fontSize:13.5,color:'var(--gray-700)',background:'var(--gray-50)',padding:'10px 12px',borderRadius:'var(--r-sm)'}}>{s.v}</div>
+                    <div className="os-view-label">{s.t}</div>
+                    <div style={{fontSize:13.5,color:'var(--gray-700)',background:'var(--gray-50)',padding:'10px 12px',borderRadius:'var(--r-sm)',whiteSpace:'pre-wrap',wordBreak:'break-word'}}>{s.v}</div>
                   </div>
                 ))}
 
                 <div style={{marginBottom:12}}>
-                  <div style={{fontSize:11,fontWeight:700,color:'var(--gray-400)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:6}}>Peças</div>
+                  <div className="os-view-label">Peças</div>
                   {pecas.filter(p=>p.nome).length ? (
-                    <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
-                      <thead><tr style={{background:'var(--gray-50)'}}>
-                        <th style={{padding:'7px 10px',textAlign:'left',fontSize:11,color:'var(--gray-400)',fontWeight:700}}>Descrição</th>
-                        <th style={{padding:'7px 10px',textAlign:'center',fontSize:11,color:'var(--gray-400)',fontWeight:700}}>Qtd</th>
-                        {!isFuncionario&&<><th style={{padding:'7px 10px',textAlign:'right',fontSize:11,color:'var(--gray-400)',fontWeight:700}}>Unit.</th><th style={{padding:'7px 10px',textAlign:'right',fontSize:11,color:'var(--gray-400)',fontWeight:700}}>Subtotal</th></>}
-                      </tr></thead>
-                      <tbody>
-                        {pecas.filter(p=>p.nome).map((p,i)=>(
-                          <tr key={i} style={{borderBottom:'1px solid var(--gray-100)'}}>
-                            <td style={{padding:'7px 10px'}}>{p.nome}</td>
-                            <td style={{padding:'7px 10px',textAlign:'center'}}>{p.qtd||1}</td>
-                            {!isFuncionario&&<><td style={{padding:'7px 10px',textAlign:'right'}}>{fmt.currency(p.valor_unit)}</td><td style={{padding:'7px 10px',textAlign:'right',fontWeight:600}}>{fmt.currency((parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1))}</td></>}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                    <div className="os-view-pecas">
+                      {pecas.filter(p=>p.nome).map((p,i)=>(
+                        <div key={i} className="os-view-peca-item">
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{fontSize:13,fontWeight:600,color:'var(--gray-800)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.nome}</div>
+                            <div style={{fontSize:12,color:'var(--gray-400)'}}>Qtd: {p.qtd||1}</div>
+                          </div>
+                          {!isFuncionario&&(
+                            <div style={{textAlign:'right',flexShrink:0}}>
+                              <div style={{fontSize:12,color:'var(--gray-400)'}}>{fmt.currency(p.valor_unit)} un.</div>
+                              <div style={{fontSize:13,fontWeight:700,color:'var(--gray-800)'}}>{fmt.currency((parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1))}</div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   ) : <p style={{fontSize:13,color:'var(--gray-400)'}}>Nenhuma peça registrada</p>}
                 </div>
 
                 {!isFuncionario && (
                 <>
-                <div style={{display:'flex',gap:12,marginBottom:8}}>
-                  {[{l:'Mão de obra',v:viewing.valor_mo},{l:'Total peças',v:totalPecas}].map(item=>(
-                    <div key={item.l} style={{flex:1,background:'var(--gray-50)',padding:12,borderRadius:'var(--r-sm)',textAlign:'center'}}>
-                      <div style={{fontSize:11,color:'var(--gray-400)',marginBottom:4}}>{item.l.toUpperCase()}</div>
-                      <div style={{fontSize:18,fontWeight:700}}>{fmt.currency(item.v)}</div>
-                    </div>
-                  ))}
-                </div>
-                {(parseFloat(viewing.desconto)||0)>0 && (
-                  <div style={{display:'flex',justifyContent:'space-between',padding:'8px 12px',background:'#fef2f2',borderRadius:'var(--r-sm)',marginBottom:8,color:'#dc2626',fontWeight:600}}>
-                    <span>Desconto</span><span>- {fmt.currency(viewing.desconto)}</span>
+                <div className="os-view-totais">
+                  <div className="os-view-total-item">
+                    <span>Mão de obra</span>
+                    <span>{fmt.currency(viewing.valor_mo)}</span>
                   </div>
-                )}
-                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'12px 16px',background:'var(--brand-light)',borderRadius:'var(--r-sm)',marginBottom:16}}>
-                  <span style={{fontWeight:700,color:'var(--brand)'}}>Total</span>
-                  <span style={{fontFamily:'Poppins,sans-serif',fontSize:20,fontWeight:800,color:'var(--brand)'}}>{fmt.currency(total)}</span>
+                  <div className="os-view-total-item">
+                    <span>Total peças</span>
+                    <span>{fmt.currency(totalPecas)}</span>
+                  </div>
+                  {(parseFloat(viewing.desconto)||0)>0 && (
+                    <div className="os-view-total-item" style={{color:'var(--danger)'}}>
+                      <span>Desconto</span>
+                      <span>- {fmt.currency(viewing.desconto)}</span>
+                    </div>
+                  )}
+                  <div className="os-view-total-final">
+                    <span>Total</span>
+                    <span>{fmt.currency(total)}</span>
+                  </div>
                 </div>
                 </>
                 )}
 
-                <div className="form-actions">
+                <div className="os-view-actions">
                   <button className="btn btn-outline" onClick={()=>setModal(null)}>Fechar</button>
                   <button className="btn btn-outline" onClick={()=>imprimir(viewing)}>🖨️ Imprimir</button>
                   <button className="btn btn-outline" onClick={()=>enviarWhatsApp(viewing)}>💬 WhatsApp</button>
