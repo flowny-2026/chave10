@@ -43,10 +43,45 @@ function getUser() {
   try { return JSON.parse(localStorage.getItem('c10_user')); } catch { return null; }
 }
 
+function getToken() {
+  return localStorage.getItem('c10_token');
+}
+
+// Verifica se o token JWT ainda é válido (sem chamar o servidor)
+function isTokenValid() {
+  const token = getToken();
+  if (!token) return false;
+  try {
+    // JWT tem 3 partes separadas por ponto — decodifica o payload (parte do meio)
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    // exp é em segundos, Date.now() em milissegundos
+    return payload.exp * 1000 > Date.now();
+  } catch {
+    return false;
+  }
+}
+
 function PrivateRoute({ children, adminOnly = false, noFuncionario = false }) {
   const user = getUser();
-  if (!user && adminOnly) return <Navigate to="/admin/login" replace />;
-  if (!user) return <Navigate to="/login" replace />;
+  const tokenOk = isTokenValid();
+
+  // Sem token válido → login
+  if (!tokenOk) {
+    // Limpa dados inválidos
+    if (!tokenOk && getToken()) {
+      localStorage.removeItem('c10_token');
+      localStorage.removeItem('c10_user');
+    }
+    if (adminOnly) return <Navigate to="/admin/login" replace />;
+    return <Navigate to="/login" replace />;
+  }
+
+  // Token válido mas sem dados do usuário em cache → tenta reconstruir do token
+  if (!user) {
+    if (adminOnly) return <Navigate to="/admin/login" replace />;
+    return <Navigate to="/login" replace />;
+  }
+
   if (adminOnly && user.perfil !== 'master_admin') return <Navigate to="/app/dashboard" replace />;
   if (noFuncionario && user.perfil === 'funcionario') return <Navigate to="/app/dashboard" replace />;
   return children;
@@ -54,7 +89,7 @@ function PrivateRoute({ children, adminOnly = false, noFuncionario = false }) {
 
 function AppRedirect() {
   const user = getUser();
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user || !isTokenValid()) return <Navigate to="/login" replace />;
   if (user.perfil === 'master_admin') return <Navigate to="/admin/dashboard" replace />;
   return <Navigate to="/app/dashboard" replace />;
 }

@@ -28,10 +28,11 @@ if ('serviceWorker' in navigator) {
       .catch(err => console.warn('SW falhou:', err));
 
     // Se o SW já controlava e foi atualizado (reload após update)
-    let refreshing = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (!refreshing) { refreshing = true; window.location.reload(); }
-    });
+    // Desabilitado: causava loops de reload que limpavam o estado
+    // let refreshing = false;
+    // navigator.serviceWorker.addEventListener('controllerchange', () => {
+    //   if (!refreshing) { refreshing = true; window.location.reload(); }
+    // });
   });
 }
 
