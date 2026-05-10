@@ -2345,7 +2345,6 @@ tbody tr { transition: background .12s; }
   /* Page header mobile */
   .page-header { margin-bottom: 16px; gap: 8px; }
   .page-title { font-size: 19px; }
-  .page-header .btn { display: none; } /* botão fica no bottom nav */
 
   /* Cards */
   .card { padding: 14px; border-radius: var(--r-sm); }
