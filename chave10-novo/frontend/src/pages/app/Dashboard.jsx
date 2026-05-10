@@ -287,7 +287,7 @@ export default function AppDashboard() {
                   <span className={`badge ${STATUS_CLASS[os.status]||'badge-gray'}`}>{STATUS_LABEL[os.status]||os.status}</span>
                   {!isFuncionario && (
                     <div style={{textAlign:'right'}}>
-                      <div style={{fontSize:13,fontWeight:700,color:'var(--gray-800)'}}>{fmt.currency(parseFloat(os.valor||0))}</div>
+                      <div style={{fontSize:13,fontWeight:700,color:'var(--dash-val-color, var(--gray-800))'}}>{fmt.currency(parseFloat(os.valor||0))}</div>
                       {parseFloat(os.valor_mo||0) > 0 && (
                         <div style={{fontSize:11,color:'var(--accent)',fontWeight:600}}>
                           🔧 MO: {fmt.currency(os.valor_mo)}
