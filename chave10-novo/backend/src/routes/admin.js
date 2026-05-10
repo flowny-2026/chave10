@@ -199,6 +199,23 @@ router.post('/trocar-senha', async (req,res) => {
   }
 });
 
+// REDEFINIR SENHA DE USUÁRIO (pelo admin)
+router.patch('/usuarios/:id/redefinir-senha', validateId, async (req,res) => {
+  try {
+    const { nova_senha } = req.body;
+    if (!nova_senha || nova_senha.length < 6) {
+      return res.status(400).json({ error: 'Nova senha deve ter no mínimo 6 caracteres' });
+    }
+    const usuario = await queryOne('SELECT id, perfil, nome, email FROM usuarios WHERE id=$1', [req.params.id]);
+    if (!usuario) return res.status(404).json({ error: 'Usuário não encontrado' });
+    if (usuario.perfil === 'master_admin') return res.status(403).json({ error: 'Não é possível redefinir a senha do admin master por aqui' });
+    const hash = bcrypt.hashSync(nova_senha, 12);
+    await run('UPDATE usuarios SET senha_hash=$1 WHERE id=$2', [hash, req.params.id]);
+    log.info('senha_redefinida_pelo_admin', { usuario_id: usuario.id, email: usuario.email, admin_id: req.user.id });
+    res.json({ ok: true });
+  } catch(err) { log.error('admin_redefinir_senha', err); res.status(500).json({ error: 'Erro interno' }); }
+});
+
 // USUÁRIOS PENDENTES (sem oficina)
 router.get('/usuarios-pendentes', async (req,res) => {
   try {

@@ -53,6 +53,7 @@ export const api = {
       pendentes: ()                  => get('/admin/usuarios-pendentes'),
       desvincular: (id)              => patch('/admin/usuarios/'+id+'/desvincular', {}),
       remove:  (id)                  => del('/admin/usuarios/'+id),
+      redefinirSenha: (id, nova_senha) => req('PATCH', '/admin/usuarios/'+id+'/redefinir-senha', { nova_senha }),
     },
     pagamentos: {
       list:    (oficina_id)          => get('/admin/pagamentos' + (oficina_id ? '?oficina_id='+oficina_id : '')),

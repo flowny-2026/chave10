@@ -28,6 +28,8 @@ export default function AdminOficinas() {
   const [form, setForm]               = useState(EMPTY);
   const [userForm, setUserForm]       = useState(EMPTY_USR);
   const [showSenhaUser, setShowSenhaUser] = useState(false);
+  const [resetForm, setResetForm]         = useState({ usuario_id: null, nome: '', nova_senha: '' });
+  const [showNovaSenha, setShowNovaSenha] = useState(false);
   const [pagForm, setPagForm]         = useState(EMPTY_PAG);
   const [loteForm, setLoteForm]       = useState({ novo_vencimento:'', valor:'', forma_pagamento:'pix' });
   const [pendentes, setPendentes]     = useState([]);
@@ -82,6 +84,18 @@ export default function AdminOficinas() {
       await api.admin.usuarios.create({...userForm, oficina_id: selectedOf.id});
       setModal(null); showToast('Usuário criado!');
     } catch (err) { showToast(err.error||'Erro ao criar usuário','error'); }
+  }
+
+  async function handleRedefinirSenha(e) {
+    e.preventDefault();
+    if (resetForm.nova_senha.length < 6) { showToast('Senha deve ter no mínimo 6 caracteres','error'); return; }
+    try {
+      await api.admin.usuarios.redefinirSenha(resetForm.usuario_id, resetForm.nova_senha);
+      setModal(null);
+      setResetForm({ usuario_id: null, nome: '', nova_senha: '' });
+      setShowNovaSenha(false);
+      showToast('Senha redefinida com sucesso!');
+    } catch (err) { showToast(err.error||'Erro ao redefinir senha','error'); }
   }
 
   async function savePagamento(e) {
@@ -268,8 +282,15 @@ export default function AdminOficinas() {
                           <div style={{fontSize:13,fontWeight:600,color:'var(--gray-800)'}}>{u.nome}</div>
                           <div style={{fontSize:11.5,color:'var(--gray-400)'}}>{u.email} · {u.perfil}</div>
                         </div>
-                        <div style={{fontSize:11,color:'var(--gray-400)'}}>
-                          {u.ultimo_acesso ? `Último acesso: ${fmt.date(u.ultimo_acesso?.split('T')[0])}` : 'Nunca acessou'}
+                        <div style={{display:'flex',alignItems:'center',gap:8}}>
+                          <div style={{fontSize:11,color:'var(--gray-400)'}}>
+                            {u.ultimo_acesso ? `Último acesso: ${fmt.date(u.ultimo_acesso?.split('T')[0])}` : 'Nunca acessou'}
+                          </div>
+                          <button
+                            className="btn btn-outline btn-sm"
+                            title="Redefinir senha"
+                            onClick={()=>{ setResetForm({usuario_id:u.id,nome:u.nome,nova_senha:''}); setShowNovaSenha(false); setModal('resetSenha'); }}
+                          >🔑 Redefinir senha</button>
                         </div>
                       </div>
                     )) : <p style={{fontSize:13,color:'var(--gray-400)'}}>Nenhum usuário cadastrado</p>}
@@ -412,6 +433,58 @@ export default function AdminOficinas() {
                 <div className="form-actions">
                   <button type="button" className="btn btn-outline" onClick={()=>setModal(null)}>Cancelar</button>
                   <button type="submit" className="btn btn-primary">Criar login</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Redefinir Senha */}
+      {modal==='resetSenha' && (
+        <div className="modal-overlay open">
+          <div className="modal" style={{maxWidth:420}}>
+            <div className="modal-header">
+              <h2>🔑 Redefinir senha</h2>
+              <button className="modal-close" onClick={()=>setModal(null)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <p style={{fontSize:13,color:'var(--gray-500)',marginBottom:20}}>
+                Definindo nova senha para <strong>{resetForm.nome}</strong>. O usuário deverá usar essa senha no próximo login.
+              </p>
+              <form onSubmit={handleRedefinirSenha}>
+                <div className="form-group" style={{marginBottom:20}}>
+                  <label>Nova senha *</label>
+                  <div style={{position:'relative'}}>
+                    <input
+                      type={showNovaSenha ? 'text' : 'password'}
+                      value={resetForm.nova_senha}
+                      onChange={e=>setResetForm(f=>({...f,nova_senha:e.target.value}))}
+                      placeholder="Mínimo 6 caracteres"
+                      required
+                      autoFocus
+                      autoComplete="new-password"
+                      style={{paddingRight:40}}
+                    />
+                    <button
+                      type="button"
+                      onClick={()=>setShowNovaSenha(s=>!s)}
+                      style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:'var(--gray-400)',padding:4,display:'flex',alignItems:'center'}}
+                      tabIndex={-1}
+                    >
+                      {showNovaSenha
+                        ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                        : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                      }
+                    </button>
+                  </div>
+                  <small style={{fontSize:11,color:'var(--gray-400)',marginTop:4,display:'block'}}>
+                    Comunique a nova senha ao usuário por um canal seguro.
+                  </small>
+                </div>
+                <div className="form-actions">
+                  <button type="button" className="btn btn-outline" onClick={()=>setModal(null)}>Cancelar</button>
+                  <button type="submit" className="btn btn-primary">Salvar nova senha</button>
                 </div>
               </form>
             </div>
