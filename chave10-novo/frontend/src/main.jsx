@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import './index.css';
+import './styles/mobile.css';
 import App from './App';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
