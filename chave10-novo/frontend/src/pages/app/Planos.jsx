@@ -38,7 +38,7 @@ export default function AppPlanos() {
   ];
 
   return (
-    <div style={{ maxWidth: 720, margin: '0 auto' }}>
+    <div className="planos-page" style={{ maxWidth: 720, margin: '0 auto' }}>
 
       {/* BANNER TRIAL */}
       {isTrial && diasRestantes !== null && (
@@ -85,20 +85,20 @@ export default function AppPlanos() {
         <h1 style={{
           fontFamily: 'Poppins, sans-serif',
           fontSize: 30, fontWeight: 800,
-          color: '#1E3A5F', lineHeight: 1.2,
+          color: 'var(--planos-hero-title, #1E3A5F)', lineHeight: 1.2,
           marginBottom: 12,
         }}>
           A ferramenta que faltava<br />na sua gestão
         </h1>
 
-        <p style={{ fontSize: 15, color: '#6B7280', lineHeight: 1.7, maxWidth: 480, margin: '0 auto' }}>
+        <p style={{ fontSize: 15, color: 'var(--planos-hero-sub, #6B7280)', lineHeight: 1.7, maxWidth: 480, margin: '0 auto' }}>
           Organize sua oficina, controle serviços e acompanhe seu faturamento de forma simples — tudo em um só lugar.
         </p>
       </div>
 
       {/* CARD PRINCIPAL */}
-      <div style={{
-        background: '#fff',
+      <div className="planos-card-principal" style={{
+        background: 'var(--planos-card-bg, #fff)',
         borderRadius: 20,
         border: '2px solid #F97316',
         boxShadow: '0 8px 40px rgba(249,115,22,.15)',
@@ -135,23 +135,23 @@ export default function AppPlanos() {
         </div>
 
         {/* Urgência — sem barra de vagas */}
-        <div style={{
-          background: '#FFF3E0',
-          borderBottom: '1px solid #FED7AA',
+        <div className="planos-urgencia" style={{
+          background: 'var(--planos-urgencia-bg, #FFF3E0)',
+          borderBottom: '1px solid var(--planos-urgencia-border, #FED7AA)',
           padding: '10px 32px',
           display: 'flex',
           alignItems: 'center',
           gap: 8,
         }}>
           <span style={{ fontSize: 16 }}>🔥</span>
-          <span style={{ fontSize: 13, fontWeight: 700, color: '#C2410C' }}>
+          <span className="planos-urgencia-text" style={{ fontSize: 13, fontWeight: 700, color: 'var(--planos-urgencia-color, #C2410C)' }}>
             Apenas para os 10 primeiros clientes — vagas promocionais limitadas
           </span>
         </div>
 
         {/* Benefícios */}
-        <div style={{ padding: '28px 32px' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '.6px', marginBottom: 16 }}>
+        <div className="planos-body" style={{ padding: '28px 32px' }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--planos-label-color, #6B7280)', textTransform: 'uppercase', letterSpacing: '.6px', marginBottom: 16 }}>
             Tudo incluído no plano:
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 24px', marginBottom: 28 }}>
@@ -166,15 +166,15 @@ export default function AppPlanos() {
                     <polyline points="20 6 9 17 4 12"/>
                   </svg>
                 </div>
-                <span style={{ fontSize: 13.5, color: '#374151' }}>{b}</span>
+                <span style={{ fontSize: 13.5, color: 'var(--planos-item-color, #374151)' }}>{b}</span>
               </div>
             ))}
           </div>
 
           {/* Garantias */}
-          <div style={{
+          <div className="planos-garantias" style={{
             display: 'flex', gap: 16, flexWrap: 'wrap',
-            background: '#F9FAFB', borderRadius: 10,
+            background: 'var(--planos-garantias-bg, #F9FAFB)', borderRadius: 10,
             padding: '14px 18px', marginBottom: 24,
           }}>
             {[
@@ -183,7 +183,7 @@ export default function AppPlanos() {
               { icon: '💾', text: 'Dados sempre salvos' },
               { icon: '📱', text: 'Funciona no celular' },
             ].map((g, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: '#6B7280' }}>
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--planos-garantia-color, #6B7280)' }}>
                 <span>{g.icon}</span> {g.text}
               </div>
             ))}
@@ -226,17 +226,17 @@ export default function AppPlanos() {
       </div>
 
       {/* FAQ */}
-      <div style={{ background: '#F9FAFB', borderRadius: 14, padding: '24px 28px' }}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: '#1E3A5F', marginBottom: 18 }}>❓ Dúvidas frequentes</div>
+      <div className="planos-faq" style={{ background: 'var(--planos-faq-bg, #F9FAFB)', borderRadius: 14, padding: '24px 28px' }}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--planos-faq-title, #1E3A5F)', marginBottom: 18 }}>❓ Dúvidas frequentes</div>
         {[
           { p: 'Como funciona o pagamento?', r: 'Pagamento somente via PIX. Após entrar em contato pelo WhatsApp, enviamos a chave PIX para você realizar o pagamento e ativar o plano.' },
           { p: 'Posso cancelar a qualquer momento?', r: 'Sim, sem fidelidade. Cancele quando quiser pelo WhatsApp, sem burocracia.' },
           { p: 'O que acontece com meus dados se eu cancelar?', r: 'Seus dados ficam salvos por 30 dias. Se voltar, tudo estará lá.' },
           { p: 'Funciona no celular?', r: 'Sim! O sistema é responsivo e pode ser instalado como app no celular (PWA).' },
         ].map((faq, i) => (
-          <div key={i} style={{ marginBottom: i < 3 ? 16 : 0, paddingBottom: i < 3 ? 16 : 0, borderBottom: i < 3 ? '1px solid #E5E7EB' : 'none' }}>
-            <div style={{ fontSize: 13.5, fontWeight: 700, color: '#1F2937', marginBottom: 4 }}>{faq.p}</div>
-            <div style={{ fontSize: 13, color: '#6B7280', lineHeight: 1.6 }}>{faq.r}</div>
+          <div key={i} style={{ marginBottom: i < 3 ? 16 : 0, paddingBottom: i < 3 ? 16 : 0, borderBottom: i < 3 ? '1px solid var(--planos-faq-border, #E5E7EB)' : 'none' }}>
+            <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--planos-faq-q, #1F2937)', marginBottom: 4 }}>{faq.p}</div>
+            <div style={{ fontSize: 13, color: 'var(--planos-faq-a, #6B7280)', lineHeight: 1.6 }}>{faq.r}</div>
           </div>
         ))}
       </div>

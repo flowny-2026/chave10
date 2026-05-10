@@ -550,3 +550,134 @@
   /* Garante que texto padrão seja legível */
   .main-content { color: #c9d1d9 !important; }
 }
+
+/* ══════════════════════════════════════════
+   PLANOS PAGE — dark mode
+══════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+  /* Container principal */
+  .main-content > div[style*="maxWidth: 720"] {
+    color: #e6edf3 !important;
+  }
+
+  /* Badge oferta */
+  .main-content div[style*="FFF3E0"] {
+    background: rgba(249,115,22,.15) !important;
+    border-color: rgba(249,115,22,.4) !important;
+    color: #F97316 !important;
+  }
+
+  /* Título hero */
+  .main-content h1[style*="1E3A5F"] {
+    color: #e6edf3 !important;
+  }
+
+  /* Subtítulo hero */
+  .main-content p[style*="6B7280"] {
+    color: rgba(255,255,255,.6) !important;
+  }
+
+  /* Card principal — fundo branco vira dark */
+  .main-content div[style*="background: '#fff'"],
+  .main-content div[style*='background: "#fff"'],
+  .main-content div[style*="background:'#fff'"] {
+    background: #161b22 !important;
+  }
+
+  /* Urgência — fundo laranja claro */
+  .main-content div[style*="FFF3E0"][style*="borderBottom"] {
+    background: rgba(249,115,22,.1) !important;
+    border-bottom-color: rgba(249,115,22,.2) !important;
+  }
+  .main-content span[style*="C2410C"] {
+    color: #fb923c !important;
+  }
+
+  /* Benefícios — texto escuro */
+  .main-content span[style*="374151"] {
+    color: #c9d1d9 !important;
+  }
+
+  /* Check icon background */
+  .main-content div[style*="FFF3E0"][style*="borderRadius: '50%'"] {
+    background: rgba(249,115,22,.15) !important;
+  }
+
+  /* Garantias — fundo cinza claro */
+  .main-content div[style*="F9FAFB"][style*="borderRadius: 10"] {
+    background: rgba(255,255,255,.05) !important;
+  }
+  .main-content div[style*="6B7280"][style*="alignItems: 'center'"] {
+    color: rgba(255,255,255,.5) !important;
+  }
+
+  /* FAQ — fundo cinza */
+  .main-content div[style*="F9FAFB"][style*="borderRadius: 14"] {
+    background: #161b22 !important;
+    border: 1px solid rgba(255,255,255,.07) !important;
+  }
+  .main-content div[style*="1E3A5F"][style*="fontWeight: 700"] {
+    color: #e6edf3 !important;
+  }
+  .main-content div[style*="1F2937"][style*="fontWeight: 700"] {
+    color: #e6edf3 !important;
+  }
+  .main-content div[style*="6B7280"][style*="lineHeight: 1.6"] {
+    color: rgba(255,255,255,.55) !important;
+  }
+  .main-content div[style*="E5E7EB"] {
+    border-bottom-color: rgba(255,255,255,.07) !important;
+  }
+
+  /* Nota final */
+  .main-content p[style*="9CA3AF"] {
+    color: rgba(255,255,255,.4) !important;
+  }
+  .main-content p[style*="9CA3AF"] strong {
+    color: rgba(255,255,255,.6) !important;
+  }
+}
+
+/* ══════════════════════════════════════════
+   PLANOS PAGE — CSS variables dark mode
+══════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .planos-page {
+    --planos-card-bg: #161b22;
+    --planos-urgencia-bg: rgba(249,115,22,.1);
+    --planos-urgencia-border: rgba(249,115,22,.2);
+    --planos-urgencia-color: #fb923c;
+    --planos-label-color: rgba(255,255,255,.4);
+    --planos-item-color: #c9d1d9;
+    --planos-garantias-bg: rgba(255,255,255,.05);
+    --planos-garantia-color: rgba(255,255,255,.5);
+    --planos-faq-bg: #161b22;
+    --planos-faq-title: #e6edf3;
+    --planos-faq-q: #e6edf3;
+    --planos-faq-a: rgba(255,255,255,.55);
+    --planos-faq-border: rgba(255,255,255,.07);
+    --planos-hero-title: #e6edf3;
+    --planos-hero-sub: rgba(255,255,255,.6);
+  }
+
+  /* Badge oferta no hero */
+  .planos-page div[style*="FFF3E0"] {
+    background: rgba(249,115,22,.15) !important;
+    border-color: rgba(249,115,22,.4) !important;
+    color: #F97316 !important;
+  }
+
+  /* Check icon background nos benefícios */
+  .planos-page div[style*="FFF3E0"][style*="50%"] {
+    background: rgba(249,115,22,.15) !important;
+  }
+
+  /* Nota final */
+  .planos-page p[style*="9CA3AF"] {
+    color: rgba(255,255,255,.4) !important;
+  }
+  .planos-page p[style*="9CA3AF"] strong {
+    color: rgba(255,255,255,.6) !important;
+  }
+}
