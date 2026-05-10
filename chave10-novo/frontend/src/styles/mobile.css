@@ -407,3 +407,46 @@
     margin-bottom: 12px !important;
   }
 }
+
+/* ══════════════════════════════════════════
+   PAGE HEADER BUTTONS — todos os casos
+══════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+  /* Botão direto no page-header */
+  .page-header > .btn-primary,
+  .page-header > .btn-outline,
+  .page-header > .btn-secondary {
+    width: 100% !important;
+    justify-content: center !important;
+    min-height: 46px !important;
+    font-size: 15px !important;
+  }
+
+  /* Grupo de botões dentro de div no page-header */
+  .page-header > div:last-child:not([class]) {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+  .page-header > div:last-child:not([class]) .btn-primary {
+    flex: 1 !important;
+    justify-content: center !important;
+    min-height: 46px !important;
+    font-size: 15px !important;
+  }
+  .page-header > div:last-child:not([class]) .btn-outline,
+  .page-header > div:last-child:not([class]) .btn-ghost {
+    min-height: 40px !important;
+  }
+
+  /* Veiculos e Clientes: botão direto */
+  .page-header > button.btn-primary {
+    width: 100% !important;
+    justify-content: center !important;
+    min-height: 46px !important;
+    font-size: 15px !important;
+    order: -1 !important;
+  }
+}
