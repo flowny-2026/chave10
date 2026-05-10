@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import { api } from '../api';
 
-// â”€â”€â”€ CSS injetado via <style> para garantir que nÃ£o seja sobrescrito â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â”€â”€â”€ CSS injetado via <style> para garantir que não seja sobrescrito â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const LOGIN_CSS = `
   @keyframes lv2FadeIn { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
   @keyframes lv2SlideIn { from{opacity:0;transform:translateX(28px)} to{opacity:1;transform:translateX(0)} }
@@ -194,7 +194,7 @@ function IconAlert() {
   );
 }
 
-// â”€â”€ AnimaÃ§Ã£o de loading â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â”€â”€ Animação de loading â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function LoginLoader() {
   const [pct, setPct] = useState(0);
   const [status, setStatus] = useState('Iniciando sistema...');
@@ -204,18 +204,18 @@ function LoginLoader() {
       [ { pct: 12, msg: 'ðŸ”§ Apertando os parafusos do sistema...' },
         { pct: 12, msg: 'ðŸª› Calibrando a chave de fenda...' },
         { pct: 12, msg: 'ðŸ”© Verificando torque das credenciais...' } ],
-      [ { pct: 42, msg: 'ðŸ›¢ï¸ Trocando o Ã³leo do banco de dados...' },
+      [ { pct: 42, msg: 'ðŸ›¢ï¸ Trocando o óleo do banco de dados...' },
         { pct: 42, msg: 'âš™ï¸ Engrenagens girando, aguarde...' },
         { pct: 42, msg: 'ðŸ”‹ Carregando a bateria do dashboard...' } ],
       [ { pct: 68, msg: 'ðŸš— Aquecendo o motor principal...' },
         { pct: 68, msg: 'ðŸŽï¸ Acelerando o carregamento...' },
         { pct: 68, msg: 'ðŸ’¨ Limpando o filtro de ar dos dados...' } ],
-      [ { pct: 88, msg: 'ðŸ”¦ Verificando a suspensÃ£o do sistema...' },
+      [ { pct: 88, msg: 'ðŸ”¦ Verificando a suspensão do sistema...' },
         { pct: 88, msg: 'ðŸ›ž Alinhando as rodas do painel...' },
-        { pct: 88, msg: 'ðŸª Rebocando os Ãºltimos dados...' } ],
+        { pct: 88, msg: 'ðŸª Rebocando os últimos dados...' } ],
       [ { pct: 100, msg: 'âœ… Carro na vaga, pode entrar!' },
         { pct: 100, msg: 'âœ… Motor ligado, bora trabalhar!' },
-        { pct: 100, msg: 'âœ… RevisÃ£o completa, tudo certo!' } ],
+        { pct: 100, msg: 'âœ… Revisão completa, tudo certo!' } ],
     ];
     const pick = arr => arr[Math.floor(Math.random() * arr.length)];
     const steps = allSteps.map(pick);
@@ -299,7 +299,7 @@ export default function Login() {
     } catch (err) {
       setLoading(false);
       if (err.error === 'blocked' || err.error === 'overdue') navigate('/bloqueado');
-      else setErro(err.error || 'Credenciais invÃ¡lidas');
+      else setErro(err.error || 'Credenciais inválidas');
     }
   }
 
@@ -391,14 +391,14 @@ export default function Login() {
 
             <h2 className="lv2-headline">
               Chega de perder<br />
-              <span className="lv2-accent-text">serviÃ§o na bagunÃ§a.</span>
+              <span className="lv2-accent-text">serviço na bagunça.</span>
             </h2>
             <p className="lv2-desc">
-              Controle clientes, veÃ­culos e faturamento em um sÃ³ lugar. Simples, rÃ¡pido e profissional.
+              Controle clientes, veículos e faturamento em um só lugar. Simples, rápido e profissional.
             </p>
 
             <ul className="lv2-feats">
-              {['Dashboard com mÃ©tricas em tempo real', 'OrÃ§amentos enviados pelo WhatsApp', 'HistÃ³rico completo de cada veÃ­culo', 'RelatÃ³rios de desempenho da oficina'].map((f, i) => (
+              {['Dashboard com métricas em tempo real', 'Orçamentos enviados pelo WhatsApp', 'Histórico completo de cada veículo', 'Relatórios de desempenho da oficina'].map((f, i) => (
                 <li key={i} className="lv2-feat">
                   <span className="lv2-fcheck"><IconCheck /></span>
                   {f}
@@ -492,8 +492,8 @@ export default function Login() {
             </form>
 
             <div className="lv2-signup">
-              NÃ£o tem uma conta?{' '}
-              <button type="button" className="lv2-lnk" onClick={() => navigate('/cadastro')}>Criar conta grÃ¡tis</button>
+              Não tem uma conta?{' '}
+              <button type="button" className="lv2-lnk" onClick={() => navigate('/cadastro')}>Criar conta grátis</button>
             </div>
 
             <div className="lv2-trust">
@@ -518,3 +518,5 @@ export default function Login() {
     </>
   );
 }
+
+

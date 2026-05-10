@@ -74,7 +74,7 @@ export default function AppAgenda() {
 
   async function save(e) {
     e.preventDefault();
-    if (!form.titulo.trim() || !form.data) { showToast('TÃ­tulo e data sÃ£o obrigatÃ³rios','error'); return; }
+    if (!form.titulo.trim() || !form.data) { showToast('Título e data são obrigatórios','error'); return; }
     try {
       await api.app.agenda.create({
         ...form,
@@ -88,7 +88,7 @@ export default function AppAgenda() {
   async function remove(id) {
     if (!window.confirm('Excluir este agendamento?')) return;
     await api.app.agenda.remove(id);
-    load(); showToast('Agendamento excluÃ­do');
+    load(); showToast('Agendamento excluído');
   }
 
   const veiculosCliente = form.cliente_id
@@ -101,7 +101,7 @@ export default function AppAgenda() {
       .sort((a,b) => (a.hora||'00:00') > (b.hora||'00:00') ? 1 : -1);
   });
 
-  // â”€â”€ MOBILE: visualizaÃ§Ã£o de lista por dia â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // â”€â”€ MOBILE: visualização de lista por dia â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (isMobile) {
     const diaAtual = diasSemana[diaSelecionado];
     const eventosHoje = eventosPorDia[diaSelecionado];
@@ -122,7 +122,7 @@ export default function AppAgenda() {
           </button>
         </div>
 
-        {/* NavegaÃ§Ã£o de semana */}
+        {/* Navegação de semana */}
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12,gap:8}}>
           <button className="btn btn-outline btn-sm" onClick={()=>setSemanaOffset(o=>o-1)}>â†</button>
           <button className="btn btn-outline btn-sm" style={{flex:1}} onClick={()=>{setSemanaOffset(0);setDiaSelecionado(hoje.getDay());}}>Hoje</button>
@@ -239,8 +239,8 @@ export default function AppAgenda() {
               <div className="modal-body">
                 <form onSubmit={save}>
                   <div className="form-group" style={{marginBottom:14}}>
-                    <label>TÃ­tulo *</label>
-                    <input value={form.titulo} onChange={e=>setForm(f=>({...f,titulo:e.target.value}))} placeholder="Ex: RevisÃ£o, Troca de Ã³leo..." required autoFocus />
+                    <label>Título *</label>
+                    <input value={form.titulo} onChange={e=>setForm(f=>({...f,titulo:e.target.value}))} placeholder="Ex: Revisão, Troca de óleo..." required autoFocus />
                   </div>
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:14}}>
                     <div className="form-group">
@@ -260,14 +260,14 @@ export default function AppAgenda() {
                     </select>
                   </div>
                   <div className="form-group" style={{marginBottom:14}}>
-                    <label>VeÃ­culo</label>
+                    <label>Veículo</label>
                     <select value={form.veiculo_id} onChange={e=>setForm(f=>({...f,veiculo_id:e.target.value}))}>
                       <option value="">Selecionar...</option>
                       {veiculosCliente.map(v=><option key={v.id} value={v.id}>{v.marca} {v.modelo} â€” {v.placa}</option>)}
                     </select>
                   </div>
                   <div className="form-group" style={{marginBottom:20}}>
-                    <label>DescriÃ§Ã£o</label>
+                    <label>Descrição</label>
                     <textarea value={form.descricao} onChange={e=>setForm(f=>({...f,descricao:e.target.value}))} placeholder="Detalhes do agendamento..." rows={3} />
                   </div>
                   <div className="form-actions">
@@ -298,7 +298,7 @@ export default function AppAgenda() {
         <div style={{display:'flex',gap:8}}>
           <button className="btn btn-outline btn-sm" onClick={()=>setSemanaOffset(o=>o-1)}>â† Anterior</button>
           <button className="btn btn-outline btn-sm" onClick={()=>setSemanaOffset(0)}>Hoje</button>
-          <button className="btn btn-outline btn-sm" onClick={()=>setSemanaOffset(o=>o+1)}>PrÃ³xima â†’</button>
+          <button className="btn btn-outline btn-sm" onClick={()=>setSemanaOffset(o=>o+1)}>Próxima â†’</button>
           <button className="btn btn-primary" onClick={()=>openCreate()}>+ Agendar</button>
         </div>
       </div>
@@ -363,7 +363,7 @@ export default function AppAgenda() {
           <div className="card-header"><div className="card-title">ðŸ“‹ Agendamentos desta semana</div></div>
           <div className="table-wrapper">
             <table>
-              <thead><tr><th>Data</th><th>Hora</th><th>TÃ­tulo</th><th>Cliente</th><th>VeÃ­culo</th><th></th></tr></thead>
+              <thead><tr><th>Data</th><th>Hora</th><th>Título</th><th>Cliente</th><th>Veículo</th><th></th></tr></thead>
               <tbody>
                 {[...eventosSemana].sort((a,b)=>(a.data+a.hora)>(b.data+b.hora)?1:-1).map(ev=>(
                   <tr key={ev.id}>
@@ -393,8 +393,8 @@ export default function AppAgenda() {
               <form onSubmit={save}>
                 <div className="form-grid">
                   <div className="form-group full">
-                    <label>TÃ­tulo *</label>
-                    <input value={form.titulo} onChange={e=>setForm(f=>({...f,titulo:e.target.value}))} placeholder="Ex: RevisÃ£o, Troca de Ã³leo..." required autoFocus />
+                    <label>Título *</label>
+                    <input value={form.titulo} onChange={e=>setForm(f=>({...f,titulo:e.target.value}))} placeholder="Ex: Revisão, Troca de óleo..." required autoFocus />
                   </div>
                   <div className="form-group">
                     <label>Data *</label>
@@ -412,14 +412,14 @@ export default function AppAgenda() {
                     </select>
                   </div>
                   <div className="form-group">
-                    <label>VeÃ­culo</label>
+                    <label>Veículo</label>
                     <select value={form.veiculo_id} onChange={e=>setForm(f=>({...f,veiculo_id:e.target.value}))}>
                       <option value="">Selecionar...</option>
                       {veiculosCliente.map(v=><option key={v.id} value={v.id}>{v.marca} {v.modelo} â€” {v.placa}</option>)}
                     </select>
                   </div>
                   <div className="form-group full">
-                    <label>DescriÃ§Ã£o</label>
+                    <label>Descrição</label>
                     <textarea value={form.descricao} onChange={e=>setForm(f=>({...f,descricao:e.target.value}))} placeholder="Detalhes do agendamento..." rows={3} />
                   </div>
                 </div>
@@ -437,4 +437,6 @@ export default function AppAgenda() {
     </div>
   );
 }
+
+
 
