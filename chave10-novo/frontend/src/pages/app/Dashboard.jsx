@@ -56,6 +56,10 @@ export default function AppDashboard() {
   const faturamentoMensal = data?.faturamentoMensal || [];
   const isFuncionario = getUser()?.perfil === 'funcionario';
   const fat = parseFloat(stats.faturamentoMes||0);
+  const fatMO = parseFloat(stats.moMes||0);
+  const fatPecas = parseFloat(stats.pecasMes||0);
+  const pctMO = fat > 0 ? Math.round((fatMO/fat)*100) : 0;
+  const pctPecas = fat > 0 ? Math.round((fatPecas/fat)*100) : 0;
   const now = new Date();
   const diasRestantes = Math.max(1, new Date(now.getFullYear(),now.getMonth()+1,0).getDate() - now.getDate());
   const faltaMeta = Math.max(0, meta - fat);
@@ -146,7 +150,28 @@ export default function AppDashboard() {
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:20,position:'relative',zIndex:1}}>
           <div>
             <div style={{fontSize:12,fontWeight:600,color:'rgba(255,255,255,.5)',textTransform:'uppercase',letterSpacing:'.8px',marginBottom:6}}>Faturamento do mês</div>
-            <div style={{fontFamily:'Poppins,sans-serif',fontSize:38,fontWeight:800,color:'#fff',lineHeight:1,marginBottom:10}}>{fmt.currency(fat)}</div>
+            <div style={{fontFamily:'Poppins,sans-serif',fontSize:38,fontWeight:800,color:'#fff',lineHeight:1,marginBottom:8}}>{fmt.currency(fat)}</div>
+
+            {/* Breakdown MO vs Peças */}
+            {fat > 0 && (
+              <div style={{display:'flex',gap:16,marginBottom:10,flexWrap:'wrap'}}>
+                <div style={{display:'flex',alignItems:'center',gap:6}}>
+                  <div style={{width:8,height:8,borderRadius:'50%',background:'#F97316',flexShrink:0}}/>
+                  <span style={{fontSize:12,color:'rgba(255,255,255,.7)'}}>
+                    Mão de obra: <strong style={{color:'#fff'}}>{fmt.currency(fatMO)}</strong>
+                    <span style={{color:'rgba(255,255,255,.45)',marginLeft:4}}>({pctMO}%)</span>
+                  </span>
+                </div>
+                <div style={{display:'flex',alignItems:'center',gap:6}}>
+                  <div style={{width:8,height:8,borderRadius:'50%',background:'#60a5fa',flexShrink:0}}/>
+                  <span style={{fontSize:12,color:'rgba(255,255,255,.7)'}}>
+                    Peças: <strong style={{color:'#fff'}}>{fmt.currency(fatPecas)}</strong>
+                    <span style={{color:'rgba(255,255,255,.45)',marginLeft:4}}>({pctPecas}%)</span>
+                  </span>
+                </div>
+              </div>
+            )}
+
             <div style={{fontSize:13,color:'rgba(255,255,255,.6)',marginBottom:meta>0?14:4}}>
               {stats.finalizadasHoje||0} OS finalizada(s) hoje · {stats.emAndamento||0} em andamento
             </div>
@@ -198,7 +223,28 @@ export default function AppDashboard() {
         {!isFuncionario && (
         <div className="stat-card c-orange">
           <div className="stat-icon c-orange"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
-          <div><div className="stat-value" style={{fontSize:17}}>{fmt.currency(fat)}</div><div className="stat-label">Faturamento do mês</div></div>
+          <div style={{flex:1,minWidth:0}}>
+            <div className="stat-value" style={{fontSize:17}}>{fmt.currency(fat)}</div>
+            <div className="stat-label">Faturamento total</div>
+            {fat > 0 && (
+              <div style={{marginTop:6,display:'flex',flexDirection:'column',gap:3}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                  <span style={{fontSize:11,color:'var(--gray-400)'}}>🔧 Mão de obra</span>
+                  <span style={{fontSize:11,fontWeight:700,color:'var(--accent)'}}>{fmt.currency(fatMO)}</span>
+                </div>
+                <div style={{height:4,background:'var(--gray-100)',borderRadius:99,overflow:'hidden'}}>
+                  <div style={{height:'100%',width:`${pctMO}%`,background:'var(--accent)',borderRadius:99}}/>
+                </div>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                  <span style={{fontSize:11,color:'var(--gray-400)'}}>🔩 Peças</span>
+                  <span style={{fontSize:11,fontWeight:700,color:'var(--info)'}}>{fmt.currency(fatPecas)}</span>
+                </div>
+                <div style={{height:4,background:'var(--gray-100)',borderRadius:99,overflow:'hidden'}}>
+                  <div style={{height:'100%',width:`${pctPecas}%`,background:'var(--info)',borderRadius:99}}/>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
         )}
         <div className="stat-card c-green">
@@ -237,9 +283,18 @@ export default function AppDashboard() {
                   <div className="dash-os-cliente">{os.cliente_nome||'—'}</div>
                   <div className="dash-os-veiculo">{os.veiculo_modelo||'—'}{os.placa?` · ${os.placa}`:''}</div>
                 </div>
-                <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:4}}>
+                <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:3}}>
                   <span className={`badge ${STATUS_CLASS[os.status]||'badge-gray'}`}>{STATUS_LABEL[os.status]||os.status}</span>
-                  {!isFuncionario && <span style={{fontSize:12,fontWeight:700,color:'var(--gray-600)'}}>{fmt.currency(os.valor)}</span>}
+                  {!isFuncionario && (
+                    <div style={{textAlign:'right'}}>
+                      <div style={{fontSize:13,fontWeight:700,color:'var(--gray-800)'}}>{fmt.currency(parseFloat(os.valor||0))}</div>
+                      {parseFloat(os.valor_mo||0) > 0 && (
+                        <div style={{fontSize:11,color:'var(--accent)',fontWeight:600}}>
+                          🔧 MO: {fmt.currency(os.valor_mo)}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

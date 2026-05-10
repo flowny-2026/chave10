@@ -15,10 +15,10 @@ router.get('/dashboard', async (req,res) => {
     const [emAnd,finHoje,fatMes,totCli] = await Promise.all([
       queryOne("SELECT COUNT(*) n FROM ordens_servico WHERE oficina_id=$1 AND status='em_andamento'",[id]),
       queryOne("SELECT COUNT(*) n FROM ordens_servico WHERE oficina_id=$1 AND status='finalizado' AND data=$2",[id,hoje]),
-      isFuncionario ? Promise.resolve({n:0}) : queryOne("SELECT COALESCE(SUM(valor),0) n FROM ordens_servico WHERE oficina_id=$1 AND status='finalizado' AND data>=$2",[id,mesInicio]),
+      isFuncionario ? Promise.resolve({n:0,mo:0,pecas:0}) : queryOne("SELECT COALESCE(SUM(valor),0) n, COALESCE(SUM(valor_mo),0) mo, COALESCE(SUM(valor_pecas),0) pecas FROM ordens_servico WHERE oficina_id=$1 AND status='finalizado' AND data>=$2",[id,mesInicio]),
       queryOne("SELECT COUNT(*) n FROM clientes WHERE oficina_id=$1",[id]),
     ]);
-    const stats={emAndamento:+emAnd.n,finalizadasHoje:+finHoje.n,faturamentoMes:isFuncionario?null:+fatMes.n,totalClientes:+totCli.n};
+    const stats={emAndamento:+emAnd.n,finalizadasHoje:+finHoje.n,faturamentoMes:isFuncionario?null:+fatMes.n,moMes:isFuncionario?null:+fatMes.mo,pecasMes:isFuncionario?null:+fatMes.pecas,totalClientes:+totCli.n};
     const recentes=await query("SELECT os.*,c.nome as cliente_nome,v.modelo as veiculo_modelo,v.placa FROM ordens_servico os LEFT JOIN clientes c ON c.id=os.cliente_id LEFT JOIN veiculos v ON v.id=os.veiculo_id WHERE os.oficina_id=$1 ORDER BY os.id DESC LIMIT 5",[id]);
     // Omite valor das OS recentes para funcionários
     const recentesFiltradas = isFuncionario
