@@ -22,7 +22,7 @@ router.post('/login', validateLogin, async (req, res) => {
   const ip = req.ip;
   try {
     await atualizarVencidos();
-    const usuario = await queryOne('SELECT * FROM usuarios WHERE email=$1 AND ativo=true', [email]);
+    const usuario = await queryOne('SELECT * FROM usuarios WHERE email=$1 AND ativo=1', [email]);
     const hashFake = '$2a$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012345';
     const hashAlvo = usuario?.senha_hash || hashFake;
     const senhaOk  = bcrypt.compareSync(senha, hashAlvo);
@@ -100,7 +100,7 @@ router.post('/google', async (req, res) => {
     const ticket = await googleClient.verifyIdToken({ idToken: credential, audience: process.env.GOOGLE_CLIENT_ID });
     const { email, name: nome } = ticket.getPayload();
 
-    const usuario = await queryOne('SELECT * FROM usuarios WHERE email=$1 AND ativo=true', [email]);
+    const usuario = await queryOne('SELECT * FROM usuarios WHERE email=$1 AND ativo=1', [email]);
 
     // Usuário não existe — cria conta nova e pede dados da oficina
     if (!usuario) {
@@ -167,7 +167,7 @@ router.post('/google-register', async (req, res) => {
     const { email, name: nome } = ticket.getPayload();
 
     // Verifica se já existe
-    const existe = await queryOne('SELECT * FROM usuarios WHERE email=$1 AND ativo=true', [email]);
+    const existe = await queryOne('SELECT * FROM usuarios WHERE email=$1 AND ativo=1', [email]);
     if (existe) {
       // Já tem conta — faz login normal
       if (existe.oficina_id) {
@@ -269,7 +269,7 @@ const { authMiddleware } = require('../middleware/auth');
 router.get('/me', authMiddleware, async (req, res) => {
   try {
     await atualizarVencidos();
-    const usuario = await queryOne('SELECT * FROM usuarios WHERE id=$1 AND ativo=true', [req.user.id]);
+    const usuario = await queryOne('SELECT * FROM usuarios WHERE id=$1 AND ativo=1', [req.user.id]);
     if (!usuario) return res.status(401).json({ error: 'Usuário não encontrado' });
 
     if (usuario.perfil === 'master_admin') {
