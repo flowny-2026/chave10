@@ -110,7 +110,7 @@ export default function GlobalSearch() {
   const hasQuery = query.trim().length > 0;
 
   return (
-    <div ref={wrapRef} style={{ position: 'relative', flex: 1, maxWidth: 420 }}>
+    <div ref={wrapRef} style={{ position: 'relative', flex: 1, maxWidth: 420, minWidth: 0 }}>
       {/* Input */}
       <div className="topbar-search" style={{ width: '100%' }}>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
@@ -148,7 +148,8 @@ export default function GlobalSearch() {
           border: '1px solid var(--gray-200)',
           zIndex: 9000,
           overflow: 'hidden',
-          minWidth: 320,
+          minWidth: 0,
+          width: '100%',
           animation: 'pwaSlideIn .15s ease',
         }}>
 

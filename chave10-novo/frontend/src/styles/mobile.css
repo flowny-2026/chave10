@@ -450,3 +450,47 @@
     order: -1 !important;
   }
 }
+
+/* ══════════════════════════════════════════
+   GLOBAL SEARCH — visível no mobile
+══════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+  /* Mostra a busca no topbar mobile */
+  .topbar-search {
+    display: flex !important;
+    flex: 1 !important;
+    max-width: none !important;
+    min-width: 0 !important;
+  }
+
+  /* Input da busca dark */
+  .topbar-search input {
+    background: rgba(255,255,255,.08) !important;
+    border-color: rgba(255,255,255,.12) !important;
+    color: #e6edf3 !important;
+    font-size: 14px !important;
+    min-height: 36px !important;
+    padding: 7px 10px 7px 32px !important;
+  }
+  .topbar-search input::placeholder {
+    color: rgba(255,255,255,.3) !important;
+  }
+  .topbar-search input:focus {
+    background: rgba(255,255,255,.12) !important;
+    border-color: #F97316 !important;
+    box-shadow: none !important;
+  }
+  .topbar-search svg {
+    color: rgba(255,255,255,.4) !important;
+  }
+
+  /* Dropdown da busca: ocupa tela toda no mobile */
+  .topbar-search + div,
+  .topbar-search ~ div[style*="position: absolute"] {
+    left: -60px !important;
+    right: 0 !important;
+    min-width: 0 !important;
+    width: calc(100vw - 24px) !important;
+  }
+}
