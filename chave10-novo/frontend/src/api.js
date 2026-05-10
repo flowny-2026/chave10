@@ -32,6 +32,7 @@ export const api = {
     register: (data) => post('/auth/register', data),
     googleRegister: (credential) => post('/auth/google-register', { credential }),
     completeOficina: (token, data) => req('POST', '/auth/complete-oficina', data, token),
+    me: () => get('/auth/me'), // busca dados atualizados do usuário logado
   },
   admin: {
     dashboard: ()                    => get('/admin/dashboard'),

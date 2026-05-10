@@ -525,6 +525,20 @@ export default function Layout({ area }) {
   const navigate = useNavigate();
   const user = getUser();
 
+  // Sincroniza dados do usuário com o servidor ao montar o layout
+  // Garante que data_vencimento e status_assinatura estejam sempre atualizados
+  useEffect(() => {
+    if (area !== 'app') return;
+    api.auth.me()
+      .then(userData => {
+        // Atualiza localStorage com dados frescos do servidor
+        localStorage.setItem('c10_user', JSON.stringify(userData));
+      })
+      .catch(() => {
+        // Silencioso — se falhar, usa os dados do localStorage mesmo
+      });
+  }, [area]);
+
   function logout() {
     localStorage.removeItem('c10_token');
     localStorage.removeItem('c10_user');

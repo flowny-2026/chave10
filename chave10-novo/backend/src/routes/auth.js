@@ -262,4 +262,40 @@ router.post('/complete-oficina', async (req, res) => {
   }
 });
 
+// ── /me — retorna dados atualizados do usuário logado ────────
+// Usado pelo frontend para sincronizar data_vencimento e status_assinatura
+// sem precisar fazer logout/login
+const { authMiddleware } = require('../middleware/auth');
+router.get('/me', authMiddleware, async (req, res) => {
+  try {
+    await atualizarVencidos();
+    const usuario = await queryOne('SELECT * FROM usuarios WHERE id=$1 AND ativo=1', [req.user.id]);
+    if (!usuario) return res.status(401).json({ error: 'Usuário não encontrado' });
+
+    if (usuario.perfil === 'master_admin') {
+      return res.json({
+        id: usuario.id, nome: usuario.nome, email: usuario.email,
+        perfil: 'master_admin', oficina_id: null,
+      });
+    }
+
+    const oficina = await queryOne('SELECT * FROM oficinas WHERE id=$1', [usuario.oficina_id]);
+    if (!oficina) return res.status(403).json({ error: 'needsOficina', needsOficina: true });
+
+    res.json({
+      id: usuario.id,
+      nome: usuario.nome,
+      email: usuario.email,
+      perfil: usuario.perfil,
+      oficina_id: usuario.oficina_id,
+      data_vencimento: oficina.data_vencimento,
+      status_assinatura: oficina.status_assinatura,
+      plano: oficina.plano,
+    });
+  } catch (err) {
+    log.error('auth_me', err);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
 module.exports = router;
