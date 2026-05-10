@@ -3,10 +3,10 @@ import { api } from '../../api';
 
 const fmt = {
   date: iso => { if(!iso) return '-'; const [y,m,d]=iso.split('-'); return `${d}/${m}/${y}`; },
-  weekday: d => ['Domingo','Segunda','TerÃ§a','Quarta','Quinta','Sexta','SÃ¡bado'][d.getDay()],
+  weekday: d => ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'][d.getDay()],
 };
 
-const DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','SÃ¡b'];
+const DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 const HORAS = Array.from({length:12},(_,i)=>i+7); // 7h Ã s 18h
 
 const EMPTY = { cliente_id:'', veiculo_id:'', titulo:'', data:'', hora:'', descricao:'' };
@@ -21,7 +21,7 @@ export default function AppAgenda() {
   const [clientes, setClientes] = useState([]);
   const [veiculos, setVeiculos] = useState([]);
   const [semanaOffset, setSemanaOffset] = useState(0);
-  const [diaSelecionado, setDiaSelecionado] = useState(0); // Ã­ndice 0-6 para mobile
+  const [diaSelecionado, setDiaSelecionado] = useState(0); // índice 0-6 para mobile
   const [modal, setModal]       = useState(false);
   const [form, setForm]         = useState(EMPTY);
   const [toast, setToast]       = useState({ msg:'', type:'' });
