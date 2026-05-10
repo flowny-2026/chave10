@@ -576,7 +576,7 @@ export default function Layout({ area }) {
           <img
             src="/teste sem fundo 2.png"
             alt="Chave 10"
-            style={{ height: 48, maxWidth: 200, objectFit: 'contain' }}
+            style={{ height: 64, maxWidth: 200, objectFit: 'contain' }}
           />
         </div>
 
@@ -696,7 +696,7 @@ export default function Layout({ area }) {
             <img
               src="/teste sem fundo 1.png"
               alt="Chave 10"
-              style={{ height: 40, maxWidth: 160, objectFit: 'contain' }}
+              style={{ height: 68, maxWidth: 160, objectFit: 'contain' }}
             />
           </div>
 

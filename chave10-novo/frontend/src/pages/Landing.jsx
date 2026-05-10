@@ -47,7 +47,7 @@ export default function Landing() {
       <nav className="lp-nav" role="navigation" aria-label="Navegação principal">
         <div className="lp-nav-inner">
           <div className="lp-brand">
-            <img src="/teste sem fundo 1.png" alt="Chave 10" style={{ height: 44, objectFit: 'contain' }} />
+            <img src="/teste sem fundo 1.png" alt="Chave 10" style={{ height: 58, objectFit: 'contain' }} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <button
@@ -321,7 +321,7 @@ export default function Landing() {
         <div className="lp-container">
           <div className="lp-footer-inner">
             <div className="lp-brand" style={{ color: 'rgba(255,255,255,.45)' }}>
-              <img src="/teste sem fundo 2.png" alt="Chave 10" style={{ height: 38, objectFit: 'contain', opacity: 0.7 }} />
+              <img src="/teste sem fundo 2.png" alt="Chave 10" style={{ height: 50, objectFit: 'contain', opacity: 0.7 }} />
             </div>
             <span>© {new Date().getFullYear()} Chave 10 · A ferramenta que faltava na sua gestão</span>
           </div>

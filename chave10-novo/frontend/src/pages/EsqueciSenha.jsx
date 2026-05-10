@@ -37,7 +37,7 @@ export default function EsqueciSenha() {
       }}>
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <img src="/teste sem fundo 1.png" alt="Chave 10" style={{ height: 44, objectFit: 'contain' }} />
+          <img src="/teste sem fundo 1.png" alt="Chave 10" style={{ height: 58, objectFit: 'contain' }} />
         </div>
 
         {!enviado ? (
