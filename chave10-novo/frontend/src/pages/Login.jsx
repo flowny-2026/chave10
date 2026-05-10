@@ -43,8 +43,8 @@ function LoginLoader() {
       display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
     }}>
-      <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 32, fontWeight: 800, color: '#fff', letterSpacing: '-0.5px', marginBottom: 48, animation: 'llFadeUp 0.6s ease both' }}>
-        Chave <span style={{ color: '#F97316' }}>10</span>
+      <div style={{ marginBottom: 48, animation: 'llFadeUp 0.6s ease both' }}>
+        <img src="/logo 250x50.png" alt="Chave 10" style={{ height: 44, objectFit: 'contain' }} />
       </div>
       <div style={{ width: 320, marginBottom: 20, animation: 'llFadeUp 0.6s 0.15s ease both' }}>
         <div style={{ width: '100%', height: 4, background: 'rgba(255,255,255,0.08)', borderRadius: 99, overflow: 'visible', position: 'relative' }}>
@@ -135,9 +135,7 @@ export default function Login() {
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0d1b2e' }}>
         <div style={{ width: '100%', maxWidth: 400, background: '#fff', borderRadius: 16, padding: '48px 40px', boxShadow: '0 24px 64px rgba(0,0,0,0.35)' }}>
           <div style={{ textAlign: 'center', marginBottom: 32 }}>
-            <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 28, fontWeight: 800, color: 'var(--brand)', letterSpacing: '-0.5px' }}>
-              Chave <span style={{ color: 'var(--accent)' }}>10</span>
-            </div>
+            <img src="/logo 250x50.png" alt="Chave 10" style={{ height: 40, objectFit: 'contain', marginBottom: 10 }} />
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 10, padding: '4px 14px', background: 'var(--brand-light)', borderRadius: 20, fontSize: 11, fontWeight: 700, color: 'var(--brand)', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
               ⚙️ Painel Administrativo
             </div>
@@ -181,8 +179,8 @@ export default function Login() {
     <div className="login-screen">
       <div className="login-left">
         <div className="login-left-content">
-          <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.3px', marginBottom: 24 }}>
-            Chave <span style={{ color: '#F97316' }}>10</span>
+          <div style={{ marginBottom: 24 }}>
+            <img src="/logo 250x50.png" alt="Chave 10" style={{ height: 40, objectFit: 'contain' }} />
           </div>
           <h2 className="login-headline">Organize sua oficina.<br/>Cresça com dados.</h2>
           <p className="login-desc">Controle ordens de serviço, clientes, veículos e faturamento em um só lugar.</p>
@@ -196,8 +194,8 @@ export default function Login() {
       </div>
       <div className="login-right">
         <div className="login-box">
-          <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 22, fontWeight: 800, color: 'var(--brand)', letterSpacing: '-0.3px', marginBottom: 20 }}>
-            Chave <span style={{ color: 'var(--accent)' }}>10</span>
+          <div style={{ marginBottom: 20 }}>
+            <img src="/logo 250x50.png" alt="Chave 10" style={{ height: 36, objectFit: 'contain' }} />
           </div>
           <h1 className="login-title">Acesse sua conta</h1>
           <p className="login-subtitle">Sistema completo para gestão de oficinas.</p>

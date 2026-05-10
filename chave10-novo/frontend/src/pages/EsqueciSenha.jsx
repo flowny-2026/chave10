@@ -37,15 +37,7 @@ export default function EsqueciSenha() {
       }}>
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ 
-            fontFamily: 'Poppins, sans-serif', 
-            fontSize: 28, 
-            fontWeight: 800, 
-            color: 'var(--brand)', 
-            letterSpacing: '-0.5px' 
-          }}>
-            Chave <span style={{ color: 'var(--accent)' }}>10</span>
-          </div>
+          <img src="/logo 250x50.png" alt="Chave 10" style={{ height: 40, objectFit: 'contain' }} />
         </div>
 
         {!enviado ? (

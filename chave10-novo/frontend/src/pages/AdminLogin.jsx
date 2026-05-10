@@ -41,8 +41,8 @@ function LoginLoader() {
       display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
     }}>
-      <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 32, fontWeight: 800, color: '#fff', letterSpacing: '-0.5px', marginBottom: 48, animation: 'llFadeUp 0.6s ease both' }}>
-        Chave <span style={{ color: '#F97316' }}>10</span>
+      <div style={{ marginBottom: 48, animation: 'llFadeUp 0.6s ease both' }}>
+        <img src="/logo 250x50.png" alt="Chave 10" style={{ height: 44, objectFit: 'contain' }} />
       </div>
       <div style={{ width: 320, marginBottom: 20, animation: 'llFadeUp 0.6s 0.15s ease both' }}>
         <div style={{ width: '100%', height: 4, background: 'rgba(255,255,255,0.08)', borderRadius: 99, overflow: 'visible', position: 'relative' }}>
@@ -113,12 +113,8 @@ export default function AdminLogin() {
       }}>
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{
-            fontFamily: 'Poppins, sans-serif',
-            fontSize: 28, fontWeight: 800,
-            color: 'var(--brand)', letterSpacing: '-0.5px',
-          }}>
-            Chave <span style={{ color: 'var(--accent)' }}>10</span>
+          <div style={{ marginBottom: 24 }}>
+            <img src="/logo 250x50.png" alt="Chave 10" style={{ height: 40, objectFit: 'contain' }} />
           </div>
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,

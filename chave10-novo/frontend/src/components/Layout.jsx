@@ -573,10 +573,11 @@ export default function Layout({ area }) {
 
       <aside className={`sidebar${open ? ' open' : ''}`}>
         <div className="sidebar-brand">
-          <div className="brand-text">
-            <span className="brand-name">Chave <span className="brand-accent">10</span></span>
-            <span className="brand-slogan">A ferramenta que faltava na sua oficina</span>
-          </div>
+          <img
+            src="/logo 250x50.png"
+            alt="Chave 10"
+            style={{ height: 40, maxWidth: 180, objectFit: 'contain' }}
+          />
         </div>
 
         {area === 'admin' ? (
@@ -692,7 +693,11 @@ export default function Layout({ area }) {
             </svg>
           </button>
           <div className="topbar-logo">
-            <span className="topbar-name">Chave <span className="accent">10</span></span>
+            <img
+              src="/logo 160x40.png"
+              alt="Chave 10"
+              style={{ height: 32, maxWidth: 140, objectFit: 'contain' }}
+            />
           </div>
 
           {area === 'app' && <GlobalSearch />}
