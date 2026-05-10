@@ -262,7 +262,7 @@ export default function AppDashboard() {
       </div>
 
       {/* GRÁFICO + OS RECENTES */}
-      <div style={{display:'grid',gridTemplateColumns: isFuncionario ? '1fr' : '1fr 1fr',gap:20,marginBottom:20}}>
+      <div className="dash-bottom-grid" style={{gridTemplateColumns: isFuncionario ? '1fr' : '1fr 1fr'}}>
         {!isFuncionario && (
         <div className="card">
           <div className="card-header"><div className="card-title">📈 Faturamento mensal</div></div>

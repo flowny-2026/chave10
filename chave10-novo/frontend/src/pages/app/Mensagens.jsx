@@ -99,7 +99,7 @@ export default function AppMensagens() {
         </div>
       </div>
 
-      <div style={{display:'grid',gridTemplateColumns:'340px 1fr',gap:20,alignItems:'start'}}>
+      <div className="msg-grid">
 
         {/* PAINEL ESQUERDO */}
         <div style={{display:'flex',flexDirection:'column',gap:16}}>

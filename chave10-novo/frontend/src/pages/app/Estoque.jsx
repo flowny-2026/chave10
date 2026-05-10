@@ -119,7 +119,7 @@ export default function AppEstoque() {
             <div className="stat-card c-red"><div className="stat-icon c-red">⚠️</div><div><div className="stat-value">{baixo.length+zerado.length}</div><div className="stat-label">Alertas de estoque</div></div></div>
           </div>
 
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:20,marginBottom:20}}>
+          <div className="estoque-grid-2">
             {/* Top 5 */}
             <div className="card">
               <div className="card-header"><div className="card-title">🏆 Top 5 itens mais valiosos</div></div>
