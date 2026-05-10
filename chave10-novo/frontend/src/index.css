@@ -3076,3 +3076,136 @@ tbody tr { transition: background .12s; }
   backdrop-filter: blur(2px);
 }
 .sidebar-overlay.open { display: block; }
+
+
+/* ══════════════════════════════════════════
+   MOBILE RESPONSIVENESS FIXES
+   Evita zoom e botões sumindo
+══════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+
+  /* Impede overflow horizontal que causa zoom */
+  html, body {
+    overflow-x: hidden !important;
+    max-width: 100vw !important;
+  }
+  .app-shell, .main-area, .main-content {
+    overflow-x: hidden !important;
+    max-width: 100vw !important;
+  }
+
+  /* Tabelas: scroll horizontal em vez de quebrar layout */
+  .table-wrapper {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    max-width: 100% !important;
+  }
+  table {
+    min-width: 500px !important; /* tabela rola, não encolhe */
+  }
+
+  /* Grids que quebram em mobile */
+  .form-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .stats-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+  .dash-grid-2, .dash-grid-3 {
+    grid-template-columns: 1fr !important;
+  }
+  .fin-summary {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+  .planos-wrap {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Botões de ação que somem */
+  .page-actions {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+  .page-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+  .btn {
+    white-space: nowrap !important;
+    min-height: 40px !important;
+  }
+  .btn-sm {
+    min-height: 34px !important;
+    font-size: 12px !important;
+    padding: 6px 10px !important;
+  }
+
+  /* Search bar */
+  .search-bar {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+  .search-input-wrap {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  /* Modal ocupa tela toda no mobile */
+  .modal-overlay {
+    padding: 0 !important;
+    align-items: flex-end !important;
+  }
+  .modal {
+    max-width: 100% !important;
+    border-radius: 20px 20px 0 0 !important;
+    max-height: 92vh !important;
+  }
+
+  /* Topbar: esconde elementos que não cabem */
+  .topbar-logo img {
+    height: 36px !important;
+    max-width: 120px !important;
+  }
+
+  /* Dashboard hero: simplifica no mobile */
+  .main-content > div > div[style*="linear-gradient"] {
+    padding: 20px 16px !important;
+  }
+
+  /* Stat cards: fonte menor */
+  .stat-value {
+    font-size: 20px !important;
+  }
+  .stat-card {
+    padding: 14px 16px !important;
+  }
+
+  /* Botões de ação na tabela: empilha */
+  td .btn + .btn {
+    margin-top: 4px !important;
+  }
+
+  /* Impede que inputs causem zoom no iOS (font-size >= 16px) */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+
+  /* Garante que o conteúdo não ultrapasse a tela */
+  * {
+    max-width: 100% !important;
+    word-break: break-word !important;
+  }
+  /* Exceções para elementos que precisam de largura fixa */
+  img, svg, canvas, video {
+    max-width: 100% !important;
+    word-break: normal !important;
+  }
+  .mobile-bottom-nav {
+    max-width: 100vw !important;
+  }
+}

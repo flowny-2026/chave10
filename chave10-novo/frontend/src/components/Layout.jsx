@@ -694,7 +694,7 @@ export default function Layout({ area }) {
           </button>
           <div className="topbar-logo">
             <img
-              src="/teste sem fundo 1.png"
+              src="/teste sem fundo 2.png"
               alt="Chave 10"
               style={{ height: 68, maxWidth: 160, objectFit: 'contain' }}
             />
