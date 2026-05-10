@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+﻿import { useNavigate } from 'react-router-dom';
 
 export default function Bloqueado() {
   const navigate = useNavigate();
@@ -27,7 +27,7 @@ export default function Bloqueado() {
           Tudo pronto para continuar, só falta regularizar sua assinatura.
         </p>
         <a
-          href="https://wa.me/5516992915540?text=Ol%C3%A1%2C%20preciso%20regularizar%20minha%20assinatura%20do%20Chave%2010"
+          href="https://wa.me/5516992383821?text=Ol%C3%A1%2C%20preciso%20regularizar%20minha%20assinatura%20do%20Chave%2010"
           target="_blank"
           rel="noopener noreferrer"
           className="btn btn-primary"
@@ -45,3 +45,5 @@ export default function Bloqueado() {
     </div>
   );
 }
+
+

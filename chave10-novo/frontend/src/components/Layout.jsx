@@ -338,7 +338,7 @@ function VencimentoAlert() {
             <button
               onClick={() => {
                 setVisible(false);
-                window.open('https://wa.me/5516992915540?text=Olá,%20preciso%20renovar%20meu%20plano%20do%20Chave%2010.', '_blank');
+                window.open('https://wa.me/5516992383821?text=Olá,%20preciso%20renovar%20meu%20plano%20do%20Chave%2010.', '_blank');
               }}
               style={{
                 flex: 2, padding: '11px 0', borderRadius: 8,
@@ -762,3 +762,5 @@ export default function Layout({ area }) {
     </div>
   );
 }
+
+

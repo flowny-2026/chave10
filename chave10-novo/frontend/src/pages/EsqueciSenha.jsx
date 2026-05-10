@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export default function EsqueciSenha() {
@@ -158,7 +158,7 @@ export default function EsqueciSenha() {
 
             <button 
               className="btn btn-primary" 
-              onClick={() => window.open('https://wa.me/5516992915540?text=Olá,%20preciso%20recuperar%20minha%20senha%20do%20Chave%2010.%20Meu%20e-mail%20é:%20' + encodeURIComponent(email), '_blank')}
+              onClick={() => window.open('https://wa.me/5516992383821?text=Olá,%20preciso%20recuperar%20minha%20senha%20do%20Chave%2010.%20Meu%20e-mail%20é:%20' + encodeURIComponent(email), '_blank')}
               style={{ 
                 width: '100%', 
                 marginBottom: 12,
@@ -208,3 +208,5 @@ export default function EsqueciSenha() {
     </div>
   );
 }
+
+
