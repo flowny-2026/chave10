@@ -49,9 +49,18 @@ export default function Landing() {
           <div className="lp-brand">
             Chave <span className="lp-accent">10</span>
           </div>
-          <button className="lp-nav-cta" onClick={() => navigate('/cadastro')} aria-label="Testar grátis">
-            Testar Grátis
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button
+              className="lp-nav-login"
+              onClick={() => navigate('/login')}
+              aria-label="Entrar na conta"
+            >
+              Entrar
+            </button>
+            <button className="lp-nav-cta" onClick={() => navigate('/cadastro')} aria-label="Testar grátis">
+              Testar Grátis
+            </button>
+          </div>
         </div>
       </nav>
 

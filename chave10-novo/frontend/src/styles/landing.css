@@ -104,6 +104,15 @@
   font-family: 'Poppins', sans-serif; font-size: 20px; font-weight: 800;
   color: var(--brand); text-decoration: none; letter-spacing: -.3px;
 }
+.lp-nav-login {
+  background: transparent; color: var(--brand);
+  border: 1.5px solid var(--gray-200); border-radius: var(--r-sm);
+  padding: 10px 20px; font-size: 14px; font-weight: 600;
+  cursor: pointer; font-family: inherit; min-height: 44px;
+  transition: all .18s cubic-bezier(.4,0,.2,1);
+}
+.lp-nav-login:hover { border-color: var(--brand); background: var(--brand-light); }
+
 .lp-nav-cta {
   background: var(--accent); color: #fff;
   border: none; border-radius: var(--r-sm);
