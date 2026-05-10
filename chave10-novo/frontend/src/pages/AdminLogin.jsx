@@ -42,7 +42,7 @@ function LoginLoader() {
       alignItems: 'center', justifyContent: 'center',
     }}>
       <div style={{ marginBottom: 48, animation: 'llFadeUp 0.6s ease both' }}>
-        <img src="/logo 250x50.png" alt="Chave 10" style={{ height: 36, objectFit: 'contain' }} />
+        <img src="/teste sem fundo 2.png" alt="Chave 10" style={{ height: 38, objectFit: 'contain' }} />
       </div>
       <div style={{ width: 320, marginBottom: 20, animation: 'llFadeUp 0.6s 0.15s ease both' }}>
         <div style={{ width: '100%', height: 4, background: 'rgba(255,255,255,0.08)', borderRadius: 99, overflow: 'visible', position: 'relative' }}>
@@ -114,7 +114,7 @@ export default function AdminLogin() {
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div style={{ marginBottom: 24 }}>
-            <img src="/logo 250x50.png" alt="Chave 10" style={{ height: 32, objectFit: 'contain', mixBlendMode: 'multiply' }} />
+            <img src="/teste sem fundo 1.png" alt="Chave 10" style={{ height: 30, objectFit: 'contain' }} />
           </div>
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,

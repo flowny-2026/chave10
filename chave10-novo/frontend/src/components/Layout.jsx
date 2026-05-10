@@ -574,9 +574,9 @@ export default function Layout({ area }) {
       <aside className={`sidebar${open ? ' open' : ''}`}>
         <div className="sidebar-brand">
           <img
-            src="/logo 250x50.png"
+            src="/teste sem fundo 2.png"
             alt="Chave 10"
-            style={{ height: 32, maxWidth: 160, objectFit: 'contain' }}
+            style={{ height: 34, maxWidth: 160, objectFit: 'contain' }}
           />
         </div>
 
@@ -694,9 +694,9 @@ export default function Layout({ area }) {
           </button>
           <div className="topbar-logo">
             <img
-              src="/logo 250x50.png"
+              src="/teste sem fundo 1.png"
               alt="Chave 10"
-              style={{ height: 26, maxWidth: 120, objectFit: 'contain', mixBlendMode: 'multiply' }}
+              style={{ height: 28, maxWidth: 120, objectFit: 'contain' }}
             />
           </div>
 
