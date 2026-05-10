@@ -1,9 +1,8 @@
 // Service Worker para PWA — Network-first para HTML/JS, cache-first para assets estáticos
-const CACHE_NAME = 'chave10-v2';
+const CACHE_NAME = 'chave10-v5';
 const STATIC_ASSETS = [
-  '/logo-icon.png',
-  '/logo-white-refined.png',
-  '/favicon.ico'
+  '/favicon.jpeg',
+  '/pwa.jpeg'
 ];
 
 // Instalação
