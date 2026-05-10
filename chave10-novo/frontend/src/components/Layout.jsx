@@ -735,7 +735,27 @@ export default function Layout({ area }) {
         </main>
       </div>
 
-      {/* Bottom Navigation removido a pedido do usuário */}
+      {/* Bottom Navigation Mobile — dark theme */}
+      {area === 'app' && (
+        <nav className="mobile-bottom-nav">
+          {[
+            { to: '/app/dashboard', label: 'Dashboard', icon: IC.dashboard },
+            { to: '/app/os',        label: 'OS',        icon: IC.os },
+            { to: '/app/clientes',  label: 'Clientes',  icon: IC.clientes },
+            { to: '/app/financeiro',label: 'Financeiro',icon: IC.financeiro },
+            { to: '/app/orcamentos',label: 'Mais',      icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg> },
+          ].map(item => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) => 'mbn-item' + (isActive ? ' mbn-item--active' : '')}
+            >
+              <span className="mbn-icon">{item.icon}</span>
+              <span className="mbn-label">{item.label}</span>
+            </NavLink>
+          ))}
+        </nav>
+      )}
 
       {/* Botão de instalação PWA — aparece após login, some após instalar */}
       <PWAInstallButton />
