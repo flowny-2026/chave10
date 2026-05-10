@@ -494,3 +494,59 @@
     width: calc(100vw - 24px) !important;
   }
 }
+
+/* ══════════════════════════════════════════
+   TEXTOS INVISÍVEIS NO DARK — correção global
+   Qualquer texto com cor escura sobre fundo escuro
+══════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+  /* OS cards mobile */
+  .os-card-cliente { color: #e6edf3 !important; }
+  .os-card-num { color: #60a5fa !important; }
+  .os-card-valor { color: #4ade80 !important; }
+  .os-card-desc { color: rgba(255,255,255,.5) !important; }
+  .os-card-info { color: rgba(255,255,255,.6) !important; }
+  .os-card-mobile { border-bottom-color: rgba(255,255,255,.07) !important; }
+  .os-card-mobile:active { background: rgba(255,255,255,.04) !important; }
+
+  /* Textos gerais que usam cores escuras */
+  .card strong,
+  .card b { color: #e6edf3 !important; }
+
+  /* Textos com var(--gray-800) e var(--gray-900) inline */
+  /* Cobrimos via herança no card */
+  .card { color: #c9d1d9 !important; }
+
+  /* Títulos dentro de cards */
+  .card h1, .card h2, .card h3,
+  .card h4, .card h5, .card h6 { color: #e6edf3 !important; }
+
+  /* Textos de info/detalhe */
+  .card small { color: rgba(255,255,255,.4) !important; }
+
+  /* Lembrete cards */
+  .lembrete-card { background: #161b22 !important; border-color: rgba(255,255,255,.08) !important; }
+  .lembrete-title { color: #e6edf3 !important; }
+  .lembrete-sub { color: rgba(255,255,255,.45) !important; }
+
+  /* Estoque cards */
+  .estoque-alerta { background: rgba(251,191,36,.12) !important; border-color: rgba(251,191,36,.25) !important; color: #fbbf24 !important; }
+
+  /* Financeiro */
+  .fin-card-value { color: inherit !important; }
+  .fin-card.receita .fin-card-value { color: #4ade80 !important; }
+  .fin-card.despesa .fin-card-value { color: #f87171 !important; }
+  .fin-card.lucro   .fin-card-value { color: #F97316 !important; }
+
+  /* Textos inline com color var(--gray-*) que ficam invisíveis */
+  /* Força herança correta */
+  .main-content p,
+  .main-content span:not(.badge):not(.mbn-label),
+  .main-content div:not(.badge):not(.stat-icon) {
+    color: inherit;
+  }
+
+  /* Garante que texto padrão seja legível */
+  .main-content { color: #c9d1d9 !important; }
+}
