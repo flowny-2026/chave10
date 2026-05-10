@@ -4,6 +4,7 @@ import { GoogleLogin } from '@react-oauth/google';
 import { api } from '../api';
 import { useForm } from '../hooks/useForm';
 import FormInput from '../components/FormInput';
+import CepInput from '../components/CepInput';
 import { 
   validateEmail, 
   validatePassword, 
@@ -159,15 +160,9 @@ export default function Cadastro() {
               required
             />
             
-            <FormInput
-              label="Endereço"
-              name="endereco"
+            <CepInput
               value={formOficina.values.endereco}
-              error={formOficina.errors.endereco}
-              touched={formOficina.touched.endereco}
-              onChange={formOficina.handleChange}
-              onBlur={formOficina.handleBlur}
-              placeholder="Rua, número, bairro, cidade"
+              onChange={v => formOficina.handleChange({ target: { name: 'endereco', value: v } })}
             />
             
             <FormInput

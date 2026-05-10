@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api';
+import CepInput from '../../components/CepInput';
 
 const fmt = {
   currency: v => 'R$ ' + parseFloat(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.'),
@@ -353,7 +354,10 @@ export default function AdminOficinas() {
                   <div className="form-group"><label>Responsável</label><input value={form.responsavel||''} onChange={e=>setForm(f=>({...f,responsavel:e.target.value}))} /></div>
                   <div className="form-group"><label>Telefone</label><input value={form.telefone||''} onChange={e=>setForm(f=>({...f,telefone:e.target.value}))} /></div>
                   <div className="form-group"><label>CNPJ / CPF</label><input value={form.observacoes||''} onChange={e=>setForm(f=>({...f,observacoes:e.target.value}))} placeholder="00.000.000/0000-00" /></div>
-                  <div className="form-group"><label>Endereço</label><input value={form.endereco||''} onChange={e=>setForm(f=>({...f,endereco:e.target.value}))} placeholder="Rua, número, bairro, cidade" /></div>
+                  <CepInput
+                    value={form.endereco || ''}
+                    onChange={v => setForm(f => ({ ...f, endereco: v }))}
+                  />
                   <div className="form-group full"><label>Logo (URL)</label><input value={form.logo||''} onChange={e=>setForm(f=>({...f,logo:e.target.value}))} placeholder="https://..." /></div>
                   <div className="form-group">
                     <label>Plano</label>

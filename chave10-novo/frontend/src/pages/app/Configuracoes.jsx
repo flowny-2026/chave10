@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { maskDocumento, maskPhone } from '../../utils/validation';
 import ImportarClientes from '../../components/ImportarClientes';
+import CepInput from '../../components/CepInput';
 
 const KEY = 'c10_oficina';
 function getOficina() { try { return JSON.parse(localStorage.getItem(KEY))||{}; } catch { return {}; } }
@@ -70,10 +71,10 @@ export default function AppConfiguracoes() {
             </div>
             <F label="CPF / CNPJ" value={of.documento} onChange={e=>setOf(o=>({...o,documento:maskDocumento(e.target.value)}))} placeholder="00.000.000/0001-00" />
             <F label="Email" type="email" value={of.email} onChange={e=>setOf(o=>({...o,email:e.target.value}))} placeholder="contato@oficina.com" />
-            <div className="form-group full">
-              <label>Endereço</label>
-              <input value={of.endereco||''} onChange={e=>setOf(o=>({...o,endereco:e.target.value}))} placeholder="Rua, número, bairro, cidade — UF" />
-            </div>
+            <CepInput
+              value={of.endereco || ''}
+              onChange={v => setOf(o => ({ ...o, endereco: v }))}
+            />
             <F label="Telefone fixo" value={of.telefone} onChange={e=>setOf(o=>({...o,telefone:maskPhone(e.target.value)}))} placeholder="(11) 3333-4444" />
             <F label="WhatsApp" value={of.whatsapp} onChange={e=>setOf(o=>({...o,whatsapp:maskPhone(e.target.value)}))} placeholder="(11) 99999-0000" />
           </div>

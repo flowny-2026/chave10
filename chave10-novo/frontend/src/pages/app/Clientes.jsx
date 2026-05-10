@@ -3,6 +3,7 @@ import { api } from '../../api';
 import { useLocalPagination } from '../../hooks/usePagination';
 import Pagination from '../../components/Pagination';
 import { maskPhone } from '../../utils/validation';
+import CepInput from '../../components/CepInput';
 
 const EMPTY = { nome: '', telefone: '', email: '', obs: '', endereco: '' };
 
@@ -171,10 +172,10 @@ export default function AppClientes() {
                     <label>Email</label>
                     <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="email@exemplo.com" />
                   </div>
-                  <div className="form-group full">
-                    <label>Endereço</label>
-                    <input value={form.endereco} onChange={e => setForm(f => ({ ...f, endereco: e.target.value }))} placeholder="Rua, número, bairro, cidade" />
-                  </div>
+                  <CepInput
+                    value={form.endereco}
+                    onChange={v => setForm(f => ({ ...f, endereco: v }))}
+                  />
                   <div className="form-group full">
                     <label>Observações</label>
                     <textarea value={form.obs} onChange={e => setForm(f => ({ ...f, obs: e.target.value }))} placeholder="Anotações sobre o cliente..." />
