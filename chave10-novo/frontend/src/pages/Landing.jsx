@@ -96,40 +96,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── NÚMEROS / PROVA SOCIAL ── */}
-      <section className="lp-numbers" aria-label="Números e depoimento">
-        <div className="lp-numbers-orb" aria-hidden="true"></div>
-        <div className="lp-container">
-          <div className="lp-numbers-grid">
-            <div className="lp-number-item lp-reveal">
-              <div className="lp-number-value">500<span>+</span></div>
-              <div className="lp-number-label">Oficinas ativas</div>
-            </div>
-            <div className="lp-number-item lp-reveal lp-reveal-delay-1">
-              <div className="lp-number-value">R$2M<span>+</span></div>
-              <div className="lp-number-label">Gerenciados</div>
-            </div>
-            <div className="lp-number-item lp-reveal lp-reveal-delay-2">
-              <div className="lp-number-value">4.9<span>★</span></div>
-              <div className="lp-number-label">Avaliação média</div>
-            </div>
-          </div>
-          <div className="lp-testimonial lp-reveal">
-            <div className="lp-testimonial-stars">★★★★★</div>
-            <p className="lp-testimonial-text">
-              "Antes eu perdia serviço no WhatsApp toda semana. Com o Chave 10, tudo ficou organizado em dois dias. Meu faturamento subiu 30% no primeiro mês porque parei de esquecer OS em aberto."
-            </p>
-            <div className="lp-testimonial-author">
-              <div className="lp-testimonial-avatar">R</div>
-              <div>
-                <div className="lp-testimonial-name">Roberto Alves</div>
-                <div className="lp-testimonial-role">Dono da Oficina Alves — Ribeirão Preto, SP</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* ── ANTES X DEPOIS ── */}
       <section className="lp-before-after" aria-label="Antes e depois">
         <div className="lp-container">
