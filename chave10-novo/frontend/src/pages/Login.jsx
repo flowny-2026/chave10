@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import { api } from '../api';
 
-// ─── CSS injetado via <style> para garantir que não seja sobrescrito ───────────
+// â”€â”€â”€ CSS injetado via <style> para garantir que nÃ£o seja sobrescrito â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const LOGIN_CSS = `
   @keyframes lv2FadeIn { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
   @keyframes lv2SlideIn { from{opacity:0;transform:translateX(28px)} to{opacity:1;transform:translateX(0)} }
@@ -139,12 +139,12 @@ const LOGIN_CSS = `
   }
 `;
 
-// ── Injeta CSS via <style> tag — imune a sobrescrita do index.css ─────────────
+// â”€â”€ Injeta CSS via <style> tag â€” imune a sobrescrita do index.css â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function LoginStyles() {
   return <style dangerouslySetInnerHTML={{ __html: LOGIN_CSS }} />;
 }
 
-// ── Ícones SVG inline ────────────────────────────────────────
+// â”€â”€ Ãcones SVG inline â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function IconMail() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -194,28 +194,28 @@ function IconAlert() {
   );
 }
 
-// ── Animação de loading ──────────────────────────────────────
+// â”€â”€ AnimaÃ§Ã£o de loading â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function LoginLoader() {
   const [pct, setPct] = useState(0);
   const [status, setStatus] = useState('Iniciando sistema...');
 
   useEffect(() => {
     const allSteps = [
-      [ { pct: 12, msg: '🔧 Apertando os parafusos do sistema...' },
-        { pct: 12, msg: '🪛 Calibrando a chave de fenda...' },
-        { pct: 12, msg: '🔩 Verificando torque das credenciais...' } ],
-      [ { pct: 42, msg: '🛢️ Trocando o óleo do banco de dados...' },
-        { pct: 42, msg: '⚙️ Engrenagens girando, aguarde...' },
-        { pct: 42, msg: '🔋 Carregando a bateria do dashboard...' } ],
-      [ { pct: 68, msg: '🚗 Aquecendo o motor principal...' },
-        { pct: 68, msg: '🏎️ Acelerando o carregamento...' },
-        { pct: 68, msg: '💨 Limpando o filtro de ar dos dados...' } ],
-      [ { pct: 88, msg: '🔦 Verificando a suspensão do sistema...' },
-        { pct: 88, msg: '🛞 Alinhando as rodas do painel...' },
-        { pct: 88, msg: '🪝 Rebocando os últimos dados...' } ],
-      [ { pct: 100, msg: '✅ Carro na vaga, pode entrar!' },
-        { pct: 100, msg: '✅ Motor ligado, bora trabalhar!' },
-        { pct: 100, msg: '✅ Revisão completa, tudo certo!' } ],
+      [ { pct: 12, msg: 'ðŸ”§ Apertando os parafusos do sistema...' },
+        { pct: 12, msg: 'ðŸª› Calibrando a chave de fenda...' },
+        { pct: 12, msg: 'ðŸ”© Verificando torque das credenciais...' } ],
+      [ { pct: 42, msg: 'ðŸ›¢ï¸ Trocando o Ã³leo do banco de dados...' },
+        { pct: 42, msg: 'âš™ï¸ Engrenagens girando, aguarde...' },
+        { pct: 42, msg: 'ðŸ”‹ Carregando a bateria do dashboard...' } ],
+      [ { pct: 68, msg: 'ðŸš— Aquecendo o motor principal...' },
+        { pct: 68, msg: 'ðŸŽï¸ Acelerando o carregamento...' },
+        { pct: 68, msg: 'ðŸ’¨ Limpando o filtro de ar dos dados...' } ],
+      [ { pct: 88, msg: 'ðŸ”¦ Verificando a suspensÃ£o do sistema...' },
+        { pct: 88, msg: 'ðŸ›ž Alinhando as rodas do painel...' },
+        { pct: 88, msg: 'ðŸª Rebocando os Ãºltimos dados...' } ],
+      [ { pct: 100, msg: 'âœ… Carro na vaga, pode entrar!' },
+        { pct: 100, msg: 'âœ… Motor ligado, bora trabalhar!' },
+        { pct: 100, msg: 'âœ… RevisÃ£o completa, tudo certo!' } ],
     ];
     const pick = arr => arr[Math.floor(Math.random() * arr.length)];
     const steps = allSteps.map(pick);
@@ -277,8 +277,11 @@ export default function Login() {
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
   function afterLogin(token, usuario) {
+    // Salva em localStorage E sessionStorage para máxima persistência
     localStorage.setItem('c10_token', token);
     localStorage.setItem('c10_user', JSON.stringify(usuario));
+    sessionStorage.setItem('c10_token', token);
+    sessionStorage.setItem('c10_user', JSON.stringify(usuario));
     setShowLoader(true);
     setTimeout(() => {
       if (usuario.perfil === 'master_admin') navigate('/admin/dashboard');
@@ -296,7 +299,7 @@ export default function Login() {
     } catch (err) {
       setLoading(false);
       if (err.error === 'blocked' || err.error === 'overdue') navigate('/bloqueado');
-      else setErro(err.error || 'Credenciais inválidas');
+      else setErro(err.error || 'Credenciais invÃ¡lidas');
     }
   }
 
@@ -320,7 +323,7 @@ export default function Login() {
 
   if (showLoader) return <LoginLoader />;
 
-  // ── Admin ────────────────────────────────────────────────────
+  // â”€â”€ Admin â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (isAdminEmail) {
     return (
       <>
@@ -331,11 +334,11 @@ export default function Login() {
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, marginBottom: 28 }}>
               <img src="/teste sem fundo 1.png" alt="Chave 10" style={{ height: 52, objectFit: 'contain' }} />
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 14px', background: '#e8eef6', borderRadius: 20, fontSize: 11, fontWeight: 700, color: '#1E3A5F', letterSpacing: '.4px', textTransform: 'uppercase' }}>
-                ⚙️ Painel Administrativo
+                âš™ï¸ Painel Administrativo
               </span>
             </div>
             <div className="lv2-title" style={{ marginBottom: 6 }}>Acesso restrito</div>
-            <div className="lv2-sub">Área exclusiva para administradores do sistema.</div>
+            <div className="lv2-sub">Ãrea exclusiva para administradores do sistema.</div>
             <div className="lv2-field">
               <label className="lv2-lbl">E-mail</label>
               <div className="lv2-iwrap">
@@ -350,7 +353,7 @@ export default function Login() {
               </div>
               <div className="lv2-iwrap">
                 <span className="lv2-iico"><IconLock /></span>
-                <input className="lv2-inp" type={showSenha ? 'text' : 'password'} value={senha} onChange={e => setSenha(e.target.value)} placeholder="••••••••" required style={{ paddingRight: 44 }} />
+                <input className="lv2-inp" type={showSenha ? 'text' : 'password'} value={senha} onChange={e => setSenha(e.target.value)} placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" required style={{ paddingRight: 44 }} />
                 <button type="button" className="lv2-eye" onClick={() => setShowSenha(s => !s)}><IconEye off={showSenha} /></button>
               </div>
             </div>
@@ -368,7 +371,7 @@ export default function Login() {
     );
   }
 
-  // ── Login principal ──────────────────────────────────────────
+  // â”€â”€ Login principal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   return (
     <>
       <LoginStyles />
@@ -388,14 +391,14 @@ export default function Login() {
 
             <h2 className="lv2-headline">
               Chega de perder<br />
-              <span className="lv2-accent-text">serviço na bagunça.</span>
+              <span className="lv2-accent-text">serviÃ§o na bagunÃ§a.</span>
             </h2>
             <p className="lv2-desc">
-              Controle clientes, veículos e faturamento em um só lugar. Simples, rápido e profissional.
+              Controle clientes, veÃ­culos e faturamento em um sÃ³ lugar. Simples, rÃ¡pido e profissional.
             </p>
 
             <ul className="lv2-feats">
-              {['Dashboard com métricas em tempo real', 'Orçamentos enviados pelo WhatsApp', 'Histórico completo de cada veículo', 'Relatórios de desempenho da oficina'].map((f, i) => (
+              {['Dashboard com mÃ©tricas em tempo real', 'OrÃ§amentos enviados pelo WhatsApp', 'HistÃ³rico completo de cada veÃ­culo', 'RelatÃ³rios de desempenho da oficina'].map((f, i) => (
                 <li key={i} className="lv2-feat">
                   <span className="lv2-fcheck"><IconCheck /></span>
                   {f}
@@ -476,7 +479,7 @@ export default function Login() {
                 </div>
                 <div className="lv2-iwrap">
                   <span className="lv2-iico"><IconLock /></span>
-                  <input className="lv2-inp" type={showSenha ? 'text' : 'password'} value={senha} onChange={e => setSenha(e.target.value)} placeholder="••••••••" required autoComplete="current-password" style={{ paddingRight: 44 }} />
+                  <input className="lv2-inp" type={showSenha ? 'text' : 'password'} value={senha} onChange={e => setSenha(e.target.value)} placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" required autoComplete="current-password" style={{ paddingRight: 44 }} />
                   <button type="button" className="lv2-eye" onClick={() => setShowSenha(s => !s)}><IconEye off={showSenha} /></button>
                 </div>
               </div>
@@ -489,8 +492,8 @@ export default function Login() {
             </form>
 
             <div className="lv2-signup">
-              Não tem uma conta?{' '}
-              <button type="button" className="lv2-lnk" onClick={() => navigate('/cadastro')}>Criar conta grátis</button>
+              NÃ£o tem uma conta?{' '}
+              <button type="button" className="lv2-lnk" onClick={() => navigate('/cadastro')}>Criar conta grÃ¡tis</button>
             </div>
 
             <div className="lv2-trust">

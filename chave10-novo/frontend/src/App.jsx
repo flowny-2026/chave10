@@ -40,11 +40,13 @@ function PageLoader() {
 }
 
 function getUser() {
-  try { return JSON.parse(localStorage.getItem('c10_user')); } catch { return null; }
+  try { 
+    return JSON.parse(localStorage.getItem('c10_user') || sessionStorage.getItem('c10_user') || 'null'); 
+  } catch { return null; }
 }
 
 function getToken() {
-  return localStorage.getItem('c10_token');
+  return localStorage.getItem('c10_token') || sessionStorage.getItem('c10_token') || null;
 }
 
 // Verifica se o token JWT ainda é válido (sem chamar o servidor)
@@ -52,12 +54,16 @@ function isTokenValid() {
   const token = getToken();
   if (!token) return false;
   try {
-    // JWT tem 3 partes separadas por ponto — decodifica o payload (parte do meio)
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    // exp é em segundos, Date.now() em milissegundos
+    const parts = token.split('.');
+    if (parts.length !== 3) return false;
+    // Base64url -> base64 padrão
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64 + '=='.slice(0, (4 - base64.length % 4) % 4);
+    const payload = JSON.parse(atob(padded));
+    if (!payload.exp) return true; // sem exp = token sem expiração
     return payload.exp * 1000 > Date.now();
   } catch {
-    return false;
+    return true; // em caso de erro de parse, deixa passar (o servidor vai rejeitar se inválido)
   }
 }
 

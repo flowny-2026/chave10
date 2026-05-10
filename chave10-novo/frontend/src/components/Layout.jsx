@@ -542,6 +542,8 @@ export default function Layout({ area }) {
   function logout() {
     localStorage.removeItem('c10_token');
     localStorage.removeItem('c10_user');
+    sessionStorage.removeItem('c10_token');
+    sessionStorage.removeItem('c10_user');
     navigate(area === 'admin' ? '/admin/login' : '/login');
   }
 
