@@ -403,17 +403,6 @@ export default function Login() {
               ))}
             </ul>
 
-            <div className="lv2-proof">
-              <div className="lv2-avs">
-                {['M','R','J','A'].map((l, i) => (
-                  <div key={i} className="lv2-av" style={{ zIndex: 4 - i }}>{l}</div>
-                ))}
-              </div>
-              <div>
-                <span className="lv2-stars">★★★★★</span>
-                <span className="lv2-plabel">+500 oficinas confiam no Chave 10</span>
-              </div>
-            </div>
           </div>
 
           {/* Mockup flutuante */}

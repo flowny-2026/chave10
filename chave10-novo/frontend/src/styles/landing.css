@@ -129,8 +129,8 @@
 ══════════════════════════════════════════ */
 .lp-hero {
   background: linear-gradient(135deg, #0a1628 0%, #1E3A5F 55%, #162f52 100%);
-  position: relative; overflow: hidden;
-  padding: 100px 0 90px;
+  position: relative; overflow: visible;
+  padding: 100px 0 110px;
   min-height: 90vh; display: flex; align-items: center;
 }
 .lp-hero-orbs { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
@@ -177,7 +177,7 @@
 /* Hero title */
 .lp-hero-title {
   font-family: 'Poppins', sans-serif;
-  font-size: 52px; font-weight: 900; line-height: 1.1;
+  font-size: 46px; font-weight: 900; line-height: 1.1;
   color: #fff; letter-spacing: -1px; margin-bottom: 22px;
 }
 .lp-gradient-text {
@@ -667,16 +667,16 @@
 /* Grid do hero: texto à esquerda, mockup à direita */
 .lp-hero-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 480px;
   align-items: center;
-  gap: 64px;
+  gap: 56px;
   position: relative;
   z-index: 1;
   width: 100%;
 }
 
 .lp-hero-content {
-  max-width: 540px;
+  max-width: 100%;
 }
 
 /* ── MOCKUP WRAPPER ── */
@@ -853,7 +853,14 @@
 }
 
 /* ── RESPONSIVE ── */
-@media (max-width: 960px) {
+@media (max-width: 1024px) {
+  .lp-hero-grid {
+    grid-template-columns: 1fr 400px;
+    gap: 40px;
+  }
+}
+
+@media (max-width: 860px) {
   .lp-hero-grid {
     grid-template-columns: 1fr;
     gap: 48px;
@@ -866,7 +873,7 @@
     justify-content: center;
   }
   .lp-hero-mockup {
-    max-width: 380px;
+    max-width: 400px;
   }
   .lp-hero-pills {
     justify-content: center;

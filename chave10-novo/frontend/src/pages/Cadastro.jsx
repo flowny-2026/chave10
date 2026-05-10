@@ -240,17 +240,6 @@ function LeftPanel() {
             </li>
           ))}
         </ul>
-        <div className="cad-proof">
-          <div className="cad-avs">
-            {['M','R','J','A'].map((l, i) => (
-              <div key={i} className="cad-av" style={{ zIndex: 4 - i }}>{l}</div>
-            ))}
-          </div>
-          <div>
-            <span className="cad-stars">★★★★★</span>
-            <span className="cad-plabel">+500 oficinas confiam no Chave 10</span>
-          </div>
-        </div>
       </div>
       {/* Mockup flutuante */}
       <div className="cad-mock">
