@@ -72,35 +72,86 @@ export default function Landing() {
           <div className="lp-orb lp-orb-3"></div>
         </div>
         <div className="lp-container">
-          <div className="lp-hero-content lp-fade-up">
-            <div className="lp-hero-badge">
-              <span className="lp-badge-dot" aria-hidden="true"></span>
-              🔥 Oferta de lançamento — R$29/mês
+          <div className="lp-hero-grid">
+
+            {/* COLUNA ESQUERDA — texto */}
+            <div className="lp-hero-content lp-fade-up">
+              <div className="lp-hero-badge">
+                <span className="lp-badge-dot" aria-hidden="true"></span>
+                🔥 Oferta de lançamento — R$29/mês
+              </div>
+              <h1 className="lp-hero-title">
+                Organize sua oficina.<br/>
+                <span className="lp-gradient-text">Cresça com controle.</span>
+              </h1>
+              <p className="lp-hero-sub">
+                Sistema simples para oficinas mecânicas organizarem clientes, serviços e acompanharem o faturamento.
+              </p>
+              <div className="lp-hero-actions">
+                <button
+                  className="lp-btn-primary lp-btn-lg lp-btn-glow"
+                  onClick={() => navigate('/cadastro')}
+                >
+                  Iniciar Demo gratuita <ArrowIcon />
+                </button>
+                <a className="lp-btn-whatsapp" href={WA_LINK} target="_blank" rel="noopener noreferrer">
+                  <WaIcon /> Falar no WhatsApp
+                </a>
+              </div>
+              <p className="lp-hero-note">Sem cadastro · Acesso imediato · 100% gratuito</p>
+              <div className="lp-hero-pills">
+                <div className="lp-hero-pill"><CheckIcon /> Clientes e veículos organizados</div>
+                <div className="lp-hero-pill"><CheckIcon /> Orçamentos via WhatsApp</div>
+                <div className="lp-hero-pill"><CheckIcon /> Relatórios e metas em tempo real</div>
+              </div>
             </div>
-            <h1 className="lp-hero-title">
-              Sua oficina perde dinheiro<br/>
-              <span className="lp-gradient-text">na desorganização?</span>
-            </h1>
-            <p className="lp-hero-sub">
-              Controle clientes, serviços e faturamento em um só lugar. Simples, rápido e profissional.
-            </p>
-            <div className="lp-hero-actions">
-              <button
-                className="lp-btn-primary lp-btn-lg lp-btn-glow"
-                onClick={() => navigate('/cadastro')}
-              >
-                TESTAR 7 DIAS GRÁTIS <ArrowIcon />
-              </button>
-              <a className="lp-btn-whatsapp" href={WA_LINK} target="_blank" rel="noopener noreferrer">
-                <WaIcon /> Falar no WhatsApp
-              </a>
+
+            {/* COLUNA DIREITA — mockup animado */}
+            <div className="lp-hero-mockup-wrap" aria-hidden="true">
+              <div className="lp-hero-mockup">
+                {/* Barra de título */}
+                <div className="lp-hm-titlebar">
+                  <div className="lp-hm-dots">
+                    <span className="lp-hm-dot lp-hm-dot-r" />
+                    <span className="lp-hm-dot lp-hm-dot-y" />
+                    <span className="lp-hm-dot lp-hm-dot-g" />
+                  </div>
+                  <span className="lp-hm-title">Orçamentos</span>
+                </div>
+
+                {/* Corpo */}
+                <div className="lp-hm-body">
+                  <div className="lp-hm-section-label">ORÇAMENTOS RECENTES</div>
+
+                  {[
+                    { id: 'ORC-0012', nome: 'João Silva',      servico: 'Revisão completa',      val: 'R$ 800' },
+                    { id: 'ORC-0011', nome: 'Fernanda Costa',  servico: 'Freios dianteiros',      val: 'R$ 740' },
+                    { id: 'ORC-0010', nome: 'Marcos Oliveira', servico: 'Suspensão + alinhamento', val: 'R$ 1.100' },
+                  ].map((item, i) => (
+                    <div key={i} className="lp-hm-row" style={{ animationDelay: `${0.4 + i * 0.15}s` }}>
+                      <div className="lp-hm-row-info">
+                        <span className="lp-hm-row-id">{item.id} — {item.nome}</span>
+                        <span className="lp-hm-row-svc">{item.servico}</span>
+                      </div>
+                      <span className="lp-hm-row-val">{item.val}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Notificação flutuante — recebimento */}
+                <div className="lp-hm-notif lp-hm-notif-top">
+                  <span className="lp-hm-notif-icon">$</span>
+                  <span className="lp-hm-notif-text">+R$1.200 recebido</span>
+                </div>
+
+                {/* Notificação flutuante — OS finalizada */}
+                <div className="lp-hm-notif lp-hm-notif-bot">
+                  <span className="lp-hm-notif-check">✓</span>
+                  <span className="lp-hm-notif-text">OS #0047 finalizada</span>
+                </div>
+              </div>
             </div>
-            <p className="lp-hero-note">Sem cartão · Cancele quando quiser</p>
-            <div className="lp-hero-pills">
-              <div className="lp-hero-pill"><CheckIcon /> Ordens de serviço organizadas</div>
-              <div className="lp-hero-pill"><CheckIcon /> Orçamentos via WhatsApp</div>
-              <div className="lp-hero-pill"><CheckIcon /> Faturamento em tempo real</div>
-            </div>
+
           </div>
         </div>
       </section>
