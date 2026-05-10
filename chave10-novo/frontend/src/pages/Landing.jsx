@@ -47,7 +47,7 @@ export default function Landing() {
       <nav className="lp-nav" role="navigation" aria-label="Navegação principal">
         <div className="lp-nav-inner">
           <div className="lp-brand">
-            <img src="/logo 250x50.png" alt="Chave 10" style={{ height: 36, objectFit: 'contain' }} />
+            <img src="/logo 250x50.png" alt="Chave 10" style={{ height: 28, objectFit: 'contain', mixBlendMode: 'multiply' }} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <button

@@ -576,7 +576,7 @@ export default function Layout({ area }) {
           <img
             src="/logo 250x50.png"
             alt="Chave 10"
-            style={{ height: 40, maxWidth: 180, objectFit: 'contain' }}
+            style={{ height: 32, maxWidth: 160, objectFit: 'contain' }}
           />
         </div>
 
@@ -694,9 +694,9 @@ export default function Layout({ area }) {
           </button>
           <div className="topbar-logo">
             <img
-              src="/logo 160x40.png"
+              src="/logo 250x50.png"
               alt="Chave 10"
-              style={{ height: 32, maxWidth: 140, objectFit: 'contain' }}
+              style={{ height: 26, maxWidth: 120, objectFit: 'contain', mixBlendMode: 'multiply' }}
             />
           </div>
 
