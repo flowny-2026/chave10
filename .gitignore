@@ -4,3 +4,4 @@ node_modules/
 *.db-wal
 .env
 chave10-novo/backend/.env
+chave10-novo/frontend/dist/
