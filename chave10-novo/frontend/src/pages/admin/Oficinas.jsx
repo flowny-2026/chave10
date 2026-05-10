@@ -27,6 +27,7 @@ export default function AdminOficinas() {
   const [modal, setModal]             = useState(null);
   const [form, setForm]               = useState(EMPTY);
   const [userForm, setUserForm]       = useState(EMPTY_USR);
+  const [showSenhaUser, setShowSenhaUser] = useState(false);
   const [pagForm, setPagForm]         = useState(EMPTY_PAG);
   const [loteForm, setLoteForm]       = useState({ novo_vencimento:'', valor:'', forma_pagamento:'pix' });
   const [pendentes, setPendentes]     = useState([]);
@@ -192,7 +193,7 @@ export default function AdminOficinas() {
                       <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
                         <button className="btn btn-outline btn-sm" onClick={()=>abrirDetalhes(o)} title="Ver detalhes">🔍</button>
                         <button className="btn btn-outline btn-sm" onClick={()=>{setForm({...o});setEditing(o.id);setModal('oficina');}}>✏️</button>
-                        <button className="btn btn-outline btn-sm" onClick={()=>{setSelectedOf(o);setUserForm(EMPTY_USR);setModal('usuario');}}>+ Login</button>
+                        <button className="btn btn-outline btn-sm" onClick={()=>{setSelectedOf(o);setUserForm(EMPTY_USR);setShowSenhaUser(false);setModal('usuario');}}>+ Login</button>
                         <button className="btn btn-success btn-sm" onClick={()=>{setSelectedOf(o);setPagForm({...EMPTY_PAG});setModal('pagamento');}}>💳</button>
                         {o.status_assinatura!=='blocked'
                           ? <button className="btn btn-danger btn-sm" onClick={()=>setStatus(o.id,'blocked')}>🔒</button>
@@ -394,7 +395,7 @@ export default function AdminOficinas() {
                 <div className="form-grid">
                   <div className="form-group"><label>Nome *</label><input value={userForm.nome} onChange={e=>setUserForm(f=>({...f,nome:e.target.value}))} required autoFocus /></div>
                   <div className="form-group"><label>Email *</label><input type="email" value={userForm.email} onChange={e=>setUserForm(f=>({...f,email:e.target.value}))} required /></div>
-                  <div className="form-group"><label>Senha *</label><input type="password" value={userForm.senha} onChange={e=>setUserForm(f=>({...f,senha:e.target.value}))} required /></div>
+                  <div className="form-group"><label>Senha *</label><div style={{position:'relative'}}><input type={showSenhaUser?'text':'password'} value={userForm.senha} onChange={e=>setUserForm(f=>({...f,senha:e.target.value}))} required style={{paddingRight:40}} /><button type="button" onClick={()=>setShowSenhaUser(s=>!s)} style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:'var(--gray-400)',padding:4,display:'flex',alignItems:'center'}} tabIndex={-1}>{showSenhaUser?<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}</button></div></div>
                   <div className="form-group">
                     <label>Perfil *</label>
                     <select value={userForm.perfil} onChange={e=>setUserForm(f=>({...f,perfil:e.target.value}))}>
