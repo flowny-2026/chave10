@@ -201,21 +201,21 @@ function LoginLoader() {
 
   useEffect(() => {
     const allSteps = [
-      [ { pct: 12, msg: 'ðŸ”§ Apertando os parafusos do sistema...' },
-        { pct: 12, msg: 'ðŸª› Calibrando a chave de fenda...' },
-        { pct: 12, msg: 'ðŸ”© Verificando torque das credenciais...' } ],
-      [ { pct: 42, msg: 'ðŸ›¢ï¸ Trocando o óleo do banco de dados...' },
-        { pct: 42, msg: 'âš™ï¸ Engrenagens girando, aguarde...' },
-        { pct: 42, msg: 'ðŸ”‹ Carregando a bateria do dashboard...' } ],
-      [ { pct: 68, msg: 'ðŸš— Aquecendo o motor principal...' },
-        { pct: 68, msg: 'ðŸŽï¸ Acelerando o carregamento...' },
-        { pct: 68, msg: 'ðŸ’¨ Limpando o filtro de ar dos dados...' } ],
-      [ { pct: 88, msg: 'ðŸ”¦ Verificando a suspensão do sistema...' },
-        { pct: 88, msg: 'ðŸ›ž Alinhando as rodas do painel...' },
-        { pct: 88, msg: 'ðŸª Rebocando os últimos dados...' } ],
-      [ { pct: 100, msg: 'âœ… Carro na vaga, pode entrar!' },
-        { pct: 100, msg: 'âœ… Motor ligado, bora trabalhar!' },
-        { pct: 100, msg: 'âœ… Revisão completa, tudo certo!' } ],
+      [ { pct: 12, msg: 'Apertando os parafusos do sistema...' },
+        { pct: 12, msg: 'Calibrando a chave de fenda...' },
+        { pct: 12, msg: 'Verificando torque das credenciais...' } ],
+      [ { pct: 42, msg: 'Trocando o oleo do banco de dados...' },
+        { pct: 42, msg: 'Engrenagens girando, aguarde...' },
+        { pct: 42, msg: 'Carregando a bateria do dashboard...' } ],
+      [ { pct: 68, msg: 'Aquecendo o motor principal...' },
+        { pct: 68, msg: 'Acelerando o carregamento...' },
+        { pct: 68, msg: 'Limpando o filtro de ar dos dados...' } ],
+      [ { pct: 88, msg: 'Verificando a suspensao do sistema...' },
+        { pct: 88, msg: 'Alinhando as rodas do painel...' },
+        { pct: 88, msg: 'Rebocando os ultimos dados...' } ],
+      [ { pct: 100, msg: 'Carro na vaga, pode entrar!' },
+        { pct: 100, msg: 'Motor ligado, bora trabalhar!' },
+        { pct: 100, msg: 'Revisao completa, tudo certo!' } ],
     ];
     const pick = arr => arr[Math.floor(Math.random() * arr.length)];
     const steps = allSteps.map(pick);
@@ -334,11 +334,15 @@ export default function Login() {
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, marginBottom: 28 }}>
               <img src="/teste sem fundo 1.png" alt="Chave 10" style={{ height: 52, objectFit: 'contain' }} />
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 14px', background: '#e8eef6', borderRadius: 20, fontSize: 11, fontWeight: 700, color: '#1E3A5F', letterSpacing: '.4px', textTransform: 'uppercase' }}>
-                âš™ï¸ Painel Administrativo
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="3"/>
+                  <path d="M12 1v6m0 6v6M5.6 5.6l4.2 4.2m4.2 4.2l4.2 4.2M1 12h6m6 0h6M5.6 18.4l4.2-4.2m4.2-4.2l4.2-4.2"/>
+                </svg>
+                PAINEL ADMINISTRATIVO
               </span>
             </div>
             <div className="lv2-title" style={{ marginBottom: 6 }}>Acesso restrito</div>
-            <div className="lv2-sub">Ãrea exclusiva para administradores do sistema.</div>
+            <div className="lv2-sub">Área exclusiva para administradores do sistema.</div>
             <div className="lv2-field">
               <label className="lv2-lbl">E-mail</label>
               <div className="lv2-iwrap">
@@ -353,7 +357,7 @@ export default function Login() {
               </div>
               <div className="lv2-iwrap">
                 <span className="lv2-iico"><IconLock /></span>
-                <input className="lv2-inp" type={showSenha ? 'text' : 'password'} value={senha} onChange={e => setSenha(e.target.value)} placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" required style={{ paddingRight: 44 }} />
+                <input className="lv2-inp" type={showSenha ? 'text' : 'password'} value={senha} onChange={e => setSenha(e.target.value)} placeholder="••••••••" required style={{ paddingRight: 44 }} />
                 <button type="button" className="lv2-eye" onClick={() => setShowSenha(s => !s)}><IconEye off={showSenha} /></button>
               </div>
             </div>
@@ -479,7 +483,7 @@ export default function Login() {
                 </div>
                 <div className="lv2-iwrap">
                   <span className="lv2-iico"><IconLock /></span>
-                  <input className="lv2-inp" type={showSenha ? 'text' : 'password'} value={senha} onChange={e => setSenha(e.target.value)} placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" required autoComplete="current-password" style={{ paddingRight: 44 }} />
+                  <input className="lv2-inp" type={showSenha ? 'text' : 'password'} value={senha} onChange={e => setSenha(e.target.value)} placeholder="••••••••" required autoComplete="current-password" style={{ paddingRight: 44 }} />
                   <button type="button" className="lv2-eye" onClick={() => setShowSenha(s => !s)}><IconEye off={showSenha} /></button>
                 </div>
               </div>
@@ -518,5 +522,6 @@ export default function Login() {
     </>
   );
 }
+
 
 

@@ -125,11 +125,11 @@ export default function AdminLogin() {
             color: 'var(--brand)', letterSpacing: '0.5px',
             textTransform: 'uppercase',
           }}>
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-              <circle cx="5" cy="5" r="4" fill="var(--brand)"/>
-              <path d="M3 5l1.5 1.5L7 3.5" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M12 1v6m0 6v6M5.6 5.6l4.2 4.2m4.2 4.2l4.2 4.2M1 12h6m6 0h6M5.6 18.4l4.2-4.2m4.2-4.2l4.2-4.2"/>
             </svg>
-            Painel Administrativo
+            PAINEL ADMINISTRATIVO
           </div>
         </div>
 
