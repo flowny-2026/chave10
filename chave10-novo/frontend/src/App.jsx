@@ -41,8 +41,11 @@ function PageLoader() {
 
 function getUser() {
   try { 
-    return JSON.parse(localStorage.getItem('c10_user') || sessionStorage.getItem('c10_user') || 'null'); 
-  } catch { return null; }
+    const user = localStorage.getItem('c10_user') || sessionStorage.getItem('c10_user');
+    return user ? JSON.parse(user) : null;
+  } catch { 
+    return null; 
+  }
 }
 
 function getToken() {
@@ -53,17 +56,37 @@ function getToken() {
 function isTokenValid() {
   const token = getToken();
   if (!token) return false;
+  
   try {
     const parts = token.split('.');
     if (parts.length !== 3) return false;
+    
     // Base64url -> base64 padrão
     const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
     const padded = base64 + '=='.slice(0, (4 - base64.length % 4) % 4);
     const payload = JSON.parse(atob(padded));
-    if (!payload.exp) return true; // sem exp = token sem expiração
-    return payload.exp * 1000 > Date.now();
-  } catch {
-    return true; // em caso de erro de parse, deixa passar (o servidor vai rejeitar se inválido)
+    
+    // Se não tem expiração, considera válido
+    if (!payload.exp) return true;
+    
+    // Verifica se ainda não expirou (exp está em segundos, Date.now() em milissegundos)
+    const expirationTime = payload.exp * 1000;
+    const now = Date.now();
+    const isValid = expirationTime > now;
+    
+    // Debug: mostra quanto tempo falta para expirar
+    if (isValid) {
+      const hoursLeft = Math.floor((expirationTime - now) / (1000 * 60 * 60));
+      console.log(`🔑 Token válido por mais ${hoursLeft} horas`);
+    } else {
+      console.log('🔑 Token expirado');
+    }
+    
+    return isValid;
+  } catch (error) {
+    // Em caso de erro no parse, considera inválido (segurança)
+    console.error('❌ Erro ao validar token:', error);
+    return false;
   }
 }
 
@@ -71,25 +94,35 @@ function PrivateRoute({ children, adminOnly = false, noFuncionario = false }) {
   const user = getUser();
   const tokenOk = isTokenValid();
 
-  // Sem token válido → login
+  // Sem token válido → redireciona para login e limpa dados apenas se o token realmente expirou
   if (!tokenOk) {
-    // Limpa dados inválidos
-    if (!tokenOk && getToken()) {
+    const token = getToken();
+    
+    // Se tinha token mas não é mais válido (expirado), limpa
+    if (token) {
+      console.log('🔐 Token expirado, limpando sessão...');
       localStorage.removeItem('c10_token');
       localStorage.removeItem('c10_user');
+      sessionStorage.removeItem('c10_token');
+      sessionStorage.removeItem('c10_user');
     }
+    
+    // Redireciona para o login apropriado
     if (adminOnly) return <Navigate to="/admin/login" replace />;
     return <Navigate to="/login" replace />;
   }
 
-  // Token válido mas sem dados do usuário em cache → tenta reconstruir do token
+  // Token válido mas sem dados do usuário em cache → algo deu errado, redireciona
   if (!user) {
+    console.log('⚠️ Token válido mas sem dados do usuário, redirecionando...');
     if (adminOnly) return <Navigate to="/admin/login" replace />;
     return <Navigate to="/login" replace />;
   }
 
+  // Validações de perfil
   if (adminOnly && user.perfil !== 'master_admin') return <Navigate to="/app/dashboard" replace />;
   if (noFuncionario && user.perfil === 'funcionario') return <Navigate to="/app/dashboard" replace />;
+  
   return children;
 }
 

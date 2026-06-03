@@ -3,6 +3,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import PWAInstallButton from './PWAInstallButton';
 import GlobalSearch from './GlobalSearch';
 import { api } from '../api';
+import { useAuth } from '../hooks/useAuth';
 
 // SVG Icons
 const IC = {
@@ -524,6 +525,9 @@ export default function Layout({ area }) {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const user = getUser();
+  
+  // Hook para manter a sessão ativa e verificar expiração
+  useAuth();
 
   // Sincroniza dados do usuário com o servidor ao montar o layout
   // Garante que data_vencimento e status_assinatura estejam sempre atualizados
