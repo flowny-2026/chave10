@@ -76,10 +76,6 @@ export default function Landing() {
 
             {/* COLUNA ESQUERDA — texto */}
             <div className="lp-hero-content lp-fade-up">
-              <div className="lp-hero-badge">
-                <span className="lp-badge-dot" aria-hidden="true"></span>
-                🔥 Oferta de lançamento — R$29/mês
-              </div>
               <h1 className="lp-hero-title">
                 Organize sua oficina.<br/>
                 <span className="lp-gradient-text">Cresça com controle.</span>
