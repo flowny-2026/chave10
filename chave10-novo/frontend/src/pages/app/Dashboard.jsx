@@ -15,11 +15,11 @@ function BarChart({ data }) {
     return <div className="empty-state" style={{padding:24}}><p>Sem dados</p></div>;
   const max = Math.max(...data.map(d => d.total), 1);
   return (
-    <div style={{display:'flex',alignItems:'flex-end',gap:6,height:120,marginTop:12,overflowX:'auto'}}>
+    <div className="dashboard-chart" style={{display:'flex',alignItems:'flex-end',gap:6,height:110,marginTop:12,overflowX:'auto'}}>
       {data.map((d,i) => (
         <div key={i} style={{flex:1,minWidth:32,display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
           <div style={{fontSize:9,color:'var(--gray-400)'}}>{d.total>0?fmt.currency(d.total).replace('R$ ',''):''}</div>
-          <div style={{width:'100%',background:'var(--accent)',borderRadius:4,height:Math.max((d.total/max)*90,d.total>0?4:0),opacity:.85}} />
+          <div style={{width:'100%',background:'var(--accent)',borderRadius:4,height:Math.max((d.total/max)*80,d.total>0?4:0),opacity:.85}} />
           <div style={{fontSize:9,color:'var(--gray-400)'}}>{d.mes}</div>
         </div>
       ))}
@@ -145,35 +145,33 @@ export default function AppDashboard() {
       
       {/* HERO */}
       {!isFuncionario && (
-      <div style={{background:'linear-gradient(135deg,var(--brand) 0%,var(--brand-mid) 100%)',borderRadius:'var(--r-lg)',padding:'28px 32px',marginBottom:24,position:'relative',overflow:'hidden'}}>
+      <div className="dashboard-hero" style={{background:'linear-gradient(135deg,var(--brand) 0%,var(--brand-mid) 100%)',borderRadius:'var(--r-lg)',padding:'20px 24px',marginBottom:20,position:'relative',overflow:'hidden'}}>
         <div style={{position:'absolute',inset:0,background:'radial-gradient(ellipse at 80% 50%,rgba(249,115,22,.18),transparent 60%)',pointerEvents:'none'}} />
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:20,position:'relative',zIndex:1}}>
-          <div>
-            <div style={{fontSize:12,fontWeight:600,color:'rgba(255,255,255,.5)',textTransform:'uppercase',letterSpacing:'.8px',marginBottom:6}}>Faturamento do mês</div>
-            <div style={{fontFamily:'Poppins,sans-serif',fontSize:38,fontWeight:800,color:'#fff',lineHeight:1,marginBottom:8}}>{fmt.currency(fat)}</div>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:16,position:'relative',zIndex:1}}>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:11,fontWeight:600,color:'rgba(255,255,255,.5)',textTransform:'uppercase',letterSpacing:'.8px',marginBottom:4}}>Faturamento do mês</div>
+            <div style={{fontFamily:'Poppins,sans-serif',fontSize:32,fontWeight:800,color:'#fff',lineHeight:1,marginBottom:6}}>{fmt.currency(fat)}</div>
 
             {/* Breakdown MO vs Peças */}
             {fat > 0 && (
-              <div style={{display:'flex',gap:16,marginBottom:10,flexWrap:'wrap'}}>
-                <div style={{display:'flex',alignItems:'center',gap:6}}>
-                  <div style={{width:8,height:8,borderRadius:'50%',background:'#F97316',flexShrink:0}}/>
-                  <span style={{fontSize:12,color:'rgba(255,255,255,.7)'}}>
-                    Mão de obra: <strong style={{color:'#fff'}}>{fmt.currency(fatMO)}</strong>
-                    <span style={{color:'rgba(255,255,255,.45)',marginLeft:4}}>({pctMO}%)</span>
+              <div style={{display:'flex',gap:12,marginBottom:8,flexWrap:'wrap'}}>
+                <div style={{display:'flex',alignItems:'center',gap:5}}>
+                  <div style={{width:7,height:7,borderRadius:'50%',background:'#F97316',flexShrink:0}}/>
+                  <span style={{fontSize:11,color:'rgba(255,255,255,.7)'}}>
+                    MO: <strong style={{color:'#fff'}}>{fmt.currency(fatMO)}</strong>
                   </span>
                 </div>
-                <div style={{display:'flex',alignItems:'center',gap:6}}>
-                  <div style={{width:8,height:8,borderRadius:'50%',background:'#60a5fa',flexShrink:0}}/>
-                  <span style={{fontSize:12,color:'rgba(255,255,255,.7)'}}>
+                <div style={{display:'flex',alignItems:'center',gap:5}}>
+                  <div style={{width:7,height:7,borderRadius:'50%',background:'#60a5fa',flexShrink:0}}/>
+                  <span style={{fontSize:11,color:'rgba(255,255,255,.7)'}}>
                     Peças: <strong style={{color:'#fff'}}>{fmt.currency(fatPecas)}</strong>
-                    <span style={{color:'rgba(255,255,255,.45)',marginLeft:4}}>({pctPecas}%)</span>
                   </span>
                 </div>
               </div>
             )}
 
-            <div style={{fontSize:13,color:'rgba(255,255,255,.6)',marginBottom:meta>0?14:4}}>
-              {stats.finalizadasHoje||0} OS finalizada(s) hoje · {stats.emAndamento||0} em andamento
+            <div style={{fontSize:12,color:'rgba(255,255,255,.6)'}}>
+              {stats.finalizadasHoje||0} finalizada(s) · {stats.emAndamento||0} em andamento
             </div>
             {meta > 0 ? (
               <div>
@@ -194,21 +192,21 @@ export default function AppDashboard() {
               </button>
             )}
           </div>
-          <div style={{display:'flex',flexDirection:'column',gap:10,alignItems:'flex-end'}}>
-            <button className="btn btn-primary" onClick={()=>navigate('/app/os')} style={{fontSize:15,padding:'14px 22px',boxShadow:'0 4px 20px rgba(249,115,22,.5)'}}>
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-              Nova Ordem de Serviço
+          <div className="dashboard-hero-actions" style={{display:'flex',flexDirection:'column',gap:10,alignItems:'flex-end'}}>
+            <button className="btn btn-primary dashboard-btn-nova-os" onClick={()=>navigate('/app/os')} style={{fontSize:14,padding:'12px 18px',boxShadow:'0 4px 16px rgba(249,115,22,.4)',whiteSpace:'nowrap'}}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+              <span className="dashboard-btn-label">Nova OS</span>
             </button>
-            <div style={{display:'flex',gap:8}}>
+            <div className="dashboard-hero-stats" style={{display:'flex',gap:8}}>
               {[{label:'OS abertas',val:stats.emAndamento||0,color:(stats.emAndamento||0)>0?'#fbbf24':'#fff'},{label:'Clientes',val:stats.totalClientes||0,color:'#fff'}].map(item=>(
-                <div key={item.label} style={{background:'rgba(255,255,255,.1)',borderRadius:'var(--r-sm)',padding:'10px 14px',textAlign:'center',minWidth:80}}>
-                  <div style={{fontSize:10,color:'rgba(255,255,255,.45)',marginBottom:3,textTransform:'uppercase',letterSpacing:'.5px'}}>{item.label}</div>
+                <div key={item.label} style={{background:'rgba(255,255,255,.1)',borderRadius:'var(--r-sm)',padding:'8px 12px',textAlign:'center',minWidth:72}}>
+                  <div style={{fontSize:9,color:'rgba(255,255,255,.45)',marginBottom:2,textTransform:'uppercase',letterSpacing:'.5px'}}>{item.label}</div>
                   <div style={{fontSize:15,fontWeight:800,color:item.color}}>{item.val}</div>
                 </div>
               ))}
               {meta > 0 && (
-                <button onClick={()=>{setMetaInput(meta);setShowMeta(true);}} style={{background:'rgba(255,255,255,.1)',borderRadius:'var(--r-sm)',padding:'10px 14px',textAlign:'center',minWidth:80,border:'none',cursor:'pointer',color:'#fff'}}>
-                  <div style={{fontSize:10,color:'rgba(255,255,255,.45)',marginBottom:3,textTransform:'uppercase',letterSpacing:'.5px'}}>Meta</div>
+                <button onClick={()=>{setMetaInput(meta);setShowMeta(true);}} style={{background:'rgba(255,255,255,.1)',borderRadius:'var(--r-sm)',padding:'8px 12px',textAlign:'center',minWidth:72,border:'none',cursor:'pointer',color:'#fff'}}>
+                  <div style={{fontSize:9,color:'rgba(255,255,255,.45)',marginBottom:2,textTransform:'uppercase',letterSpacing:'.5px'}}>Meta</div>
                   <div style={{fontSize:12,fontWeight:700}}>✏️ Editar</div>
                 </button>
               )}
@@ -249,15 +247,15 @@ export default function AppDashboard() {
         )}
         <div className="stat-card c-green">
           <div className="stat-icon c-green"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div><div className="stat-value">{stats.finalizadasHoje||0}</div><div className="stat-label">Finalizadas hoje</div></div>
+          <div><div className="stat-value" style={{fontSize:20,fontWeight:800}}>{stats.finalizadasHoje||0}</div><div className="stat-label">Finalizadas hoje</div></div>
         </div>
         <div className="stat-card c-blue">
           <div className="stat-icon c-blue"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
-          <div><div className="stat-value">{stats.emAndamento||0}</div><div className="stat-label">OS em andamento</div></div>
+          <div><div className="stat-value" style={{fontSize:20,fontWeight:800}}>{stats.emAndamento||0}</div><div className="stat-label">OS em andamento</div></div>
         </div>
         <div className="stat-card c-purple">
           <div className="stat-icon c-purple"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
-          <div><div className="stat-value">{stats.totalClientes||0}</div><div className="stat-label">Total de clientes</div></div>
+          <div><div className="stat-value" style={{fontSize:20,fontWeight:800}}>{stats.totalClientes||0}</div><div className="stat-label">Total de clientes</div></div>
         </div>
       </div>
 

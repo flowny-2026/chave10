@@ -2338,9 +2338,37 @@ tbody tr { transition: background .12s; }
   .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
   .stat-card { padding: 14px 14px; gap: 10px; }
   .stat-icon { width: 38px; height: 38px; border-radius: 9px; }
-  .stat-value { font-size: 19px !important; }
-  .stat-label { font-size: 11.5px; }
+  .stat-value { font-size: 22px !important; font-weight: 800 !important; }
+  .stat-label { font-size: 11px; }
   .stat-var { font-size: 10.5px; }
+
+  /* Dashboard hero — mais compacto no mobile */
+  .dashboard-hero { 
+    padding: 18px 20px !important; 
+    margin-bottom: 18px !important;
+  }
+  .dashboard-hero .stat-value { font-size: 28px !important; }
+  .dashboard-btn-nova-os { 
+    font-size: 13px !important; 
+    padding: 10px 16px !important;
+  }
+  .dashboard-btn-label { display: inline; }
+  .dashboard-hero-stats { flex-wrap: wrap; }
+  .dashboard-hero-actions {
+    width: 100%;
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-top: 8px;
+  }
+
+  /* Gráfico mais compacto */
+  .dashboard-chart { height: 95px !important; }
+
+  /* FAB Nova OS visível no mobile */
+  .fab-nova-os { 
+    display: flex !important;
+  }
 
   /* Page header mobile */
   .page-header { margin-bottom: 16px; gap: 8px; }
@@ -2437,7 +2465,7 @@ tbody tr { transition: background .12s; }
   .main-content { padding: 10px 10px 72px; }
   .stats-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
   .stat-card { padding: 12px; }
-  .stat-value { font-size: 17px !important; }
+  .stat-value { font-size: 20px !important; font-weight: 800 !important; }
   .stat-icon { width: 34px; height: 34px; }
   .page-title { font-size: 17px; }
   .card { padding: 12px; }
@@ -2449,6 +2477,29 @@ tbody tr { transition: background .12s; }
   .bottom-nav-inner { height: 54px; }
   .bnav-label { display: none; } /* só ícones em telas muito pequenas */
   .bottom-nav-item.btn-nova-os span { display: none; }
+
+  /* Dashboard hero ainda mais compacto */
+  .dashboard-hero { 
+    padding: 16px 18px !important;
+    margin-bottom: 16px !important;
+  }
+  .dashboard-btn-label { display: none; } /* Esconde "Nova" no botão, deixa só ícone */
+  .dashboard-hero-actions {
+    margin-top: 12px;
+  }
+  .dashboard-chart { height: 85px !important; }
+
+  /* FAB menor em telas pequenas */
+  .fab-nova-os {
+    width: 52px;
+    height: 52px;
+    bottom: 80px;
+    right: 14px;
+  }
+  .fab-nova-os svg {
+    width: 22px;
+    height: 22px;
+  }
 }
 
 /* ── Tablet ≤ 1024px ── */
@@ -2460,6 +2511,19 @@ tbody tr { transition: background .12s; }
   .fin-summary { grid-template-columns: 1fr 1fr; }
   .action-label { display: none; }
   .topbar-action-btn { padding: 8px; }
+}
+
+/* ── Desktop ≥769px — ocultar elementos mobile ── */
+@media (min-width: 769px) {
+  .mobile-bottom-nav { display: none !important; }
+  .sidebar-overlay { display: none !important; }
+  .fab-nova-os { display: none !important; }
+  .dashboard-btn-label { display: inline !important; }
+  .dashboard-hero-actions {
+    width: auto !important;
+    flex-direction: column !important;
+    align-items: flex-end !important;
+  }
 }
 
 /* ── Garantir que hover não quebre no touch ── */

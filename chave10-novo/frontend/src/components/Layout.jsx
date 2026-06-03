@@ -745,18 +745,57 @@ export default function Layout({ area }) {
             { to: '/app/os',        label: 'OS',        icon: IC.os },
             { to: '/app/clientes',  label: 'Clientes',  icon: IC.clientes },
             { to: '/app/financeiro',label: 'Financeiro',icon: IC.financeiro },
-            { to: '/app/orcamentos',label: 'Mais',      icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg> },
+            { to: '/app/agenda',    label: 'Mais',      icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>, onClick: () => setOpen(true) },
           ].map(item => (
             <NavLink
               key={item.to}
               to={item.to}
               className={({ isActive }) => 'mbn-item' + (isActive ? ' mbn-item--active' : '')}
+              onClick={item.onClick}
             >
               <span className="mbn-icon">{item.icon}</span>
               <span className="mbn-label">{item.label}</span>
             </NavLink>
           ))}
         </nav>
+      )}
+
+      {/* Floating Action Button (FAB) — Nova OS */}
+      {area === 'app' && (
+        <button
+          className="fab-nova-os"
+          onClick={() => navigate('/app/os')}
+          title="Nova Ordem de Serviço"
+          style={{
+            position: 'fixed',
+            bottom: '84px',
+            right: '16px',
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #F97316, #fb923c)',
+            border: 'none',
+            boxShadow: '0 6px 20px rgba(249, 115, 22, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            zIndex: 999,
+            transition: 'all 0.2s ease',
+          }}
+          onMouseOver={e => {
+            e.currentTarget.style.transform = 'scale(1.1)';
+            e.currentTarget.style.boxShadow = '0 8px 24px rgba(249, 115, 22, 0.6)';
+          }}
+          onMouseOut={e => {
+            e.currentTarget.style.transform = 'scale(1)';
+            e.currentTarget.style.boxShadow = '0 6px 20px rgba(249, 115, 22, 0.5)';
+          }}
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+          </svg>
+        </button>
       )}
 
       {/* Botão de instalação PWA — aparece após login, some após instalar */}
