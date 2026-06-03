@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api } from '../api';
+import { api, saveToken, saveUser } from '../api';
 
 function LoginLoader() {
   const [pct, setPct] = useState(0);
@@ -84,8 +84,8 @@ export default function AdminLogin() {
         setErro('Acesso restrito ao administrador.');
         return;
       }
-      localStorage.setItem('c10_token', token);
-      localStorage.setItem('c10_user', JSON.stringify(usuario));
+      saveToken(token);
+      saveUser(usuario);
       setShowLoader(true);
       setTimeout(() => navigate('/admin/dashboard'), 3200);
     } catch (err) {

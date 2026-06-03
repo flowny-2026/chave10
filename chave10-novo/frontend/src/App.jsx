@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { lazy, Suspense, useEffect } from 'react';
 import Layout from './components/Layout';
+import { getFromStorage } from './api';
 
 // Páginas públicas — carregadas imediatamente
 import Landing from './pages/Landing';
@@ -41,9 +42,9 @@ function PageLoader() {
 
 function getUser() {
   try { 
-    const user = localStorage.getItem('c10_user') || sessionStorage.getItem('c10_user');
+    const user = getFromStorage('c10_user');
     if (user) {
-      console.log('✅ Usuário recuperado do storage');
+      console.log('✅ Usuário recuperado do storage (com fallback mobile)');
       return JSON.parse(user);
     }
     console.log('⚠️ Nenhum usuário encontrado no storage');
@@ -55,9 +56,9 @@ function getUser() {
 }
 
 function getToken() {
-  const token = localStorage.getItem('c10_token') || sessionStorage.getItem('c10_token') || null;
+  const token = getFromStorage('c10_token');
   if (token) {
-    console.log('✅ Token recuperado do storage');
+    console.log('✅ Token recuperado do storage (com fallback mobile)');
   } else {
     console.log('⚠️ Nenhum token encontrado no storage');
   }

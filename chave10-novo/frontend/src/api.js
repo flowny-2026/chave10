@@ -1,7 +1,68 @@
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
+// Funções auxiliares para persistência robusta em mobile
+function saveToStorage(key, value) {
+  try {
+    // Salva em AMBOS localStorage e sessionStorage
+    localStorage.setItem(key, value);
+    sessionStorage.setItem(key, value);
+    
+    // Também salva em cookie como fallback (expira em 30 dias)
+    const expires = new Date();
+    expires.setTime(expires.getTime() + 30 * 24 * 60 * 60 * 1000);
+    document.cookie = `${key}=${encodeURIComponent(value)}; expires=${expires.toUTCString()}; path=/; SameSite=Strict`;
+    
+    console.log(`💾 Dados salvos (${key}):`, { localStorage: '✅', sessionStorage: '✅', cookie: '✅' });
+  } catch (error) {
+    console.error(`❌ Erro ao salvar ${key}:`, error);
+  }
+}
+
+function getFromStorage(key) {
+  try {
+    // Tenta localStorage primeiro
+    let value = localStorage.getItem(key);
+    if (value) return value;
+    
+    // Se não tem no localStorage, tenta sessionStorage
+    value = sessionStorage.getItem(key);
+    if (value) {
+      // Restaura para localStorage
+      localStorage.setItem(key, value);
+      return value;
+    }
+    
+    // Se não tem em nenhum, tenta cookie
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+      const [name, val] = cookie.trim().split('=');
+      if (name === key) {
+        value = decodeURIComponent(val);
+        // Restaura para os storages
+        localStorage.setItem(key, value);
+        sessionStorage.setItem(key, value);
+        console.log(`🔄 Token restaurado do cookie para ${key}`);
+        return value;
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error(`❌ Erro ao recuperar ${key}:`, error);
+    return null;
+  }
+}
+
 function getToken() {
-  return localStorage.getItem('c10_token');
+  return getFromStorage('c10_token');
+}
+
+function saveToken(token) {
+  saveToStorage('c10_token', token);
+}
+
+function saveUser(user) {
+  saveToStorage('c10_user', typeof user === 'string' ? user : JSON.stringify(user));
 }
 
 async function req(method, url, body, customToken) {
@@ -122,3 +183,6 @@ export const api = {
     },
   },
 };
+
+// Exportar funções de storage para uso em outras partes da aplicação
+export { saveToken, saveUser, getToken, getFromStorage, saveToStorage };

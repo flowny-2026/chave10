@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
-import { api } from '../api';
+import { api, saveToken, saveUser } from '../api';
 
 // â”€â”€â”€ CSS injetado via <style> para garantir que não seja sobrescrito â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const LOGIN_CSS = `
@@ -277,11 +277,12 @@ export default function Login() {
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
   function afterLogin(token, usuario) {
-    // Salva em localStorage E sessionStorage para máxima persistência
-    localStorage.setItem('c10_token', token);
-    localStorage.setItem('c10_user', JSON.stringify(usuario));
-    sessionStorage.setItem('c10_token', token);
-    sessionStorage.setItem('c10_user', JSON.stringify(usuario));
+    // Usa funções robustas de storage que funcionam em mobile
+    saveToken(token);
+    saveUser(usuario);
+    
+    console.log('✅ Login bem-sucedido, dados salvos com persistência mobile');
+    
     setShowLoader(true);
     setTimeout(() => {
       if (usuario.perfil === 'master_admin') navigate('/admin/dashboard');

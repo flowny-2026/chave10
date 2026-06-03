@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
-import { api } from '../api';
+import { api, saveToken, saveUser } from '../api';
 import { useForm } from '../hooks/useForm';
 import FormInput from '../components/FormInput';
 import CepInput from '../components/CepInput';
@@ -316,8 +316,8 @@ export default function Cadastro() {
     async (values) => {
       setErro('');
       const { token, usuario } = await api.auth.completeOficina(tempToken, values);
-      localStorage.setItem('c10_token', token);
-      localStorage.setItem('c10_user', JSON.stringify(usuario));
+      saveToken(token);
+      saveUser(usuario);
       navigate('/app/dashboard');
     },
     { nome_oficina: [validateRequired], telefone: [validatePhone] }
@@ -339,8 +339,8 @@ export default function Cadastro() {
       const { token, needsOficina, usuario } = await api.auth.googleRegister(credential);
       if (needsOficina) { setTempToken(token); setStep(2); }
       else {
-        localStorage.setItem('c10_token', token);
-        if (usuario) localStorage.setItem('c10_user', JSON.stringify(usuario));
+        saveToken(token);
+        if (usuario) saveUser(usuario);
         navigate('/app/dashboard');
       }
     } catch (err) { setErro(err.error || 'Erro ao cadastrar com Google'); }
