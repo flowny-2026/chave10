@@ -7,7 +7,20 @@ import App from './App';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
+// DESREGISTRA SERVICE WORKER ANTIGO (temporário para debugging)
+// Remove qualquer SW que possa estar causando logout automático
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(registrations => {
+    for (const registration of registrations) {
+      console.log('🗑️ Removendo Service Worker antigo...');
+      registration.unregister();
+    }
+  });
+}
+
 // Registra o Service Worker para habilitar PWA
+// COMENTADO TEMPORARIAMENTE PARA DEBUGGING DO LOGOUT
+/*
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
@@ -35,6 +48,7 @@ if ('serviceWorker' in navigator) {
     // });
   });
 }
+*/
 
 function showUpdateBanner() {
   if (document.getElementById('sw-update-banner')) return;
