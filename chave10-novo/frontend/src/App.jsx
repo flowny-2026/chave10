@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import Layout from './components/Layout';
 
 // Páginas públicas — carregadas imediatamente
@@ -42,86 +42,129 @@ function PageLoader() {
 function getUser() {
   try { 
     const user = localStorage.getItem('c10_user') || sessionStorage.getItem('c10_user');
-    return user ? JSON.parse(user) : null;
-  } catch { 
+    if (user) {
+      console.log('✅ Usuário recuperado do storage');
+      return JSON.parse(user);
+    }
+    console.log('⚠️ Nenhum usuário encontrado no storage');
+    return null;
+  } catch (error) { 
+    console.error('❌ Erro ao recuperar usuário:', error);
     return null; 
   }
 }
 
 function getToken() {
-  return localStorage.getItem('c10_token') || sessionStorage.getItem('c10_token') || null;
+  const token = localStorage.getItem('c10_token') || sessionStorage.getItem('c10_token') || null;
+  if (token) {
+    console.log('✅ Token recuperado do storage');
+  } else {
+    console.log('⚠️ Nenhum token encontrado no storage');
+  }
+  return token;
 }
 
 // Verifica se o token JWT ainda é válido (sem chamar o servidor)
 function isTokenValid() {
   const token = getToken();
-  if (!token) return false;
+  if (!token) {
+    console.log('🔐 Validação: SEM TOKEN');
+    return false;
+  }
   
   try {
     const parts = token.split('.');
-    if (parts.length !== 3) return false;
+    if (parts.length !== 3) {
+      console.log('❌ Validação: Token com formato inválido');
+      return false;
+    }
     
     // Base64url -> base64 padrão
     const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
     const padded = base64 + '=='.slice(0, (4 - base64.length % 4) % 4);
     const payload = JSON.parse(atob(padded));
     
+    console.log('🔍 Payload do token:', payload);
+    
     // Se não tem expiração, considera válido
-    if (!payload.exp) return true;
+    if (!payload.exp) {
+      console.log('✅ Validação: Token SEM EXPIRAÇÃO (sempre válido)');
+      return true;
+    }
     
     // Verifica se ainda não expirou (exp está em segundos, Date.now() em milissegundos)
     const expirationTime = payload.exp * 1000;
     const now = Date.now();
     const isValid = expirationTime > now;
     
-    // Debug: mostra quanto tempo falta para expirar
     if (isValid) {
-      const hoursLeft = Math.floor((expirationTime - now) / (1000 * 60 * 60));
-      console.log(`🔑 Token válido por mais ${hoursLeft} horas`);
+      const timeLeft = expirationTime - now;
+      const daysLeft = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+      const hoursLeft = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      console.log(`✅ Validação: Token VÁLIDO por mais ${daysLeft} dias e ${hoursLeft} horas`);
     } else {
-      console.log('🔑 Token expirado');
+      const expirado = new Date(expirationTime).toLocaleString();
+      console.log(`❌ Validação: Token EXPIRADO em ${expirado}`);
     }
     
     return isValid;
   } catch (error) {
     // Em caso de erro no parse, considera inválido (segurança)
-    console.error('❌ Erro ao validar token:', error);
+    console.error('❌ Validação: Erro ao processar token:', error);
     return false;
   }
 }
 
 function PrivateRoute({ children, adminOnly = false, noFuncionario = false }) {
+  console.log('🛡️ PrivateRoute: Verificando autenticação...');
+  
   const user = getUser();
   const tokenOk = isTokenValid();
 
-  // Sem token válido → redireciona para login e limpa dados apenas se o token realmente expirou
+  console.log('🛡️ PrivateRoute: user =', user);
+  console.log('🛡️ PrivateRoute: tokenOk =', tokenOk);
+
+  // Sem token válido → redireciona para login
   if (!tokenOk) {
     const token = getToken();
     
-    // Se tinha token mas não é mais válido (expirado), limpa
+    // Só limpa se realmente tinha um token mas ele expirou
     if (token) {
-      console.log('🔐 Token expirado, limpando sessão...');
+      console.log('🔐 Token inválido/expirado encontrado, limpando sessão...');
       localStorage.removeItem('c10_token');
       localStorage.removeItem('c10_user');
       sessionStorage.removeItem('c10_token');
       sessionStorage.removeItem('c10_user');
+    } else {
+      console.log('🔐 Nenhum token encontrado');
     }
     
+    console.log('🔐 Redirecionando para login...');
     // Redireciona para o login apropriado
     if (adminOnly) return <Navigate to="/admin/login" replace />;
     return <Navigate to="/login" replace />;
   }
 
-  // Token válido mas sem dados do usuário em cache → algo deu errado, redireciona
+  // Token válido mas sem dados do usuário em cache → problema
   if (!user) {
-    console.log('⚠️ Token válido mas sem dados do usuário, redirecionando...');
+    console.log('⚠️ Token válido mas sem dados do usuário!');
+    console.log('🔐 Redirecionando para login...');
     if (adminOnly) return <Navigate to="/admin/login" replace />;
     return <Navigate to="/login" replace />;
   }
 
+  console.log('✅ Autenticação OK, perfil:', user.perfil);
+
   // Validações de perfil
-  if (adminOnly && user.perfil !== 'master_admin') return <Navigate to="/app/dashboard" replace />;
-  if (noFuncionario && user.perfil === 'funcionario') return <Navigate to="/app/dashboard" replace />;
+  if (adminOnly && user.perfil !== 'master_admin') {
+    console.log('⚠️ Tentativa de acesso admin por usuário não-admin');
+    return <Navigate to="/app/dashboard" replace />;
+  }
+  
+  if (noFuncionario && user.perfil === 'funcionario') {
+    console.log('⚠️ Tentativa de acesso restrito por funcionário');
+    return <Navigate to="/app/dashboard" replace />;
+  }
   
   return children;
 }
@@ -134,6 +177,55 @@ function AppRedirect() {
 }
 
 export default function App() {
+  // Log de inicialização para debug
+  useEffect(() => {
+    console.log('==================================================');
+    console.log('🚀 APP INICIALIZADO');
+    console.log('==================================================');
+    console.log('📍 URL atual:', window.location.href);
+    
+    const token = localStorage.getItem('c10_token');
+    const user = localStorage.getItem('c10_user');
+    
+    console.log('🔍 Estado do LocalStorage:');
+    console.log('  - Token:', token ? '✅ EXISTE' : '❌ NÃO EXISTE');
+    console.log('  - User:', user ? '✅ EXISTE' : '❌ NÃO EXISTE');
+    
+    if (token && user) {
+      console.log('👤 Dados do usuário:', JSON.parse(user));
+      
+      // Valida o token
+      try {
+        const parts = token.split('.');
+        if (parts.length === 3) {
+          const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+          const padded = base64 + '=='.slice(0, (4 - base64.length % 4) % 4);
+          const payload = JSON.parse(atob(padded));
+          
+          if (payload.exp) {
+            const expirationTime = payload.exp * 1000;
+            const now = Date.now();
+            const isValid = expirationTime > now;
+            
+            if (isValid) {
+              const daysLeft = Math.floor((expirationTime - now) / (1000 * 60 * 60 * 24));
+              console.log(`✅ Token VÁLIDO por mais ${daysLeft} dias`);
+              console.log('✅ SESSÃO RESTAURADA COM SUCESSO');
+            } else {
+              console.log('❌ Token EXPIRADO');
+            }
+          }
+        }
+      } catch (e) {
+        console.error('❌ Erro ao validar token:', e);
+      }
+    } else {
+      console.log('❌ Não há sessão salva');
+    }
+    
+    console.log('==================================================');
+  }, []);
+
   return (
     <BrowserRouter>
       <Suspense fallback={<PageLoader />}>

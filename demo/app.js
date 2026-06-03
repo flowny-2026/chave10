@@ -126,19 +126,19 @@ function showLoginLoader(onDone) {
 
   // Barra de progresso animada
   const allSteps = [
-    // 0–20%
+    // 0-20%
     [ { pct: 12, msg: '🔧 Apertando os parafusos do sistema...' },
       { pct: 12, msg: '🪛 Calibrando a chave de fenda...' },
       { pct: 12, msg: '🔩 Verificando torque das credenciais...' } ],
-    // 20–45%
+    // 20-45%
     [ { pct: 42, msg: '🛢️ Trocando o óleo do banco de dados...' },
       { pct: 42, msg: '⚙️ Engrenagens girando, aguarde...' },
       { pct: 42, msg: '🔋 Carregando a bateria do dashboard...' } ],
-    // 45–70%
+    // 45-70%
     [ { pct: 68, msg: '🚗 Aquecendo o motor principal...' },
       { pct: 68, msg: '🏎️ Acelerando o carregamento...' },
       { pct: 68, msg: '💨 Limpando o filtro de ar dos dados...' } ],
-    // 70–90%
+    // 70-90%
     [ { pct: 88, msg: '🔦 Verificando a suspensão do sistema...' },
       { pct: 88, msg: '🛞 Alinhando as rodas do painel...' },
       { pct: 88, msg: '🪝 Rebocando os últimos dados...' } ],

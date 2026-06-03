@@ -1,8 +1,8 @@
-import { useNavigate } from 'react-router-dom';
+﻿import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import '../styles/landing.css';
 
-const WA_LINK = 'https://wa.me/5516992915540?text=Ol%C3%A1%2C%20quero%20saber%20mais%20sobre%20o%20Chave%2010!';
+const WA_LINK = 'https://wa.me/5516992383821?text=Ol%C3%A1%2C%20quero%20saber%20mais%20sobre%20o%20Chave%2010!';
 
 function WaIcon() {
   return (

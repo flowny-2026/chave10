@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Teste LocalStorage - Chave 10</title>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #fff; }
+    button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    .info { background: #2a2a2a; padding: 15px; margin: 10px 0; border-radius: 5px; }
+    .success { color: #4ade80; }
+    .error { color: #f87171; }
+    .warning { color: #fbbf24; }
+  </style>
+</head>
+<body>
+  <h1>🔍 Teste de Persistência - Chave 10</h1>
+  
+  <div class="info">
+    <h3>Estado Atual:</h3>
+    <div id="status"></div>
+  </div>
+
+  <button onclick="salvarDados()">💾 Salvar Token Teste</button>
+  <button onclick="verificarDados()">🔍 Verificar Dados</button>
+  <button onclick="limparDados()">🗑️ Limpar Dados</button>
+  <button onclick="location.reload()">🔄 Recarregar Página</button>
+
+  <div class="info">
+    <h3>Log de Ações:</h3>
+    <pre id="log"></pre>
+  </div>
+
+  <script>
+    function log(msg, type = 'info') {
+      const logEl = document.getElementById('log');
+      const timestamp = new Date().toLocaleTimeString();
+      const color = type === 'success' ? '#4ade80' : type === 'error' ? '#f87171' : '#fbbf24';
+      logEl.innerHTML += `<span style="color:${color}">[${timestamp}] ${msg}</span>\n`;
+      console.log(msg);
+    }
+
+    function salvarDados() {
+      const testToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidGVzdGUiOnRydWUsImV4cCI6MTk5OTk5OTk5OX0.test';
+      const testUser = JSON.stringify({ id: 1, nome: 'Teste', perfil: 'admin_oficina' });
+      
+      try {
+        localStorage.setItem('c10_token', testToken);
+        localStorage.setItem('c10_user', testUser);
+        log('✅ Dados salvos no localStorage', 'success');
+        verificarDados();
+      } catch(e) {
+        log('❌ Erro ao salvar: ' + e.message, 'error');
+      }
+    }
+
+    function verificarDados() {
+      const statusEl = document.getElementById('status');
+      const token = localStorage.getItem('c10_token');
+      const user = localStorage.getItem('c10_user');
+      
+      if (token && user) {
+        statusEl.innerHTML = `
+          <div class="success">✅ DADOS ENCONTRADOS</div>
+          <div><strong>Token:</strong> ${token.substring(0, 50)}...</div>
+          <div><strong>User:</strong> ${user}</div>
+        `;
+        log('✅ Dados encontrados no localStorage', 'success');
+      } else {
+        statusEl.innerHTML = `<div class="error">❌ DADOS NÃO ENCONTRADOS</div>`;
+        log('❌ Dados NÃO encontrados no localStorage', 'error');
+      }
+    }
+
+    function limparDados() {
+      localStorage.removeItem('c10_token');
+      localStorage.removeItem('c10_user');
+      log('🗑️ Dados removidos', 'warning');
+      verificarDados();
+    }
+
+    // Verificar ao carregar
+    window.addEventListener('load', () => {
+      log('🔄 Página carregada', 'info');
+      verificarDados();
+    });
+  </script>
+</body>
+</html>
