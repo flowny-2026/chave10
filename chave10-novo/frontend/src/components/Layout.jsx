@@ -2,6 +2,7 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import PWAInstallButton from './PWAInstallButton';
 import GlobalSearch from './GlobalSearch';
+import OfflineIndicator from './OfflineIndicator';
 import { api } from '../api';
 import { useAuth } from '../hooks/useAuth';
 
@@ -804,6 +805,9 @@ export default function Layout({ area }) {
 
       {/* Botão de instalação PWA — aparece após login, some após instalar */}
       <PWAInstallButton />
+
+      {/* Indicador de status offline/sincronização */}
+      <OfflineIndicator />
     </div>
   );
 }

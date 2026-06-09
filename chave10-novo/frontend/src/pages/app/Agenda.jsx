@@ -7,7 +7,7 @@ const fmt = {
 };
 
 const DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
-const HORAS = Array.from({length:12},(_,i)=>i+7); // 7h Ã s 18h
+const HORAS = Array.from({length:12},(_,i)=>i+7); // 7h às 18h
 
 const EMPTY = { cliente_id:'', veiculo_id:'', titulo:'', data:'', hora:'', descricao:'' };
 
@@ -101,7 +101,7 @@ export default function AppAgenda() {
       .sort((a,b) => (a.hora||'00:00') > (b.hora||'00:00') ? 1 : -1);
   });
 
-  // â”€â”€ MOBILE: visualização de lista por dia â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // MOBILE: visualização de lista por dia
   if (isMobile) {
     const diaAtual = diasSemana[diaSelecionado];
     const eventosHoje = eventosPorDia[diaSelecionado];
@@ -124,9 +124,9 @@ export default function AppAgenda() {
 
         {/* Navegação de semana */}
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12,gap:8}}>
-          <button className="btn btn-outline btn-sm" onClick={()=>setSemanaOffset(o=>o-1)}>â†</button>
+          <button className="btn btn-outline btn-sm" onClick={()=>setSemanaOffset(o=>o-1)}>←</button>
           <button className="btn btn-outline btn-sm" style={{flex:1}} onClick={()=>{setSemanaOffset(0);setDiaSelecionado(hoje.getDay());}}>Hoje</button>
-          <button className="btn btn-outline btn-sm" onClick={()=>setSemanaOffset(o=>o+1)}>â†’</button>
+          <button className="btn btn-outline btn-sm" onClick={()=>setSemanaOffset(o=>o+1)}>→</button>
         </div>
 
         {/* Seletor de dias da semana */}
@@ -167,7 +167,12 @@ export default function AppAgenda() {
         <div className="card" style={{padding:0,overflow:'hidden'}}>
           {eventosHoje.length === 0 ? (
             <div style={{padding:'32px 20px',textAlign:'center'}}>
-              <div style={{fontSize:36,marginBottom:8}}>ðŸ“…</div>
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.3)" strokeWidth="1.5" style={{margin:'0 auto 12px'}}>
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
               <div style={{fontSize:14,color:'rgba(255,255,255,.4)',marginBottom:16}}>
                 Nenhum agendamento {isToday ? 'hoje' : 'neste dia'}
               </div>
@@ -190,24 +195,33 @@ export default function AppAgenda() {
                     paddingTop:2,
                   }}>
                     <div style={{fontSize:13,fontWeight:700,color:'#F97316'}}>
-                      {ev.hora ? ev.hora.substring(0,5) : 'â€”'}
+                      {ev.hora ? ev.hora.substring(0,5) : '—'}
                     </div>
                   </div>
                   {/* Linha vertical */}
                   <div style={{width:3,alignSelf:'stretch',background:'#F97316',borderRadius:99,flexShrink:0,minHeight:40}}/>
-                  {/* ConteÃºdo */}
+                  {/* Conteúdo */}
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontSize:14,fontWeight:700,color:'#e6edf3',marginBottom:3}}>
                       {ev.titulo}
                     </div>
                     {ev.cliente_nome && (
-                      <div style={{fontSize:12,color:'rgba(255,255,255,.5)',marginBottom:2}}>
-                        ðŸ‘¤ {ev.cliente_nome}
+                      <div style={{fontSize:12,color:'rgba(255,255,255,.5)',marginBottom:2,display:'flex',alignItems:'center',gap:4}}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                          <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                        {ev.cliente_nome}
                       </div>
                     )}
                     {ev.veiculo_modelo && (
-                      <div style={{fontSize:12,color:'rgba(255,255,255,.5)'}}>
-                        ðŸš— {ev.veiculo_modelo}
+                      <div style={{fontSize:12,color:'rgba(255,255,255,.5)',display:'flex',alignItems:'center',gap:4}}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M5 17h14v3H5zM5 11h14l-2-5H7z"/>
+                          <circle cx="8" cy="17" r="2"/>
+                          <circle cx="16" cy="17" r="2"/>
+                        </svg>
+                        {ev.veiculo_modelo}
                       </div>
                     )}
                     {ev.descricao && (
@@ -220,8 +234,13 @@ export default function AppAgenda() {
                   <button onClick={()=>remove(ev.id)} style={{
                     background:'rgba(220,38,38,.15)', border:'none', borderRadius:8,
                     width:32,height:32,display:'flex',alignItems:'center',justifyContent:'center',
-                    cursor:'pointer',color:'#f87171',flexShrink:0,fontSize:14,
-                  }}>ðŸ—‘</button>
+                    cursor:'pointer',color:'#f87171',flexShrink:0,
+                  }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="3 6 5 6 21 6"/>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    </svg>
+                  </button>
                 </div>
               ))}
             </div>
@@ -233,8 +252,8 @@ export default function AppAgenda() {
           <div className="modal-overlay open">
             <div className="modal">
               <div className="modal-header">
-                <h2>ðŸ“… Novo Agendamento</h2>
-                <button className="modal-close" onClick={()=>setModal(false)}>âœ•</button>
+                <h2>Novo Agendamento</h2>
+                <button className="modal-close" onClick={()=>setModal(false)}>×</button>
               </div>
               <div className="modal-body">
                 <form onSubmit={save}>
@@ -263,7 +282,7 @@ export default function AppAgenda() {
                     <label>Veículo</label>
                     <select value={form.veiculo_id} onChange={e=>setForm(f=>({...f,veiculo_id:e.target.value}))}>
                       <option value="">Selecionar...</option>
-                      {veiculosCliente.map(v=><option key={v.id} value={v.id}>{v.marca} {v.modelo} â€” {v.placa}</option>)}
+                      {veiculosCliente.map(v=><option key={v.id} value={v.id}>{v.marca} {v.modelo} - {v.placa}</option>)}
                     </select>
                   </div>
                   <div className="form-group" style={{marginBottom:20}}>
@@ -272,7 +291,7 @@ export default function AppAgenda() {
                   </div>
                   <div className="form-actions">
                     <button type="button" className="btn btn-outline" onClick={()=>setModal(false)}>Cancelar</button>
-                    <button type="submit" className="btn btn-primary">ðŸ’¾ Salvar</button>
+                    <button type="submit" className="btn btn-primary">Salvar</button>
                   </div>
                 </form>
               </div>
@@ -285,20 +304,20 @@ export default function AppAgenda() {
     );
   }
 
-  // â”€â”€ DESKTOP: grade semanal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // DESKTOP: grade semanal
   return (
     <div>
       <div className="page-header">
         <div>
           <div className="page-title">Agenda</div>
           <div className="page-subtitle">
-            {fmt.date(inicioSemana.toISOString().split('T')[0])} â€” {fmt.date(fimSemana.toISOString().split('T')[0])}
+            {fmt.date(inicioSemana.toISOString().split('T')[0])} - {fmt.date(fimSemana.toISOString().split('T')[0])}
           </div>
         </div>
         <div style={{display:'flex',gap:8}}>
-          <button className="btn btn-outline btn-sm" onClick={()=>setSemanaOffset(o=>o-1)}>â† Anterior</button>
+          <button className="btn btn-outline btn-sm" onClick={()=>setSemanaOffset(o=>o-1)}>← Anterior</button>
           <button className="btn btn-outline btn-sm" onClick={()=>setSemanaOffset(0)}>Hoje</button>
-          <button className="btn btn-outline btn-sm" onClick={()=>setSemanaOffset(o=>o+1)}>Próxima â†’</button>
+          <button className="btn btn-outline btn-sm" onClick={()=>setSemanaOffset(o=>o+1)}>Próxima →</button>
           <button className="btn btn-primary" onClick={()=>openCreate()}>+ Agendar</button>
         </div>
       </div>
@@ -340,13 +359,13 @@ export default function AppAgenda() {
                     {evs.map(ev=>(
                       <div key={ev.id} className="agenda-event orange"
                         onClick={e=>{e.stopPropagation();}}
-                        title={`${ev.titulo}${ev.cliente_nome?' â€” '+ev.cliente_nome:''}`}
+                        title={`${ev.titulo}${ev.cliente_nome?' - '+ev.cliente_nome:''}`}
                         style={{cursor:'default',position:'relative'}}>
                         <span style={{flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
                           {ev.hora&&<strong>{ev.hora.substring(0,5)} </strong>}{ev.titulo}
                         </span>
                         <button onClick={e=>{e.stopPropagation();remove(ev.id);}}
-                          style={{background:'none',border:'none',cursor:'pointer',color:'inherit',opacity:.7,padding:'0 2px',fontSize:13,lineHeight:1,flexShrink:0}}>Ã—</button>
+                          style={{background:'none',border:'none',cursor:'pointer',color:'inherit',opacity:.7,padding:'0 2px',fontSize:13,lineHeight:1,flexShrink:0}}>×</button>
                       </div>
                     ))}
                   </div>
@@ -360,7 +379,7 @@ export default function AppAgenda() {
       {/* Lista de eventos da semana */}
       {eventosSemana.length > 0 && (
         <div className="card">
-          <div className="card-header"><div className="card-title">ðŸ“‹ Agendamentos desta semana</div></div>
+          <div className="card-header"><div className="card-title">Agendamentos desta semana</div></div>
           <div className="table-wrapper">
             <table>
               <thead><tr><th>Data</th><th>Hora</th><th>Título</th><th>Cliente</th><th>Veículo</th><th></th></tr></thead>
@@ -368,11 +387,11 @@ export default function AppAgenda() {
                 {[...eventosSemana].sort((a,b)=>(a.data+a.hora)>(b.data+b.hora)?1:-1).map(ev=>(
                   <tr key={ev.id}>
                     <td>{fmt.date(ev.data)}</td>
-                    <td>{ev.hora?.substring(0,5)||'â€”'}</td>
+                    <td>{ev.hora?.substring(0,5)||'—'}</td>
                     <td><strong>{ev.titulo}</strong>{ev.descricao&&<><br/><small style={{color:'var(--gray-400)'}}>{ev.descricao}</small></>}</td>
-                    <td>{ev.cliente_nome||'â€”'}</td>
-                    <td>{ev.veiculo_modelo||'â€”'}</td>
-                    <td><button className="btn btn-outline btn-sm" onClick={()=>remove(ev.id)}>ðŸ—‘ï¸</button></td>
+                    <td>{ev.cliente_nome||'—'}</td>
+                    <td>{ev.veiculo_modelo||'—'}</td>
+                    <td><button className="btn btn-outline btn-sm" onClick={()=>remove(ev.id)}>Excluir</button></td>
                   </tr>
                 ))}
               </tbody>
@@ -386,8 +405,8 @@ export default function AppAgenda() {
         <div className="modal-overlay open">
           <div className="modal">
             <div className="modal-header">
-              <h2>ðŸ“… Novo Agendamento</h2>
-              <button className="modal-close" onClick={()=>setModal(false)}>âœ•</button>
+              <h2>Novo Agendamento</h2>
+              <button className="modal-close" onClick={()=>setModal(false)}>×</button>
             </div>
             <div className="modal-body">
               <form onSubmit={save}>
@@ -415,7 +434,7 @@ export default function AppAgenda() {
                     <label>Veículo</label>
                     <select value={form.veiculo_id} onChange={e=>setForm(f=>({...f,veiculo_id:e.target.value}))}>
                       <option value="">Selecionar...</option>
-                      {veiculosCliente.map(v=><option key={v.id} value={v.id}>{v.marca} {v.modelo} â€” {v.placa}</option>)}
+                      {veiculosCliente.map(v=><option key={v.id} value={v.id}>{v.marca} {v.modelo} - {v.placa}</option>)}
                     </select>
                   </div>
                   <div className="form-group full">
@@ -425,7 +444,7 @@ export default function AppAgenda() {
                 </div>
                 <div className="form-actions">
                   <button type="button" className="btn btn-outline" onClick={()=>setModal(false)}>Cancelar</button>
-                  <button type="submit" className="btn btn-primary">ðŸ’¾ Salvar</button>
+                  <button type="submit" className="btn btn-primary">Salvar</button>
                 </div>
               </form>
             </div>
@@ -437,6 +456,3 @@ export default function AppAgenda() {
     </div>
   );
 }
-
-
-

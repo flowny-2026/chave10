@@ -1,0 +1,120 @@
+📱 UX/UI - Alta Prioridade
+Modo Offline (PWA aprimorado)
+
+Salvar OS em rascunho quando offline
+Sincronizar automaticamente quando voltar online
+Notificação de status da conexão
+Busca Global Aprimorada
+
+Buscar em todas as áreas (clientes, veículos, OS, orçamentos)
+Atalho de teclado (Ctrl+K ou Cmd+K)
+Resultados instantâneos com preview
+Notificações Push
+
+OS finalizadas
+Pagamentos vencendo
+Revisões agendadas
+Clientes inativos
+Dashboard Personalizado
+
+Widgets arrastáveis
+Filtros de período personalizados
+Exportar relatórios em PDF
+🔧 Funcionalidades - Média Prioridade
+Check-in Rápido de Veículos
+
+Scanner de placa (OCR)
+QR Code para identificação rápida
+Histórico instantâneo ao escanear
+Fluxo de Aprovação de Orçamentos
+
+Cliente aprova direto pelo WhatsApp
+Link único com validade
+Assinatura digital opcional
+Peças e Estoque Inteligente
+
+Alertas de estoque baixo
+Sugestão automática de compra
+Fornecedores preferidos
+Lembretes Automáticos Melhorados
+
+Envio automático por WhatsApp
+Lembretes de revisão personalizados
+Campanhas de reativação de clientes inativos
+Relatórios Avançados
+
+Top 10 clientes
+Serviços mais lucrativos
+Análise de sazonalidade
+Comparativo mês a mês
+💼 Gestão - Alta Prioridade
+Gestão de Funcionários
+
+Registro de ponto
+Comissões por serviço
+Metas individuais
+Relatório de produtividade
+Controle de Caixa
+
+Abertura/fechamento de caixa
+Sangria e reforço
+Conciliação bancária
+Relatório de movimentação
+Contas a Pagar/Receber
+
+Fornecedores
+Despesas recorrentes
+Fluxo de caixa projetado
+Alertas de vencimento
+🚀 Integrações - Média/Baixa Prioridade
+Integração com Pagamento
+
+Pix automático
+Link de pagamento
+Parcelamento em cartão
+API para Consulta de Veículos
+
+Consulta de placa (Fipe)
+Histórico de recalls
+Dados técnicos do veículo
+Backup Automático
+
+Backup diário na nuvem
+Exportação completa do banco
+Restauração com um clique
+📊 Otimizações Técnicas
+Performance
+
+✅ Lazy loading de imagens
+✅ Code splitting por rota
+Cache de requisições frequentes
+Paginação server-side para grandes volumes
+Acessibilidade
+
+Modo alto contraste
+Navegação por teclado completa
+Suporte a leitores de tela
+Segurança
+
+✅ Autenticação de 2 fatores (2FA)
+Log de atividades
+Permissões granulares por usuário
+Sessão com timeout configurável
+🎨 Melhorias Visuais Rápidas
+Tela de OS
+
+Status visual mais claro (timeline)
+Anexar fotos do veículo
+Assinatura do cliente na finalização
+Agenda
+
+✅ Visualização de semana (feito)
+Arrastar e soltar eventos
+Cores por tipo de serviço
+Sincronização com Google Calendar
+Mobile
+
+✅ FAB para Nova OS (feito)
+Gestos swipe para ações
+Menu bottom sheet
+Modo escuro
