@@ -40,12 +40,31 @@ class OfflineManager {
     window.addEventListener('online', () => {
       console.log('🌐 Conexão restaurada! Iniciando sincronização...');
       this.syncAll();
+      
+      // Registra background sync se suportado
+      if ('serviceWorker' in navigator && 'sync' in navigator.serviceWorker) {
+        navigator.serviceWorker.ready.then((registration) => {
+          return registration.sync.register('sync-offline-queue');
+        }).catch((error) => {
+          console.warn('Background Sync não suportado:', error);
+        });
+      }
     });
 
     window.addEventListener('offline', () => {
       console.log('📡 Conexão perdida. Modo offline ativado.');
       this.notifyListeners({ type: 'offline' });
     });
+    
+    // Listener para mensagens do service worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'SYNC_OFFLINE_QUEUE') {
+          console.log('📨 Service Worker solicitou sincronização');
+          this.syncAll();
+        }
+      });
+    }
   }
 
   /**

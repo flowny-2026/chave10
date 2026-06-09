@@ -1,6 +1,7 @@
-﻿import { useEffect, useState } from 'react';
+﻿import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../../api';
+import { offlineManager, OPERATION_TYPES, useOfflineManager } from '../../utils/offlineManager';
 
 const fmt = {
   currency: v => 'R$ ' + parseFloat(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.'),
@@ -136,6 +137,12 @@ export default function AppOS() {
   const [viewing, setViewing]   = useState(null);
   const [toast, setToast]       = useState({ msg:'', type:'' });
   const [pagForm, setPagForm]   = useState({ os_id:null, forma:'', valor_total:0, parcelas:1, bandeira:'', taxa_maquininha:'', observacao:'' });
+  
+  // Offline mode
+  const { isOnline, pendingCount } = useOfflineManager();
+  const [autoSaveStatus, setAutoSaveStatus] = useState(''); // '', 'saving', 'saved'
+  const autoSaveTimerRef = useRef(null);
+  const DRAFT_ID = 'current_os';
 
   // Sincroniza search com query param quando a URL muda (ex: busca da topbar)
   useEffect(() => {
@@ -144,6 +151,59 @@ export default function AppOS() {
   }, [searchParams]);
 
   function showToast(msg, type='success') { setToast({msg,type}); setTimeout(()=>setToast({msg:'',type:''}),3000); }
+
+  // Auto-save rascunho a cada 30 segundos
+  const saveFormDraft = useCallback(() => {
+    if (modal !== 'form') return;
+    const hasContent = form.descricao || form.servicos || form.cliente_id || form.veiculo_id;
+    if (!hasContent) return;
+    
+    setAutoSaveStatus('saving');
+    offlineManager.saveDraft('os', { ...form, draftId: DRAFT_ID });
+    
+    setTimeout(() => {
+      setAutoSaveStatus('saved');
+      setTimeout(() => setAutoSaveStatus(''), 2000);
+    }, 500);
+  }, [form, modal]);
+
+  // Auto-save quando form muda (debounced)
+  useEffect(() => {
+    if (modal !== 'form') return;
+    
+    // Limpa timer anterior
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+    
+    // Agenda novo save
+    autoSaveTimerRef.current = setTimeout(() => {
+      saveFormDraft();
+    }, 30000); // 30 segundos
+    
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, [form, modal, saveFormDraft]);
+
+  // Recupera rascunho ao abrir modal
+  useEffect(() => {
+    if (modal === 'form' && !editing) {
+      const draft = offlineManager.getDraft('os', DRAFT_ID);
+      if (draft && (draft.descricao || draft.servicos)) {
+        const shouldRecover = window.confirm('Você tem um rascunho salvo. Deseja recuperá-lo?');
+        if (shouldRecover) {
+          setForm(draft);
+          showToast('Rascunho recuperado!', 'success');
+        } else {
+          // Remove rascunho se usuário não quiser
+          offlineManager.removeDraft('os', DRAFT_ID);
+        }
+      }
+    }
+  }, [modal, editing]);
 
   async function load(status) {
     try { const data = await api.app.os.list(status||undefined); setOsList(data); }
@@ -174,14 +234,74 @@ export default function AppOS() {
   async function save(e) {
     e.preventDefault();
     if (!form.descricao.trim()) { showToast('Problema/descrição é obrigatório','error'); return; }
+    
     try {
       const pecasValidas = form.pecas_itens.filter(p=>p.nome.trim());
       const totalPecas = pecasValidas.reduce((s,p)=>s+(parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1),0);
-      const payload = { ...form, cliente_id:form.cliente_id||null, veiculo_id:form.veiculo_id||null, valor_mo:parseFloat(form.valor_mo)||0, valor_pecas:totalPecas, valor:(parseFloat(form.valor_mo)||0)+totalPecas, pecas_itens:pecasValidas, pecas: pecasValidas.map(p=>`${p.qtd}x ${p.nome} (${fmt.currency(p.valor_unit)})`).join('\n') };
-      if (editing) await api.app.os.update(editing, payload);
-      else await api.app.os.create(payload);
-      setModal(null); load(statusFiltro); showToast(editing?'OS atualizada!':'Ordem de serviço salva!');
-    } catch (err) { showToast(err.error||'Erro ao salvar','error'); }
+      const payload = { 
+        ...form, 
+        cliente_id:form.cliente_id||null, 
+        veiculo_id:form.veiculo_id||null, 
+        valor_mo:parseFloat(form.valor_mo)||0, 
+        valor_pecas:totalPecas, 
+        valor:(parseFloat(form.valor_mo)||0)+totalPecas, 
+        pecas_itens:pecasValidas, 
+        pecas: pecasValidas.map(p=>`${p.qtd}x ${p.nome} (${fmt.currency(p.valor_unit)})`).join('\n') 
+      };
+      
+      if (isOnline) {
+        // Online: envia normalmente
+        if (editing) await api.app.os.update(editing, payload);
+        else await api.app.os.create(payload);
+        
+        // Remove rascunho após sucesso
+        offlineManager.removeDraft('os', DRAFT_ID);
+        
+        setModal(null); 
+        load(statusFiltro); 
+        showToast(editing?'OS atualizada!':'Ordem de serviço salva!');
+      } else {
+        // Offline: adiciona à fila
+        const operationType = editing ? OPERATION_TYPES.UPDATE_OS : OPERATION_TYPES.CREATE_OS;
+        const operationData = editing ? { id: editing, ...payload } : payload;
+        
+        offlineManager.addToQueue({
+          type: operationType,
+          data: operationData,
+        });
+        
+        // Remove rascunho
+        offlineManager.removeDraft('os', DRAFT_ID);
+        
+        setModal(null);
+        showToast('Você está offline! OS salva e será enviada automaticamente quando voltar online.', 'info');
+      }
+    } catch (err) {
+      // Se falhar mesmo online, adiciona à fila
+      const pecasValidas = form.pecas_itens.filter(p=>p.nome.trim());
+      const totalPecas = pecasValidas.reduce((s,p)=>s+(parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1),0);
+      const payload = { 
+        ...form, 
+        cliente_id:form.cliente_id||null, 
+        veiculo_id:form.veiculo_id||null, 
+        valor_mo:parseFloat(form.valor_mo)||0, 
+        valor_pecas:totalPecas, 
+        valor:(parseFloat(form.valor_mo)||0)+totalPecas, 
+        pecas_itens:pecasValidas, 
+        pecas: pecasValidas.map(p=>`${p.qtd}x ${p.nome} (${fmt.currency(p.valor_unit)})`).join('\n') 
+      };
+      
+      const operationType = editing ? OPERATION_TYPES.UPDATE_OS : OPERATION_TYPES.CREATE_OS;
+      const operationData = editing ? { id: editing, ...payload } : payload;
+      
+      offlineManager.addToQueue({
+        type: operationType,
+        data: operationData,
+      });
+      
+      setModal(null);
+      showToast('Erro de conexão. OS salva localmente e será sincronizada automaticamente.', 'warning');
+    }
   }
 
   async function finalizar(id) {
@@ -373,6 +493,86 @@ export default function AppOS() {
               <h2>{editing?`Editar OS #${String(editing).padStart(4,'0')}`:'Nova Ordem de Serviço'}</h2>
               <button className="modal-close" onClick={()=>setModal(null)}>✕</button>
             </div>
+            
+            {/* Alertas de status */}
+            {!isOnline && (
+              <div style={{
+                background: 'linear-gradient(135deg, #fbbf24, #f59e0b)',
+                padding: '12px 20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                borderBottom: '1px solid rgba(0,0,0,.1)',
+              }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                  <line x1="12" y1="9" x2="12" y2="13"/>
+                  <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>
+                    Você está offline
+                  </div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,.8)' }}>
+                    A OS será salva localmente e sincronizada quando a conexão voltar
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {pendingCount > 0 && isOnline && (
+              <div style={{
+                background: 'linear-gradient(135deg, #60a5fa, #3b82f6)',
+                padding: '12px 20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                borderBottom: '1px solid rgba(0,0,0,.1)',
+              }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" style={{animation: 'spin 1s linear infinite'}}>
+                  <polyline points="23 4 23 10 17 10"/>
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                </svg>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>
+                    Sincronizando operações pendentes...
+                  </div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,.8)' }}>
+                    {pendingCount} operação{pendingCount > 1 ? 'ões' : ''} sendo processada{pendingCount > 1 ? 's' : ''}
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Auto-save indicator */}
+            {autoSaveStatus && (
+              <div style={{
+                background: autoSaveStatus === 'saved' ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #60a5fa, #3b82f6)',
+                padding: '10px 20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                borderBottom: '1px solid rgba(0,0,0,.1)',
+              }}>
+                {autoSaveStatus === 'saving' ? (
+                  <>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" style={{animation: 'spin 1s linear infinite'}}>
+                      <polyline points="23 4 23 10 17 10"/>
+                      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                    </svg>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: '#fff' }}>Salvando rascunho...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: '#fff' }}>Rascunho salvo</span>
+                  </>
+                )}
+              </div>
+            )}
+            
             <div className="modal-body">
               <form onSubmit={save}>
                 <div className="form-grid">
