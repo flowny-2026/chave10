@@ -30,6 +30,7 @@ const AppEstoque       = lazy(() => import('./pages/app/Estoque'));
 const AppConfiguracoes = lazy(() => import('./pages/app/Configuracoes'));
 const AppPlanos        = lazy(() => import('./pages/app/Planos'));
 const AppNotificacoes  = lazy(() => import('./pages/app/Notificacoes'));
+const AppDashboardV2   = lazy(() => import('./pages/app/DashboardV2'));
 
 // Fallback simples enquanto carrega a página
 function PageLoader() {
@@ -249,7 +250,7 @@ export default function App() {
           </Route>
 
           <Route path="/app" element={<PrivateRoute><Layout area="app" /></PrivateRoute>}>
-            <Route path="dashboard"     element={<AppDashboard />} />
+            <Route path="dashboard"     element={<AppDashboardV2 />} />
             <Route path="clientes"      element={<AppClientes />} />
             <Route path="veiculos"      element={<AppVeiculos />} />
             <Route path="os"            element={<AppOS />} />

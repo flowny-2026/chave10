@@ -1,24 +1,4 @@
-📱 UX/UI - Alta Prioridade
-Modo Offline (PWA aprimorado)
 
-Salvar OS em rascunho quando offline
-Sincronizar automaticamente quando voltar online
-Notificação de status da conexão
-Busca Global Aprimorada
-
-Buscar em todas as áreas (clientes, veículos, OS, orçamentos)
-Atalho de teclado (Ctrl+K ou Cmd+K)
-Resultados instantâneos com preview
-Notificações Push
-
-OS finalizadas
-Pagamentos vencendo
-Revisões agendadas
-Clientes inativos
-Dashboard Personalizado
-
-Widgets arrastáveis
-Filtros de período personalizados
 Exportar relatórios em PDF
 🔧 Funcionalidades - Média Prioridade
 Check-in Rápido de Veículos
