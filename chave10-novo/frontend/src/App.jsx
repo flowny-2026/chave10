@@ -16,7 +16,7 @@ const AdminDashboard   = lazy(() => import('./pages/admin/Dashboard'));
 const AdminOficinas    = lazy(() => import('./pages/admin/Oficinas'));
 const AdminPagamentos  = lazy(() => import('./pages/admin/Pagamentos'));
 const AdminTrocarSenha = lazy(() => import('./pages/admin/TrocarSenha'));
-const AppDashboard     = lazy(() => import('./pages/app/Dashboard'));
+const AppDashboard     = lazy(() => import('./pages/app/DashboardV2'));
 const AppClientes      = lazy(() => import('./pages/app/Clientes'));
 const AppVeiculos      = lazy(() => import('./pages/app/Veiculos'));
 const AppOS            = lazy(() => import('./pages/app/OS'));
