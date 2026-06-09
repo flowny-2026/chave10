@@ -299,22 +299,31 @@ async function cacheRoutes(routes) {
 }
 
 // ===============================
-// NOTIFICAÇÕES PUSH (futuro)
+// NOTIFICAÇÕES PUSH
 // ===============================
 self.addEventListener('push', (event) => {
   console.log('[SW] Push recebido:', event);
   
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { body: event.data ? event.data.text() : 'Nova notificação do Chave 10' };
+  }
+  
   const options = {
-    body: event.data ? event.data.text() : 'Nova notificação do Chave 10',
-    icon: '/pwa.jpeg',
+    body: data.body || 'Nova notificação do Chave 10',
+    icon: data.icon || '/pwa.jpeg',
     badge: '/favicon.jpeg',
     vibrate: [200, 100, 200],
-    tag: 'chave10-notification',
-    requireInteraction: false,
+    tag: data.tag || 'chave10-notification',
+    requireInteraction: data.requireInteraction || false,
+    data: data.data || {},
+    actions: data.actions || [],
   };
   
   event.waitUntil(
-    self.registration.showNotification('Chave 10', options)
+    self.registration.showNotification(data.title || 'Chave 10', options)
   );
 });
 
@@ -323,9 +332,38 @@ self.addEventListener('notificationclick', (event) => {
   
   event.notification.close();
   
+  // Obtém URL de destino dos dados da notificação
+  const urlToOpen = event.notification.data?.url || '/app/dashboard';
+  
   event.waitUntil(
-    clients.openWindow('/app/dashboard')
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        // Se já tem uma janela aberta, foca nela
+        for (const client of clientList) {
+          if (client.url.includes('/app/') && 'focus' in client) {
+            return client.focus().then((client) => {
+              // Envia mensagem para navegar para URL específica
+              if (client.url !== urlToOpen) {
+                client.postMessage({
+                  type: 'NAVIGATE',
+                  url: urlToOpen,
+                });
+              }
+              return client;
+            });
+          }
+        }
+        // Se não tem janela aberta, abre uma nova
+        if (clients.openWindow) {
+          return clients.openWindow(urlToOpen);
+        }
+      })
   );
+});
+
+// Handler para ações de notificação (futuro)
+self.addEventListener('notificationclose', (event) => {
+  console.log('[SW] Notificação fechada:', event);
 });
 
 // ===============================

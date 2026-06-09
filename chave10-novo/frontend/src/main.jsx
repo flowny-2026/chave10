@@ -8,25 +8,12 @@ import App from './App';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
-// DESREGISTRA SERVICE WORKER ANTIGO (temporário para debugging)
-// Remove qualquer SW que possa estar causando logout automático
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(registrations => {
-    for (const registration of registrations) {
-      console.log('🗑️ Removendo Service Worker antigo...');
-      registration.unregister();
-    }
-  });
-}
-
-// Registra o Service Worker para habilitar PWA
-// COMENTADO TEMPORARIAMENTE PARA DEBUGGING DO LOGOUT
-/*
+// Registra o Service Worker para habilitar PWA e notificações
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
       .then(reg => {
-        console.log('SW registrado:', reg.scope);
+        console.log('✅ SW registrado:', reg.scope);
 
         // Detecta quando há uma nova versão disponível
         reg.addEventListener('updatefound', () => {
@@ -39,17 +26,25 @@ if ('serviceWorker' in navigator) {
           });
         });
       })
-      .catch(err => console.warn('SW falhou:', err));
+      .catch(err => console.warn('⚠️ SW falhou:', err));
 
-    // Se o SW já controlava e foi atualizado (reload após update)
-    // Desabilitado: causava loops de reload que limpavam o estado
-    // let refreshing = false;
-    // navigator.serviceWorker.addEventListener('controllerchange', () => {
-    //   if (!refreshing) { refreshing = true; window.location.reload(); }
-    // });
+    // Listener para mensagens do Service Worker
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      console.log('[Main] Mensagem do SW:', event.data);
+      
+      // Handler para navegação via notificação
+      if (event.data && event.data.type === 'NAVIGATE') {
+        window.location.href = event.data.url;
+      }
+      
+      // Handler para sincronização offline
+      if (event.data && event.data.type === 'SYNC_OFFLINE_QUEUE') {
+        // O offlineManager vai lidar com isso
+        console.log('[Main] Sincronização solicitada pelo SW');
+      }
+    });
   });
 }
-*/
 
 function showUpdateBanner() {
   if (document.getElementById('sw-update-banner')) return;
