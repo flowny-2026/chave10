@@ -306,7 +306,7 @@ export default function DashboardV2() {
       {/* Widgets Grid */}
       <div className="stats-grid" style={{marginBottom:20}}>
         {layout.map(widget => (
-          <div key={widget.id} style={{animationlayout.indexOf(widget) * 0.05 + 's'}}>
+          <div key={widget.id}>
             {renderWidget(widget.id)}
           </div>
         ))}
