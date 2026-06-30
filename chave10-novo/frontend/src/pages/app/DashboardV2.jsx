@@ -110,7 +110,7 @@ export default function DashboardV2() {
       case 'faturamento':
         if (isFuncionario) return null;
         return (
-          <div className="stat-card c-orange">
+          <div key="faturamento" className="stat-card c-orange">
             <div className="stat-icon c-orange">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
@@ -125,7 +125,7 @@ export default function DashboardV2() {
 
       case 'os_finalizadas':
         return (
-          <div className="stat-card c-green">
+          <div key="os_finalizadas" className="stat-card c-green">
             <div className="stat-icon c-green">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12"/>
@@ -140,7 +140,7 @@ export default function DashboardV2() {
 
       case 'os_andamento':
         return (
-          <div className="stat-card c-blue">
+          <div key="os_andamento" className="stat-card c-blue">
             <div className="stat-icon c-blue">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
@@ -155,7 +155,7 @@ export default function DashboardV2() {
 
       case 'clientes':
         return (
-          <div className="stat-card c-purple">
+          <div key="clientes" className="stat-card c-purple">
             <div className="stat-icon c-purple">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
@@ -171,7 +171,7 @@ export default function DashboardV2() {
       case 'meta_mensal':
         if (isFuncionario || meta === 0) return null;
         return (
-          <div className="card" style={{gridColumn:'1 / -1'}}>
+          <div key="meta_mensal" className="card" style={{gridColumn:'1 / -1'}}>
             <div className="card-header">
               <div className="card-title">🎯 Meta Mensal</div>
               <button className="btn btn-ghost btn-sm" onClick={()=>{setMetaInput(meta);setShowMeta(true);}}>
@@ -200,7 +200,7 @@ export default function DashboardV2() {
       case 'grafico_mensal':
         if (isFuncionario) return null;
         return (
-          <div className="card">
+          <div key="grafico_mensal" className="card">
             <div className="card-header">
               <div className="card-title">📊 Faturamento Mensal</div>
             </div>
@@ -210,7 +210,7 @@ export default function DashboardV2() {
 
       case 'os_recentes':
         return (
-          <div className="card">
+          <div key="os_recentes" className="card">
             <div className="card-header">
               <div className="card-title">📋 OS Recentes</div>
               <button className="btn btn-ghost btn-sm" onClick={()=>navigate('/app/os')}>Ver todas</button>
@@ -238,7 +238,7 @@ export default function DashboardV2() {
       case 'breakdown_mo_pecas':
         if (isFuncionario || fat === 0) return null;
         return (
-          <div className="card">
+          <div key="breakdown_mo_pecas" className="card">
             <div className="card-header">
               <div className="card-title">🔩 Mão de Obra vs Peças</div>
             </div>
@@ -305,11 +305,7 @@ export default function DashboardV2() {
 
       {/* Widgets Grid */}
       <div className="stats-grid" style={{marginBottom:20}}>
-        {layout.map(widget => (
-          <div key={widget.id}>
-            {renderWidget(widget.id)}
-          </div>
-        ))}
+        {layout.map(widget => renderWidget(widget.id)).filter(Boolean)}
       </div>
 
       {/* Botão de definir meta se não existir */}
