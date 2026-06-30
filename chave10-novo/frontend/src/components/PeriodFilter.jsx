@@ -147,7 +147,7 @@ export default function PeriodFilter({ value, onChange }) {
     }
     
     const preset = PRESET_PERIODS.find(p => p.id === selectedPreset);
-    return preset ? `${preset.icon} ${preset.label}` : 'Selecione o período';
+    return preset ? preset.label : 'Selecione o período';
   }
 
   return (
