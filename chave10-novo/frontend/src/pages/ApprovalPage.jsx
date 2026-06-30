@@ -1,10 +1,27 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import axios from 'axios';
 import SignatureCanvas from '../components/SignatureCanvas';
 import '../styles/ApprovalPage.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+
+// Helper para fazer requisições sem autenticação
+async function fetchPublic(url, options = {}) {
+  const response = await fetch(API_URL + url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  });
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw error;
+  }
+  
+  return response.json();
+}
 
 export default function ApprovalPage() {
   const { token } = useParams();
@@ -27,12 +44,12 @@ export default function ApprovalPage() {
     setError(null);
 
     try {
-      const response = await axios.get(`${API_URL}/approval/public/${token}`);
+      const response = await fetchPublic(`/approval/public/${token}`);
       
-      if (!response.data.valid) {
-        setError(response.data);
+      if (!response.valid) {
+        setError(response);
       } else {
-        setData(response.data);
+        setData(response);
       }
     } catch (err) {
       console.error('Error loading budget:', err);
@@ -54,19 +71,20 @@ export default function ApprovalPage() {
     setProcessing(true);
 
     try {
-      const response = await axios.post(`${API_URL}/approval/public/${token}/approve`, {
-        signature
+      const response = await fetchPublic(`/approval/public/${token}/approve`, {
+        method: 'POST',
+        body: JSON.stringify({ signature })
       });
 
       setResult({
         type: 'success',
-        message: response.data.message || 'Orçamento aprovado com sucesso!'
+        message: response.message || 'Orçamento aprovado com sucesso!'
       });
     } catch (err) {
       console.error('Error approving:', err);
       setResult({
         type: 'error',
-        message: err.response?.data?.message || 'Erro ao aprovar orçamento'
+        message: err.message || 'Erro ao aprovar orçamento'
       });
     } finally {
       setProcessing(false);
@@ -82,19 +100,20 @@ export default function ApprovalPage() {
     setProcessing(true);
 
     try {
-      const response = await axios.post(`${API_URL}/approval/public/${token}/reject`, {
-        reason: rejectReason.trim() || null
+      const response = await fetchPublic(`/approval/public/${token}/reject`, {
+        method: 'POST',
+        body: JSON.stringify({ reason: rejectReason.trim() || null })
       });
 
       setResult({
         type: 'info',
-        message: response.data.message || 'Orçamento recusado'
+        message: response.message || 'Orçamento recusado'
       });
     } catch (err) {
       console.error('Error rejecting:', err);
       setResult({
         type: 'error',
-        message: err.response?.data?.message || 'Erro ao recusar orçamento'
+        message: err.message || 'Erro ao recusar orçamento'
       });
     } finally {
       setProcessing(false);
