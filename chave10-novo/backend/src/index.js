@@ -80,10 +80,11 @@ const writeLimiter = rateLimit({
 });
 
 // ── ROTAS ─────────────────────────────────────────────────────
-app.use('/api/auth',   loginLimiter, require('./routes/auth'));
-app.use('/api/admin',  writeLimiter, require('./routes/admin'));
-app.use('/api/app',    writeLimiter, cacheMiddleware(15), require('./routes/app'));
-app.use('/api/backup', require('./routes/backup'));
+app.use('/api/auth',     loginLimiter, require('./routes/auth'));
+app.use('/api/admin',    writeLimiter, require('./routes/admin'));
+app.use('/api/app',      writeLimiter, cacheMiddleware(15), require('./routes/app'));
+app.use('/api/backup',   require('./routes/backup'));
+app.use('/api/approval', require('./routes/approval'));
 
 // ── HEALTH CHECK ──────────────────────────────────────────────
 app.get('/health', (_, res) => res.json({ ok: true }));

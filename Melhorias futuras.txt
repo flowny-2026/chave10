@@ -1,6 +1,5 @@
 
-Exportar relatórios em PDF
-🔧 Funcionalidades - Média Prioridade
+
 Check-in Rápido de Veículos
 
 Scanner de placa (OCR)

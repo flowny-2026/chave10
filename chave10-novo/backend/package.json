@@ -7,7 +7,8 @@
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "backup": "node -e \"require('./src/utils/backup').backupDatabase().then(r => console.log(r))\"",
-    "seed:demo": "node src/scripts/seed-demo.js"
+    "seed:demo": "node src/scripts/seed-demo.js",
+    "migrate:approval": "node src/migrations/run-migrations.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

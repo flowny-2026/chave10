@@ -87,6 +87,11 @@ const patch= (url, body)  => req('PATCH',  url, body);
 const del  = (url)        => req('DELETE', url);
 
 export const api = {
+  get,
+  post,
+  put,
+  patch,
+  del,
   auth: {
     login: (email, senha) => post('/auth/login', { email, senha }),
     googleLogin: (credential) => post('/auth/google', { credential }),

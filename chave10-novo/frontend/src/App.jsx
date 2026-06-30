@@ -10,6 +10,7 @@ import Cadastro from './pages/Cadastro';
 import EsqueciSenha from './pages/EsqueciSenha';
 import AdminLogin from './pages/AdminLogin';
 import Bloqueado from './pages/Bloqueado';
+import ApprovalPage from './pages/ApprovalPage';
 
 // Páginas do app — carregadas sob demanda (lazy)
 const AdminDashboard   = lazy(() => import('./pages/admin/Dashboard'));
@@ -240,6 +241,7 @@ export default function App() {
           <Route path="/esqueci-senha" element={<EsqueciSenha />} />
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/bloqueado" element={<Bloqueado />} />
+          <Route path="/approve/:token" element={<ApprovalPage />} />
 
           <Route path="/admin" element={<PrivateRoute adminOnly><Layout area="admin" /></PrivateRoute>}>
             <Route path="dashboard"    element={<AdminDashboard />} />

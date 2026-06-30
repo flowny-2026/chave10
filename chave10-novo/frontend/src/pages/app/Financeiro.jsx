@@ -109,7 +109,10 @@ export default function AppFinanceiro() {
   // Meses para select
   const meses = Array.from({length:6},(_,i)=>{
     const d = new Date(hoje.getFullYear(),hoje.getMonth()-i,1);
-    return { label:d.toLocaleDateString('pt-BR',{month:'long',year:'numeric'}), idx:i };
+    const label = i === 0 
+      ? `${d.toLocaleDateString('pt-BR',{month:'long',year:'numeric'})} (atual)`
+      : d.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+    return { label, idx:i };
   });
 
   return (
