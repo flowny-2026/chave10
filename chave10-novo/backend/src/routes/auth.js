@@ -83,8 +83,9 @@ router.post('/register', async (req, res) => {
     const token = jwt.sign({ id: r.id, perfil: 'admin_oficina', oficina_id: null, nome }, SECRET, { expiresIn: '7d' });
     res.status(201).json({ token, needsOficina: true });
   } catch (err) {
+    console.error('[REGISTER] ERRO FATAL:', err);
     log.error('auth_register', err);
-    res.status(500).json({ error: 'Erro ao criar conta' });
+    res.status(500).json({ error: 'Erro ao criar conta', details: err.message });
   }
 });
 
