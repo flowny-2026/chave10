@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { lazy, Suspense, useEffect } from 'react';
 import Layout from './components/Layout';
 import { getFromStorage } from './api';
+import PWAInstallBanner from './components/PWAInstallBanner';
 
 // Páginas públicas — carregadas imediatamente
 import Landing from './pages/Landing';
@@ -232,6 +233,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <PWAInstallBanner />
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={<Landing />} />
