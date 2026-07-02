@@ -156,6 +156,8 @@ export default function DashboardV2() {
   const fatHoje = parseFloat(stats.faturamentoHoje||0);
   const fatMO = parseFloat(stats.moMes||0);
   const fatPecas = parseFloat(stats.pecasMes||0);
+  const pctMO = fat > 0 ? Math.round((fatMO/fat)*100) : 0;
+  const pctPecas = fat > 0 ? Math.round((fatPecas/fat)*100) : 0;
   const finalizadasHoje = parseInt(stats.finalizadasHoje||0);
   const emAndamento = parseInt(stats.emAndamento||0);
   const totalClientes = parseInt(stats.totalClientes||0);
@@ -284,15 +286,70 @@ export default function DashboardV2() {
         </div>
       )}
 
-      {/* Grid Principal - Gráfico e OS Recentes */}
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:24,marginBottom:24}}>
+      {/* Grid Principal - 3 colunas: Gráfico, Breakdown MO/Peças, OS Recentes */}
+      <div style={{
+        display:'grid',
+        gridTemplateColumns:'repeat(auto-fit, minmax(320px, 1fr))',
+        gap:24,
+        marginBottom:24
+      }}>
         {/* Gráfico de Faturamento */}
         {!isFuncionario && (
-          <div className="modern-chart-card">
+          <div className="modern-chart-card" style={{gridColumn:isFuncionario?'span 1':'span 1'}}>
             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20}}>
               <h3 style={{fontSize:16,fontWeight:700,color:'var(--gray-800)'}}>📊 Faturamento Mensal</h3>
             </div>
             <ModernChart data={faturamentoMensal} />
+          </div>
+        )}
+        
+        {/* Breakdown MO vs Peças */}
+        {!isFuncionario && fat > 0 && (
+          <div className="modern-chart-card">
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20}}>
+              <h3 style={{fontSize:16,fontWeight:700,color:'var(--gray-800)'}}>🔩 Mão de Obra vs Peças</h3>
+            </div>
+            <div style={{padding:'10px 0'}}>
+              {/* Faturamento Total */}
+              <div style={{marginBottom:24,textAlign:'center',padding:'16px',background:'var(--gray-50)',borderRadius:12}}>
+                <div style={{fontSize:11,fontWeight:700,color:'var(--gray-500)',textTransform:'uppercase',letterSpacing:'0.8px',marginBottom:8}}>
+                  Faturamento Total
+                </div>
+                <div style={{fontFamily:'Poppins',fontSize:28,fontWeight:800,color:'var(--gray-900)'}}>
+                  {fmt.currency(fat)}
+                </div>
+              </div>
+              
+              {/* Mão de Obra */}
+              <div style={{marginBottom:20}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+                  <span style={{fontSize:14,color:'var(--gray-700)',display:'flex',alignItems:'center',gap:8,fontWeight:600}}>
+                    <span style={{width:12,height:12,borderRadius:'50%',background:'var(--accent)',flexShrink:0}}/>
+                    Mão de Obra
+                  </span>
+                  <span style={{fontSize:16,fontWeight:800,color:'var(--accent)'}}>{fmt.currency(fatMO)}</span>
+                </div>
+                <div style={{height:10,background:'var(--gray-100)',borderRadius:99,overflow:'hidden'}}>
+                  <div style={{height:'100%',width:`${pctMO}%`,background:'linear-gradient(90deg, var(--accent), var(--accent-dark))',borderRadius:99,transition:'width .6s ease',boxShadow:'0 2px 8px rgba(249,115,22,0.3)'}}/>
+                </div>
+                <div style={{fontSize:12,color:'var(--gray-500)',marginTop:6,textAlign:'right',fontWeight:700}}>{pctMO}% do total</div>
+              </div>
+              
+              {/* Peças */}
+              <div>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+                  <span style={{fontSize:14,color:'var(--gray-700)',display:'flex',alignItems:'center',gap:8,fontWeight:600}}>
+                    <span style={{width:12,height:12,borderRadius:'50%',background:'var(--info)',flexShrink:0}}/>
+                    Peças
+                  </span>
+                  <span style={{fontSize:16,fontWeight:800,color:'var(--info)'}}>{fmt.currency(fatPecas)}</span>
+                </div>
+                <div style={{height:10,background:'var(--gray-100)',borderRadius:99,overflow:'hidden'}}>
+                  <div style={{height:'100%',width:`${pctPecas}%`,background:'linear-gradient(90deg, var(--info), #0369a1)',borderRadius:99,transition:'width .6s ease',boxShadow:'0 2px 8px rgba(2,132,199,0.3)'}}/>
+                </div>
+                <div style={{fontSize:12,color:'var(--gray-500)',marginTop:6,textAlign:'right',fontWeight:700}}>{pctPecas}% do total</div>
+              </div>
+            </div>
           </div>
         )}
         
