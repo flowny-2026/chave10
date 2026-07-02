@@ -46,6 +46,32 @@ function BarChart({ data }) {
   );
 }
 
+// Componente de gráfico moderno
+function ModernChart({ data }) {
+  if (!data?.length || data.every(d => (d.total || 0) === 0)) {
+    return <div className="empty-chart" style={{textAlign:'center',padding:32,color:'var(--gray-400)'}}>Sem dados</div>;
+  }
+  
+  const max = Math.max(...data.map(d => d.total || 0), 1);
+  
+  return (
+    <div className="modern-chart">
+      {data.map((item, i) => {
+        const height = ((item.total || 0) / max) * 100;
+        return (
+          <div key={i} className="chart-bar-wrapper">
+            <div className="chart-value">{(item.total || 0) > 0 ? fmt.currency(item.total).replace('R$ ', '') : ''}</div>
+            <div className="chart-bar" style={{ height: `${height}%` }}>
+              <div className="chart-bar-fill"></div>
+            </div>
+            <div className="chart-label">{item.mes || item.label}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 const STATUS_CLASS = { em_andamento:'badge-orange', finalizado:'badge-green' };
 const STATUS_LABEL = { em_andamento:'Em andamento', finalizado:'Finalizado' };
 
