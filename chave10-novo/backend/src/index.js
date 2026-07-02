@@ -89,6 +89,40 @@ app.use('/api/backup',   require('./routes/backup'));
 // ── HEALTH CHECK ──────────────────────────────────────────────
 app.get('/health', (_, res) => res.json({ ok: true }));
 
+// ── DEBUG: Teste conexão banco ────────────────────────────────
+app.get('/api/debug/db-test', async (req, res) => {
+  try {
+    const { query } = require('./db');
+    
+    // Teste 1: Conexão básica
+    const version = await query('SELECT version()');
+    
+    // Teste 2: Listar tabelas
+    const tables = await query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public'
+      ORDER BY table_name
+    `);
+    
+    // Teste 3: Contar usuários
+    const userCount = await query('SELECT COUNT(*) as count FROM usuarios');
+    
+    res.json({
+      ok: true,
+      postgres_version: version[0]?.version?.substring(0, 50),
+      tables: tables.map(t => t.table_name),
+      total_users: userCount[0]?.count
+    });
+  } catch (err) {
+    res.status(500).json({
+      ok: false,
+      error: err.message,
+      code: err.code
+    });
+  }
+});
+
 // ── SEED DEMO (protegido por chave secreta) ───────────────────
 app.get('/seed-demo', async (req, res) => {
   const chave = req.query.chave;
