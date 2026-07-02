@@ -75,9 +75,8 @@ router.post('/register', async (req, res) => {
     if (existe) return res.status(400).json({ error: 'E-mail jÃ¡ cadastrado' });
 
     const hash = bcrypt.hashSync(senha, 12);
-    // Cria usuÃ¡rio sem oficina ainda (pendente)
     const r = await queryOne(
-      "INSERT INTO usuarios(oficina_id, nome, email, senha_hash, perfil, ativo) VALUES(NULL, $1, $2, $3, 'admin_oficina', true) RETURNING id",
+      "INSERT INTO usuarios(oficina_id, nome, email, senha_hash, perfil, ativo) VALUES(NULL, $1, $2, $3, 'admin_oficina', 1) RETURNING id",
       [nome, email, hash]
     );
     const token = jwt.sign({ id: r.id, perfil: 'admin_oficina', oficina_id: null, nome }, SECRET, { expiresIn: '7d' });
@@ -107,7 +106,7 @@ router.post('/google', async (req, res) => {
     if (!usuario) {
       const hash = bcrypt.hashSync(Math.random().toString(36), 10);
       const r = await queryOne(
-        "INSERT INTO usuarios(oficina_id, nome, email, senha_hash, perfil, ativo) VALUES(NULL, $1, $2, $3, 'admin_oficina', true) RETURNING id",
+        "INSERT INTO usuarios(oficina_id, nome, email, senha_hash, perfil, ativo) VALUES(NULL, $1, $2, $3, 'admin_oficina', 1) RETURNING id",
         [nome, email, hash]
       );
       const token = jwt.sign({ id: r.id, perfil: 'admin_oficina', oficina_id: null, nome }, SECRET, { expiresIn: '7d' });
@@ -191,9 +190,9 @@ router.post('/google-register', async (req, res) => {
     }
 
     // Cria novo usuÃ¡rio sem oficina
-    const hash = bcrypt.hashSync(Math.random().toString(36), 10); // senha aleatÃ³ria (login sÃ³ via Google)
+    const hash = bcrypt.hashSync(Math.random().toString(36), 10); // senha aleatória (login só via Google)
     const r = await queryOne(
-      "INSERT INTO usuarios(oficina_id, nome, email, senha_hash, perfil, ativo) VALUES(NULL, $1, $2, $3, 'admin_oficina', true) RETURNING id",
+      "INSERT INTO usuarios(oficina_id, nome, email, senha_hash, perfil, ativo) VALUES(NULL, $1, $2, $3, 'admin_oficina', 1) RETURNING id",
       [nome, email, hash]
     );
     const token = jwt.sign({ id: r.id, perfil: 'admin_oficina', oficina_id: null, nome }, SECRET, { expiresIn: '7d' });
