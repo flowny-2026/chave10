@@ -171,7 +171,7 @@ export default function DashboardV2() {
       case 'meta_mensal':
         if (isFuncionario || meta === 0) return null;
         return (
-          <div key="meta_mensal" className="card" style={{gridColumn:'1 / -1'}}>
+          <div key="meta_mensal" className="card" style={{gridColumn:'span 4'}}>
             <div className="card-header">
               <div className="card-title">🎯 Meta Mensal</div>
               <button className="btn btn-ghost btn-sm" onClick={()=>{setMetaInput(meta);setShowMeta(true);}}>
@@ -200,7 +200,7 @@ export default function DashboardV2() {
       case 'grafico_mensal':
         if (isFuncionario) return null;
         return (
-          <div key="grafico_mensal" className="card">
+          <div key="grafico_mensal" className="card" style={{gridColumn:'span 2'}}>
             <div className="card-header">
               <div className="card-title">📊 Faturamento Mensal</div>
             </div>
@@ -210,7 +210,7 @@ export default function DashboardV2() {
 
       case 'os_recentes':
         return (
-          <div key="os_recentes" className="card">
+          <div key="os_recentes" className="card" style={{gridColumn:'span 2'}}>
             <div className="card-header">
               <div className="card-title">📋 OS Recentes</div>
               <button className="btn btn-ghost btn-sm" onClick={()=>navigate('/app/os')}>Ver todas</button>
@@ -280,6 +280,32 @@ export default function DashboardV2() {
 
   return (
     <div>
+      <style>{`
+        .dashboard-v2-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 16px;
+          margin-bottom: 20px;
+        }
+        @media (max-width: 1200px) {
+          .dashboard-v2-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+          .dashboard-v2-grid .card[style*="span 4"],
+          .dashboard-v2-grid .card[style*="span 2"] {
+            grid-column: span 2 !important;
+          }
+        }
+        @media (max-width: 640px) {
+          .dashboard-v2-grid {
+            grid-template-columns: 1fr;
+          }
+          .dashboard-v2-grid .card[style*="span 4"],
+          .dashboard-v2-grid .card[style*="span 2"] {
+            grid-column: span 1 !important;
+          }
+        }
+      `}</style>
       {/* Header com filtros */}
       <div className="page-header" style={{marginBottom:20}}>
         <div>
@@ -304,7 +330,7 @@ export default function DashboardV2() {
       </div>
 
       {/* Widgets Grid */}
-      <div className="stats-grid" style={{marginBottom:20}}>
+      <div className="dashboard-v2-grid">
         {layout.map(widget => renderWidget(widget.id)).filter(Boolean)}
       </div>
 
