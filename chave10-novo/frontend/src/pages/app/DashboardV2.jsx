@@ -165,29 +165,6 @@ export default function DashboardV2() {
         </div>
       </div>
 
-  // Renderiza widget individual
-  function renderWidget(widgetId) {
-    return null; // Desabilitado temporariamente - usando novo layout
-  }
-
-  return (
-    <div>
-      {/* Header */}
-      <div className="page-header" style={{marginBottom:28}}>
-        <div>
-          <h1 className="page-title" style={{fontSize:26,marginBottom:6}}>Dashboard</h1>
-          <p className="page-subtitle">Visão geral da sua oficina em tempo real</p>
-        </div>
-        <div className="page-actions" style={{gap:10}}>
-          <button className="btn btn-primary" onClick={() => navigate('/app/os')}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-            Nova OS
-          </button>
-        </div>
-      </div>
-
       {/* KPIs Principais - Linha 1 */}
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))',gap:16,marginBottom:24}}>
         {!isFuncionario && (
