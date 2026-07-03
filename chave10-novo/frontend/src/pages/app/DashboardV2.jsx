@@ -32,18 +32,30 @@ function saveMeta(v) { localStorage.setItem('c10_meta', v); }
 // Gráfico de barras moderno
 function ModernChart({ data }) {
   if (!data?.length || data.every(d => (d.total||0) === 0))
-    return <div style={{textAlign:'center',padding:'32px 0',color:'var(--gray-400)',fontSize:13}}>Sem dados de faturamento ainda</div>;
+    return <div style={{textAlign:'center',padding:'32px 0',color:'#9ca3af',fontSize:13}}>Sem dados de faturamento ainda</div>;
+
+  const CHART_H = 80; // altura total das barras em px
   const max = Math.max(...data.map(d => d.total||0), 1);
+
   return (
-    <div style={{display:'flex',alignItems:'flex-end',gap:6,height:90,paddingTop:8}}>
+    <div style={{display:'flex',alignItems:'flex-end',gap:4,paddingTop:8}}>
       {data.map((item,i) => {
-        const h = ((item.total||0)/max)*100;
+        const barH = Math.max(((item.total||0)/max)*CHART_H, (item.total||0)>0 ? 4 : 0);
         const isLast = i === data.length-1;
         return (
           <div key={i} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:3}}>
-            {(item.total||0)>0 && <div style={{fontSize:8,color:'var(--gray-400)',fontWeight:600}}>{fmt.currency(item.total).replace('R$ ','')}</div>}
-            <div style={{width:'100%',borderRadius:'4px 4px 0 0',height:`${Math.max(h,item.total>0?4:0)}%`,background:isLast?'var(--accent)':'var(--gray-200)',transition:'height .4s ease'}} />
-            <div style={{fontSize:9,color:isLast?'var(--accent)':'var(--gray-400)',fontWeight:isLast?700:400}}>{item.mes}</div>
+            {(item.total||0)>0
+              ? <div style={{fontSize:8,color:'#9ca3af',fontWeight:600,whiteSpace:'nowrap'}}>{fmt.currency(item.total).replace('R$ ','')}</div>
+              : <div style={{fontSize:8}}>&nbsp;</div>
+            }
+            <div style={{
+              width:'100%',
+              borderRadius:'4px 4px 0 0',
+              height: barH,
+              background: isLast ? '#F97316' : '#e5e7eb',
+              transition:'height .4s ease',
+            }} />
+            <div style={{fontSize:9,color:isLast?'#F97316':'#9ca3af',fontWeight:isLast?700:400}}>{item.mes}</div>
           </div>
         );
       })}
