@@ -5,6 +5,7 @@ import DashboardCustomizer, { DEFAULT_LAYOUT, AVAILABLE_WIDGETS } from '../../co
 import PeriodFilter from '../../components/PeriodFilter';
 import WelcomeModal from '../../components/WelcomeModal';
 import OnboardingTour from '../../components/OnboardingTour';
+import KPICard from '../../components/KPICard';
 import { useOnboarding } from '../../hooks/useOnboarding';
 import '../../styles/dashboardPremium.css';
 
@@ -77,32 +78,6 @@ function ModernChart({ data }) {
 
 const STATUS_CLASS = { em_andamento:'badge-orange', finalizado:'badge-green' };
 const STATUS_LABEL = { em_andamento:'Em andamento', finalizado:'Finalizado' };
-
-// KPI Card Moderno
-function KPICard({ title, value, subvalue, trend, icon, color = 'var(--accent)', size = 'normal' }) {
-  const trendNum = parseFloat(trend || 0);
-  const isUp = trendNum > 0;
-  const isDown = trendNum < 0;
-  
-  return (
-    <div className={`kpi-premium ${size}`} style={{ '--kpi-color': color }}>
-      <div className="kpi-icon-wrap" style={{ background: `${color}12` }}>
-        <div className="kpi-icon" style={{ color }}>{icon}</div>
-      </div>
-      <div className="kpi-data">
-        <div className="kpi-label">{title}</div>
-        <div className="kpi-value">{value}</div>
-        {subvalue && <div className="kpi-sub">{subvalue}</div>}
-      </div>
-      {trend !== undefined && (
-        <div className={`kpi-trend-badge ${isUp?'up':isDown?'down':'neutral'}`}>
-          <span className="trend-icon">{isUp?'↗':isDown?'↘':'→'}</span>
-          <span className="trend-val">{Math.abs(trendNum).toFixed(1)}%</span>
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function DashboardV2() {
   const [data, setData] = useState(null);

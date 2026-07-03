@@ -3,8 +3,10 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import PWAInstallButton from './PWAInstallButton';
 import GlobalSearch from './GlobalSearch';
 import OfflineIndicator from './OfflineIndicator';
+import OnboardingTour from './OnboardingTour';
 import { api } from '../api';
 import { useAuth } from '../hooks/useAuth';
+import { useOnboarding } from '../hooks/useOnboarding';
 
 // SVG Icons
 const IC = {
@@ -532,6 +534,15 @@ export default function Layout({ area }) {
   // Hook para manter a sessão ativa e verificar expiração
   useAuth();
 
+  // Tour guiado
+  const { tourActive, currentStep, startTourDirect, nextStep, prevStep, endTour } = useOnboarding();
+
+  // Inicia o tour manualmente (mesmo que já tenha feito antes)
+  const startTourManually = () => {
+    setOpen(false); // fecha sidebar mobile
+    startTourDirect();
+  };
+
   // Sincroniza dados do usuário com o servidor ao montar o layout
   // Garante que data_vencimento e status_assinatura estejam sempre atualizados
   useEffect(() => {
@@ -645,6 +656,39 @@ export default function Layout({ area }) {
         )}
 
         <div className="sidebar-footer">
+          {/* Botão Tour Guiado — só na área app */}
+          {area === 'app' && (
+            <button
+              onClick={startTourManually}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '10px 14px',
+                margin: '0 0 8px 0',
+                width: '100%',
+                background: 'rgba(249,115,22,.08)',
+                border: '1px solid rgba(249,115,22,.2)',
+                borderRadius: 'var(--r-sm)',
+                cursor: 'pointer',
+                transition: 'background .15s',
+                textAlign: 'left',
+              }}
+              onMouseOver={e => e.currentTarget.style.background = 'rgba(249,115,22,.16)'}
+              onMouseOut={e => e.currentTarget.style.background = 'rgba(249,115,22,.08)'}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F97316" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#F97316', lineHeight: 1.2 }}>Tour guiado</div>
+                <div style={{ fontSize: 11, color: 'var(--gray-400)', lineHeight: 1.2 }}>Ver tutorial do sistema</div>
+              </div>
+            </button>
+          )}
+
           {/* Botão de suporte WhatsApp */}
           <a
             href={SUPORTE_WA}
@@ -810,6 +854,17 @@ export default function Layout({ area }) {
 
       {/* Indicador de status offline/sincronização */}
       <OfflineIndicator />
+
+      {/* Tour guiado — só na área app */}
+      {area === 'app' && (
+        <OnboardingTour
+          isActive={tourActive}
+          currentStep={currentStep}
+          onNext={nextStep}
+          onPrev={prevStep}
+          onEnd={endTour}
+        />
+      )}
     </div>
   );
 }

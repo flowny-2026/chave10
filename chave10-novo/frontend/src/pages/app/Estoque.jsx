@@ -149,12 +149,33 @@ export default function AppEstoque() {
 
       {view==='patrimonio' && !isFuncionario && (
         <>
-          {/* KPI */}
-          <div className="stats-grid" style={{gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',marginBottom:24}}>
-            <div className="stat-card c-orange"><div className="stat-icon c-orange">💰</div><div><div className="stat-value" style={{fontSize:17}}>{fmt.currency(valTotal)}</div><div className="stat-label">Patrimônio total</div></div></div>
-            <div className="stat-card c-blue"><div className="stat-icon c-blue">⚙️</div><div><div className="stat-value" style={{fontSize:17}}>{fmt.currency(valPecas)}</div><div className="stat-label">Em peças ({pecas.length})</div></div></div>
-            <div className="stat-card c-purple"><div className="stat-icon c-purple">🔧</div><div><div className="stat-value" style={{fontSize:17}}>{fmt.currency(valFerr)}</div><div className="stat-label">Em ferramentas ({ferr.length})</div></div></div>
-            <div className="stat-card c-red"><div className="stat-icon c-red">⚠️</div><div><div className="stat-value">{baixo.length+zerado.length}</div><div className="stat-label">Alertas de estoque</div></div></div>
+          {/* KPI patrimônio */}
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:16,marginBottom:24}}>
+            <KPICard
+              title="Patrimônio Total"
+              value={fmt.currency(valTotal)}
+              color="var(--accent)"
+              icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>}
+            />
+            <KPICard
+              title={`Em Peças (${pecas.length})`}
+              value={fmt.currency(valPecas)}
+              color="var(--brand)"
+              icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>}
+            />
+            <KPICard
+              title={`Em Ferramentas (${ferr.length})`}
+              value={fmt.currency(valFerr)}
+              color="#7c3aed"
+              icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>}
+            />
+            <KPICard
+              title="Alertas de Estoque"
+              value={baixo.length + zerado.length}
+              subvalue={`${zerado.length} zerados`}
+              color={baixo.length + zerado.length > 0 ? 'var(--danger)' : 'var(--success)'}
+              icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>}
+            />
           </div>
 
           <div className="estoque-grid-2">

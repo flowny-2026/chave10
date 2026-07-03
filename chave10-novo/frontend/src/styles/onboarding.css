@@ -190,36 +190,24 @@
   pointer-events: none;
 }
 
-.tour-backdrop {
-  position: absolute;
+/* SVG backdrop com recorte real no elemento destacado */
+.tour-svg-backdrop {
+  position: fixed;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(2px);
   pointer-events: all;
+  cursor: default;
   animation: fadeIn 0.3s ease;
 }
 
-.tour-highlight {
-  position: absolute;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 0 0 4px var(--accent), 0 0 0 9999px rgba(0, 0, 0, 0.7);
-  z-index: 9999;
-  pointer-events: none;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  animation: pulse 2s infinite;
+/* Borda animada ao redor do elemento destacado */
+.tour-highlight-border {
+  animation: tourPulse 1.8s ease-in-out infinite;
 }
 
-@keyframes pulse {
-  0%, 100% {
-    box-shadow: 0 0 0 4px var(--accent), 0 0 0 9999px rgba(0, 0, 0, 0.7);
-  }
-  50% {
-    box-shadow: 0 0 0 8px var(--accent), 0 0 0 9999px rgba(0, 0, 0, 0.7);
-  }
+@keyframes tourPulse {
+  0%, 100% { stroke-opacity: 1; stroke-width: 2.5; }
+  50%       { stroke-opacity: 0.5; stroke-width: 4; }
 }
 
 .tour-tooltip {
@@ -229,7 +217,7 @@
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
   width: 360px;
   max-width: calc(100vw - 32px);
-  z-index: 10000;
+  z-index: 9999;
   pointer-events: all;
   animation: tooltipAppear 0.3s ease;
 }

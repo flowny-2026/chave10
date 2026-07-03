@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api';
+import KPICard from '../../components/KPICard';
 
 const fmt = {
   currency: v => 'R$ ' + parseFloat(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.'),
@@ -128,22 +129,31 @@ export default function AppFinanceiro() {
       </div>
 
       {/* Cards resumo */}
-      <div className="fin-summary">
-        <div className="fin-card receita">
-          <div className="fin-card-label">💰 Receita do mês</div>
-          <div className="fin-card-value">{fmt.currency(receita)}</div>
-          <div style={{fontSize:12,color:'var(--gray-400)',marginTop:6}}>{ordensM.length} serviços finalizados</div>
-        </div>
-        <div className="fin-card despesa">
-          <div className="fin-card-label">📉 Despesas do mês</div>
-          <div className="fin-card-value">{fmt.currency(totalDesp)}</div>
-          <div style={{fontSize:12,color:'var(--gray-400)',marginTop:6}}>{despesas.length} lançamento(s)</div>
-        </div>
-        <div className={`fin-card ${lucro>=0?'lucro':'prejuizo'}`}>
-          <div className="fin-card-label">{lucro>=0?'📈 Lucro líquido':'⚠️ Prejuízo'}</div>
-          <div className="fin-card-value" style={{color:lucro>=0?'var(--success)':'var(--danger)'}}>{fmt.currency(lucro)}</div>
-          <div style={{fontSize:12,color:'var(--gray-400)',marginTop:6}}>Margem: {receita>0?((lucro/receita)*100).toFixed(1):0}%</div>
-        </div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:16,marginBottom:24}}>
+        <KPICard
+          title="Receita do Mês"
+          value={fmt.currency(receita)}
+          subvalue={`${ordensM.length} serviços finalizados`}
+          color="var(--success)"
+          icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>}
+        />
+        <KPICard
+          title="Despesas do Mês"
+          value={fmt.currency(totalDesp)}
+          subvalue={`${despesas.length} lançamento(s)`}
+          color="var(--danger)"
+          icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>}
+        />
+        <KPICard
+          title={lucro >= 0 ? 'Lucro Líquido' : 'Prejuízo'}
+          value={fmt.currency(lucro)}
+          subvalue={`Margem: ${receita > 0 ? ((lucro / receita) * 100).toFixed(1) : 0}%`}
+          color={lucro >= 0 ? 'var(--success)' : 'var(--danger)'}
+          icon={lucro >= 0
+            ? <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+            : <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          }
+        />
       </div>
 
       {/* Gráfico de formas de pagamento */}

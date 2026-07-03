@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import '../styles/onboarding.css';
 
 /**
@@ -90,53 +90,16 @@ const TOUR_STEPS = [
 ];
 
 export default function OnboardingTour({ isActive, currentStep, onNext, onPrev, onEnd }) {
-  const [targetElement, setTargetElement] = useState(null);
+  const [highlightRect, setHighlightRect] = useState(null);
   const [tooltipStyle, setTooltipStyle] = useState({});
-  const [highlightStyle, setHighlightStyle] = useState({});
 
   const step = TOUR_STEPS[currentStep];
   const isLastStep = currentStep === TOUR_STEPS.length - 1;
   const isFirstStep = currentStep === 0;
 
-  useEffect(() => {
-    if (!isActive || !step) return;
-
-    if (step.target) {
-      // Busca o elemento target
-      const element = document.querySelector(step.target);
-      if (element) {
-        setTargetElement(element);
-        
-        // Calcula posição do highlight
-        const rect = element.getBoundingClientRect();
-        const padding = step.highlightPadding || 8;
-        
-        setHighlightStyle({
-          top: rect.top - padding + window.scrollY,
-          left: rect.left - padding,
-          width: rect.width + (padding * 2),
-          height: rect.height + (padding * 2),
-        });
-
-        // Calcula posição do tooltip
-        calculateTooltipPosition(rect, step.position);
-
-        // Scroll suave até o elemento
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      } else {
-        setTargetElement(null);
-      }
-    } else {
-      // Step sem target (central)
-      setTargetElement(null);
-      setTooltipStyle({});
-      setHighlightStyle({});
-    }
-  }, [isActive, currentStep, step]);
-
-  const calculateTooltipPosition = (rect, position) => {
+  const calculateTooltipPosition = useCallback((rect, position) => {
     const tooltipWidth = 360;
-    const tooltipHeight = 200; // estimado
+    const tooltipHeight = 200;
     const gap = 16;
 
     let style = {};
@@ -144,25 +107,25 @@ export default function OnboardingTour({ isActive, currentStep, onNext, onPrev, 
     switch (position) {
       case 'bottom':
         style = {
-          top: rect.bottom + gap + window.scrollY,
-          left: rect.left + (rect.width / 2) - (tooltipWidth / 2),
+          top: rect.bottom + gap,
+          left: rect.left + rect.width / 2 - tooltipWidth / 2,
         };
         break;
       case 'top':
         style = {
-          top: rect.top - tooltipHeight - gap + window.scrollY,
-          left: rect.left + (rect.width / 2) - (tooltipWidth / 2),
+          top: rect.top - tooltipHeight - gap,
+          left: rect.left + rect.width / 2 - tooltipWidth / 2,
         };
         break;
       case 'right':
         style = {
-          top: rect.top + (rect.height / 2) - (tooltipHeight / 2) + window.scrollY,
+          top: rect.top + rect.height / 2 - tooltipHeight / 2,
           left: rect.right + gap,
         };
         break;
       case 'left':
         style = {
-          top: rect.top + (rect.height / 2) - (tooltipHeight / 2) + window.scrollY,
+          top: rect.top + rect.height / 2 - tooltipHeight / 2,
           left: rect.left - tooltipWidth - gap,
         };
         break;
@@ -172,35 +135,146 @@ export default function OnboardingTour({ isActive, currentStep, onNext, onPrev, 
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
+          position: 'fixed',
         };
     }
 
-    // Garante que não saia da tela
-    if (style.left < 16) style.left = 16;
-    if (style.left + tooltipWidth > window.innerWidth - 16) {
-      style.left = window.innerWidth - tooltipWidth - 16;
+    if (style.left !== undefined) {
+      if (style.left < 16) style.left = 16;
+      if (style.left + tooltipWidth > window.innerWidth - 16) {
+        style.left = window.innerWidth - tooltipWidth - 16;
+      }
     }
 
     setTooltipStyle(style);
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!isActive || !step) return;
+
+    if (step.target) {
+      const element = document.querySelector(step.target);
+      if (element) {
+        // Scroll suave até o elemento antes de calcular posição
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // Aguarda o scroll terminar para calcular a posição correta
+        const timeout = setTimeout(() => {
+          const rect = element.getBoundingClientRect();
+          const padding = step.highlightPadding || 8;
+
+          setHighlightRect({
+            top: rect.top - padding,
+            left: rect.left - padding,
+            width: rect.width + padding * 2,
+            height: rect.height + padding * 2,
+          });
+
+          calculateTooltipPosition(rect, step.position);
+        }, 350);
+
+        return () => clearTimeout(timeout);
+      } else {
+        setHighlightRect(null);
+        setTooltipStyle({
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          position: 'fixed',
+        });
+      }
+    } else {
+      // Step central sem target
+      setHighlightRect(null);
+      setTooltipStyle({
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        position: 'fixed',
+      });
+    }
+  }, [isActive, currentStep, step, calculateTooltipPosition]);
 
   if (!isActive) return null;
 
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  // SVG com recorte (clip) na área do elemento destacado
+  const renderBackdrop = () => {
+    if (!highlightRect) {
+      // Sem highlight: backdrop sólido
+      return (
+        <svg
+          className="tour-svg-backdrop"
+          width={vw}
+          height={vh}
+          viewBox={`0 0 ${vw} ${vh}`}
+          onClick={onEnd}
+        >
+          <rect width={vw} height={vh} fill="rgba(0,0,0,0.75)" />
+        </svg>
+      );
+    }
+
+    const { top, left, width, height } = highlightRect;
+    const r = 8; // border-radius do recorte
+
+    return (
+      <svg
+        className="tour-svg-backdrop"
+        width={vw}
+        height={vh}
+        viewBox={`0 0 ${vw} ${vh}`}
+        onClick={onEnd}
+      >
+        <defs>
+          <mask id="tour-cutout">
+            {/* Tudo branco = visível */}
+            <rect width={vw} height={vh} fill="white" />
+            {/* Recorte preto = transparente (mostra o elemento real) */}
+            <rect
+              x={left}
+              y={top}
+              width={width}
+              height={height}
+              rx={r}
+              ry={r}
+              fill="black"
+            />
+          </mask>
+        </defs>
+        {/* Backdrop com buraco no elemento */}
+        <rect
+          width={vw}
+          height={vh}
+          fill="rgba(0,0,0,0.75)"
+          mask="url(#tour-cutout)"
+        />
+        {/* Borda de destaque animada ao redor do recorte */}
+        <rect
+          x={left}
+          y={top}
+          width={width}
+          height={height}
+          rx={r}
+          ry={r}
+          fill="none"
+          stroke="var(--accent, #F97316)"
+          strokeWidth="2.5"
+          className="tour-highlight-border"
+        />
+      </svg>
+    );
+  };
+
   return (
     <div className="onboarding-tour-overlay">
-      {/* Backdrop escuro */}
-      <div className="tour-backdrop" onClick={onEnd} />
-
-      {/* Highlight do elemento target */}
-      {targetElement && (
-        <div 
-          className="tour-highlight" 
-          style={highlightStyle}
-        />
-      )}
+      {/* Backdrop SVG com recorte real */}
+      {renderBackdrop()}
 
       {/* Tooltip com conteúdo */}
-      <div 
+      <div
         className={`tour-tooltip ${step.position === 'center' ? 'center' : ''}`}
         style={tooltipStyle}
       >
@@ -224,8 +298,8 @@ export default function OnboardingTour({ isActive, currentStep, onNext, onPrev, 
         <div className="tour-tooltip-footer">
           <div className="tour-progress">
             {TOUR_STEPS.map((_, idx) => (
-              <div 
-                key={idx} 
+              <div
+                key={idx}
                 className={`tour-progress-dot ${idx === currentStep ? 'active' : ''} ${idx < currentStep ? 'completed' : ''}`}
               />
             ))}
@@ -237,7 +311,7 @@ export default function OnboardingTour({ isActive, currentStep, onNext, onPrev, 
                 ← Anterior
               </button>
             )}
-            
+
             <button className="btn btn-outline btn-sm" onClick={onEnd}>
               Pular tour
             </button>

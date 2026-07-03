@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api';
+import KPICard from '../../components/KPICard';
 import { exportRelatorioFinanceiro, exportWithFeedback } from '../../utils/pdfExporter';
 
 const fmt = {
@@ -95,23 +96,31 @@ export default function AppRelatorios() {
         </div>
       </div>
 
-      <div className="stats-grid" style={{marginBottom:24}}>
-        <div className="stat-card c-orange">
-          <div className="stat-icon c-orange"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
-          <div className="stat-body"><div className="stat-value" style={{fontSize:18}}>{fmt.currency(totalFat)}</div><div className="stat-label">Faturamento total</div></div>
-        </div>
-        <div className="stat-card c-blue">
-          <div className="stat-icon c-blue"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div className="stat-body"><div className="stat-value">{finalizadas.length}</div><div className="stat-label">Serviços realizados</div></div>
-        </div>
-        <div className="stat-card c-green">
-          <div className="stat-icon c-green"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
-          <div className="stat-body"><div className="stat-value" style={{fontSize:18}}>{fmt.currency(ticketMedio)}</div><div className="stat-label">Ticket médio</div></div>
-        </div>
-        <div className="stat-card c-blue">
-          <div className="stat-icon c-blue"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
-          <div className="stat-body"><div className="stat-value">{clientes.length}</div><div className="stat-label">Clientes cadastrados</div></div>
-        </div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:16,marginBottom:24}}>
+        <KPICard
+          title="Faturamento Total"
+          value={fmt.currency(totalFat)}
+          color="var(--accent)"
+          icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>}
+        />
+        <KPICard
+          title="Serviços Realizados"
+          value={finalizadas.length}
+          color="var(--brand)"
+          icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+        />
+        <KPICard
+          title="Ticket Médio"
+          value={fmt.currency(ticketMedio)}
+          color="var(--success)"
+          icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>}
+        />
+        <KPICard
+          title="Clientes Cadastrados"
+          value={clientes.length}
+          color="#7c3aed"
+          icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>}
+        />
       </div>
 
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:20}}>

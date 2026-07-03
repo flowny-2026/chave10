@@ -32,6 +32,13 @@ export function useOnboarding() {
     setCurrentStep(0);
   };
 
+  // Inicia o tour diretamente, sem passar pelo WelcomeModal
+  const startTourDirect = () => {
+    setShowWelcome(false);
+    setTourActive(true);
+    setCurrentStep(0);
+  };
+
   const skipTour = () => {
     setShowWelcome(false);
     setTourActive(false);
@@ -71,6 +78,7 @@ export function useOnboarding() {
     tourActive,
     currentStep,
     startTour,
+    startTourDirect,
     skipTour,
     nextStep,
     prevStep,
