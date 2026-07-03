@@ -41,19 +41,28 @@ router.get('/oficinas', async (req,res) => {
     const validos=['active','pending','overdue','blocked'];
     if(status&&!validos.includes(status)) return res.status(400).json({error:'Status inválido'});
     
-    // Busca último acesso mais recente de cada oficina
-    let q=`
-      SELECT o.*, 
-        (SELECT MAX(u.ultimo_acesso) 
-         FROM usuarios u 
-         WHERE u.oficina_id = o.id AND u.ativo = 1) as ultimo_acesso
+    // Busca oficinas com último acesso mais recente
+    let baseQuery = `
+      SELECT 
+        o.*,
+        MAX(u.ultimo_acesso) as ultimo_acesso
       FROM oficinas o
+      LEFT JOIN usuarios u ON u.oficina_id = o.id AND u.ativo = 1
     `;
-    const p=[];
-    if(status){q+=' WHERE o.status_assinatura=$1';p.push(status);}
-    q+=' ORDER BY o.nome';
-    res.json(await query(q,...p.length?[p]:[]));
-  } catch(err){res.status(500).json({error:'Erro interno'});}
+    
+    const p = [];
+    if (status) {
+      baseQuery += ' WHERE o.status_assinatura = $1';
+      p.push(status);
+    }
+    
+    baseQuery += ' GROUP BY o.id ORDER BY o.nome';
+    
+    res.json(await query(baseQuery, ...p));
+  } catch(err){
+    console.error('Erro ao buscar oficinas:', err);
+    res.status(500).json({error:'Erro interno'});
+  }
 });
 
 router.post('/oficinas', validateOficina, async (req,res) => {
