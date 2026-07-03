@@ -29,36 +29,101 @@ function loadMeta() {
 }
 function saveMeta(v) { localStorage.setItem('c10_meta', v); }
 
-// Gráfico de barras moderno
+// Gráfico de barras com SVG — controle total, sem bugs de CSS
 function ModernChart({ data }) {
   if (!data?.length || data.every(d => (d.total||0) === 0))
     return <div style={{textAlign:'center',padding:'32px 0',color:'#9ca3af',fontSize:13}}>Sem dados de faturamento ainda</div>;
 
-  const CHART_H = 80; // altura total das barras em px
+  const W = 100; // % de largura — usamos viewBox relativo
+  const H = 120; // altura do gráfico em px (área das barras)
+  const PAD_BOTTOM = 32; // espaço para labels de mês
+  const PAD_TOP = 20;    // espaço para valores
+  const TOTAL_H = H + PAD_BOTTOM + PAD_TOP;
+
   const max = Math.max(...data.map(d => d.total||0), 1);
+  const n = data.length;
+  const barW = 70 / n;   // largura de cada barra em % do viewBox (deixa gap entre elas)
+  const gap  = 100 / n;  // espaço total por coluna em %
 
   return (
-    <div style={{display:'flex',alignItems:'flex-end',gap:4,paddingTop:8}}>
-      {data.map((item,i) => {
-        const barH = Math.max(((item.total||0)/max)*CHART_H, (item.total||0)>0 ? 4 : 0);
-        const isLast = i === data.length-1;
-        return (
-          <div key={i} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:3}}>
-            {(item.total||0)>0
-              ? <div style={{fontSize:8,color:'#9ca3af',fontWeight:600,whiteSpace:'nowrap'}}>{fmt.currency(item.total).replace('R$ ','')}</div>
-              : <div style={{fontSize:8}}>&nbsp;</div>
-            }
-            <div style={{
-              width:'100%',
-              borderRadius:'4px 4px 0 0',
-              height: barH,
-              background: isLast ? '#F97316' : '#e5e7eb',
-              transition:'height .4s ease',
-            }} />
-            <div style={{fontSize:9,color:isLast?'#F97316':'#9ca3af',fontWeight:isLast?700:400}}>{item.mes}</div>
-          </div>
-        );
-      })}
+    <div style={{width:'100%'}}>
+      <svg
+        viewBox={`0 0 100 ${TOTAL_H}`}
+        preserveAspectRatio="none"
+        style={{width:'100%', height: TOTAL_H, display:'block', overflow:'visible'}}
+      >
+        {/* Linha de base */}
+        <line x1="0" y1={PAD_TOP + H} x2="100" y2={PAD_TOP + H} stroke="#e5e7eb" strokeWidth="0.4"/>
+
+        {/* Linhas de grade horizontais */}
+        {[0.25, 0.5, 0.75].map((f,i) => (
+          <line key={i}
+            x1="0" y1={PAD_TOP + H * (1 - f)}
+            x2="100" y2={PAD_TOP + H * (1 - f)}
+            stroke="#f3f4f6" strokeWidth="0.4"
+          />
+        ))}
+
+        {data.map((item, i) => {
+          const valor = item.total || 0;
+          const barH  = valor > 0 ? Math.max((valor / max) * H, 3) : 0;
+          const x     = i * gap + (gap - barW) / 2;
+          const y     = PAD_TOP + H - barH;
+          const isLast = i === n - 1;
+          const color  = isLast ? '#F97316' : '#cbd5e1';
+          const labelColor = isLast ? '#F97316' : '#9ca3af';
+
+          return (
+            <g key={i}>
+              {/* Barra com gradiente visual */}
+              <rect
+                x={x} y={y}
+                width={barW} height={barH}
+                rx="1.5"
+                fill={isLast ? 'url(#grad-accent)' : 'url(#grad-gray)'}
+              />
+
+              {/* Valor acima da barra */}
+              {valor > 0 && (
+                <text
+                  x={x + barW / 2}
+                  y={y - 2}
+                  textAnchor="middle"
+                  fontSize="4.5"
+                  fontWeight="600"
+                  fill={labelColor}
+                >
+                  {fmt.currency(valor).replace('R$ ', '')}
+                </text>
+              )}
+
+              {/* Label do mês */}
+              <text
+                x={x + barW / 2}
+                y={PAD_TOP + H + 10}
+                textAnchor="middle"
+                fontSize="5"
+                fontWeight={isLast ? '700' : '400'}
+                fill={labelColor}
+              >
+                {item.mes}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* Gradientes */}
+        <defs>
+          <linearGradient id="grad-accent" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#F97316" stopOpacity="1"/>
+            <stop offset="100%" stopColor="#fb923c" stopOpacity="0.7"/>
+          </linearGradient>
+          <linearGradient id="grad-gray" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#94a3b8" stopOpacity="0.5"/>
+            <stop offset="100%" stopColor="#cbd5e1" stopOpacity="0.3"/>
+          </linearGradient>
+        </defs>
+      </svg>
     </div>
   );
 }
