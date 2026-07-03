@@ -41,8 +41,19 @@ export default function PWAInstallBanner() {
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) {
-      // Se o prompt não está disponível, mostra instruções manuais
-      alert('Para instalar:\n\n1. Clique nos 3 pontinhos (⋮) no canto superior direito\n2. Vá em "Mais ferramentas"\n3. Clique em "Criar atalho..."\n4. Marque "Abrir como janela"\n5. Clique em "Criar"');
+      // Se o prompt não está disponível, mostra instruções manuais atualizadas
+      alert(
+        '📌 COMO INSTALAR O CHAVE 10:\n\n' +
+        '1. Clique nos 3 pontinhos (⋮) no canto superior direito\n\n' +
+        '2. Vá em "Mais ferramentas"\n\n' +
+        '3. Clique em uma das opções:\n' +
+        '   • "Instalar página como app..." OU\n' +
+        '   • "Criar atalho..."\n\n' +
+        '4. Se aparecer "Criar atalho", marque:\n' +
+        '   ✅ "Abrir como janela"\n\n' +
+        '5. Clique em "Criar" ou "Instalar"\n\n' +
+        '✨ Pronto! O ícone aparecerá na área de trabalho.'
+      );
       return;
     }
 
