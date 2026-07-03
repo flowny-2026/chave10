@@ -41,19 +41,50 @@ export default function PWAInstallBanner() {
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) {
-      // Se o prompt não está disponível, mostra instruções manuais atualizadas
-      alert(
-        '📌 COMO INSTALAR O CHAVE 10:\n\n' +
-        '1. Clique nos 3 pontinhos (⋮) no canto superior direito\n\n' +
-        '2. Vá em "Mais ferramentas"\n\n' +
-        '3. Clique em uma das opções:\n' +
-        '   • "Instalar página como app..." OU\n' +
-        '   • "Criar atalho..."\n\n' +
-        '4. Se aparecer "Criar atalho", marque:\n' +
-        '   ✅ "Abrir como janela"\n\n' +
-        '5. Clique em "Criar" ou "Instalar"\n\n' +
-        '✨ Pronto! O ícone aparecerá na área de trabalho.'
-      );
+      // Detecta o navegador
+      const isEdge = /Edg/i.test(navigator.userAgent);
+      const isChrome = /Chrome/i.test(navigator.userAgent) && !isEdge;
+      
+      let browserName = 'navegador';
+      let instructions = '';
+      
+      if (isEdge) {
+        browserName = 'Microsoft Edge';
+        instructions = 
+          '📌 COMO INSTALAR NO EDGE:\n\n' +
+          '1. Clique nos 3 pontinhos (⋮) no canto superior direito\n\n' +
+          '2. Procure a opção:\n' +
+          '   📱 "Instalar este site como app"\n\n' +
+          '3. Clique nela\n\n' +
+          '4. Digite o nome: "Chave 10"\n\n' +
+          '5. Clique em "Instalar"\n\n' +
+          '✨ Pronto! O ícone aparecerá na área de trabalho e menu Iniciar.';
+      } else if (isChrome) {
+        browserName = 'Google Chrome';
+        instructions = 
+          '📌 COMO INSTALAR NO CHROME:\n\n' +
+          '1. Clique nos 3 pontinhos (⋮) no canto superior direito\n\n' +
+          '2. Vá em "Mais ferramentas"\n\n' +
+          '3. Clique em uma das opções:\n' +
+          '   • "Instalar página como app..." OU\n' +
+          '   • "Criar atalho..."\n\n' +
+          '4. Se aparecer "Criar atalho", marque:\n' +
+          '   ✅ "Abrir como janela"\n\n' +
+          '5. Clique em "Criar" ou "Instalar"\n\n' +
+          '✨ Pronto! O ícone aparecerá na área de trabalho.';
+      } else {
+        // Firefox ou outro navegador
+        instructions = 
+          '📌 COMO INSTALAR:\n\n' +
+          'Seu navegador não suporta instalação de PWA.\n\n' +
+          'Para melhor experiência, use:\n' +
+          '• Google Chrome\n' +
+          '• Microsoft Edge\n' +
+          '• Brave\n\n' +
+          'Depois acesse: https://chave10.vercel.app';
+      }
+      
+      alert(instructions);
       return;
     }
 
@@ -88,13 +119,17 @@ export default function PWAInstallBanner() {
 
   // No desktop, mostra sempre (com ou sem prompt)
   if (isDesktop && !showBanner) {
+    // Detecta navegador para o texto
+    const isEdge = /Edg/i.test(navigator.userAgent);
+    const browserName = isEdge ? 'Edge' : 'Chrome';
+    
     return (
       <div className="pwa-install-banner desktop">
         <div className="pwa-banner-content">
           <div className="pwa-banner-icon">💻</div>
           <div className="pwa-banner-text">
             <strong>Instale o Chave 10 no seu PC</strong>
-            <span>Acesso rápido sem abrir o navegador</span>
+            <span>Usando {browserName} • Acesso rápido sem navegador</span>
           </div>
           <button onClick={handleInstallClick} className="pwa-install-btn">
             Instalar
