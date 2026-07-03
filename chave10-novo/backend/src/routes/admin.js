@@ -40,9 +40,18 @@ router.get('/oficinas', async (req,res) => {
     const {status}=req.query;
     const validos=['active','pending','overdue','blocked'];
     if(status&&!validos.includes(status)) return res.status(400).json({error:'Status inválido'});
-    let q='SELECT * FROM oficinas'; const p=[];
-    if(status){q+=' WHERE status_assinatura=$1';p.push(status);}
-    q+=' ORDER BY nome';
+    
+    // Busca último acesso mais recente de cada oficina
+    let q=`
+      SELECT o.*, 
+        (SELECT MAX(u.ultimo_acesso) 
+         FROM usuarios u 
+         WHERE u.oficina_id = o.id AND u.ativo = 1) as ultimo_acesso
+      FROM oficinas o
+    `;
+    const p=[];
+    if(status){q+=' WHERE o.status_assinatura=$1';p.push(status);}
+    q+=' ORDER BY o.nome';
     res.json(await query(q,...p.length?[p]:[]));
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });

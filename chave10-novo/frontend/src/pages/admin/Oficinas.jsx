@@ -201,7 +201,9 @@ export default function AdminOficinas() {
                         {vencido&&' 🔴'}
                       </span>
                     </td>
-                    <td style={{fontSize:12,color:'var(--gray-400)'}}>{fmt.date(o.data_criacao)}</td>
+                    <td style={{fontSize:12,color:'var(--gray-400)'}}>
+                      {o.ultimo_acesso ? fmt.date(o.ultimo_acesso.split('T')[0]) : 'Nunca acessado'}
+                    </td>
                     <td><span className={`badge ${STATUS_CLASS[o.status_assinatura]}`}>{STATUS_LABEL[o.status_assinatura]}</span></td>
                     <td>
                       <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
