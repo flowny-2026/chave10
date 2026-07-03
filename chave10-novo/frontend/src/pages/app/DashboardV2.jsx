@@ -96,7 +96,8 @@ export default function DashboardV2() {
   const navigate = useNavigate();
   const user = getUser();
   const isFuncionario = user?.perfil === 'funcionario';
-  const nomeUsuario = user?.nome?.split(' ')[0] || 'você';
+  // Usa o nome do responsável da oficina se disponível, senão o nome do usuário
+  const nomeUsuario = (user?.responsavel || user?.nome)?.split(' ')[0] || 'você';
 
   useEffect(() => {
     api.app.dashboard().then(setData).catch(()=>setData(null)).finally(()=>setLoading(false));

@@ -719,7 +719,7 @@
 }
 
 .painel-item:hover {
-  border-color: color-mix(in srgb, var(--pi-color) 30%, transparent);
+  border-color: rgba(0, 0, 0, 0.1);
 }
 
 .painel-item-header {
@@ -729,12 +729,12 @@
   gap: 12px;
   padding: 10px 12px;
   cursor: pointer;
-  background: color-mix(in srgb, var(--pi-color) 6%, #fff);
+  background: rgba(0, 0, 0, 0.03);
   transition: background .15s;
 }
 
 .painel-item-header:hover {
-  background: color-mix(in srgb, var(--pi-color) 12%, #fff);
+  background: rgba(0, 0, 0, 0.06);
 }
 
 .painel-item-left {
@@ -759,7 +759,7 @@
 
 .painel-item-count {
   font-size: 11px;
-  color: var(--pi-color);
+  color: #6b7280; /* fallback fixo — evita herdar branco */
   font-weight: 700;
   margin-top: 1px;
 }

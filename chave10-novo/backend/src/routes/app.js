@@ -517,4 +517,71 @@ router.delete('/agenda/:id', validateId, async (req,res) => {
   catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
+// CONFIGURAÇÕES DA OFICINA (leitura e atualização pelos próprios usuários)
+router.get('/config', naoFuncionario, async (req,res) => {
+  try {
+    const of = await queryOne(
+      "SELECT nome, responsavel, telefone, email, endereco, logo, observacoes, whatsapp FROM oficinas WHERE id=$1",
+      [oid(req)]
+    );
+    if (!of) return res.status(404).json({ error: 'Oficina não encontrada' });
+    res.json({
+      nome:        of.nome        || '',
+      responsavel: of.responsavel || '',
+      telefone:    of.telefone    || '',
+      whatsapp:    of.whatsapp    || '',
+      email:       of.email       || '',
+      endereco:    of.endereco    || '',
+      logo:        of.logo        || null,
+      documento:   of.observacoes || '',
+    });
+  } catch(err){ log.error('app_get_config', err); res.status(500).json({ error: 'Erro interno' }); }
+});
+
+router.put('/config', naoFuncionario, async (req,res) => {
+  try {
+    const { nome, responsavel, telefone, whatsapp, email, endereco, logo, documento } = req.body;
+    if (!nome || !nome.trim()) return res.status(400).json({ error: 'Nome da oficina é obrigatório' });
+
+    if (logo && logo.length > 3 * 1024 * 1024) {
+      return res.status(400).json({ error: 'Logo muito grande. Use uma imagem de até 2MB.' });
+    }
+
+    await run(
+      `UPDATE oficinas SET
+        nome        = $1,
+        responsavel = COALESCE($2, responsavel),
+        telefone    = COALESCE($3, telefone),
+        whatsapp    = $4,
+        email       = COALESCE($5, email),
+        endereco    = $6,
+        logo        = $7,
+        observacoes = $8
+       WHERE id = $9`,
+      [
+        nome.trim(),
+        responsavel || null,
+        telefone    || null,
+        whatsapp    || null,
+        email       || null,
+        endereco    || null,
+        logo !== undefined ? (logo || null) : undefined,
+        documento   || null,
+        oid(req),
+      ]
+    );
+
+    // Se o responsável foi alterado, atualiza também na tabela de usuários
+    // (para refletir na saudação do dashboard sem precisar fazer logout)
+    if (responsavel?.trim()) {
+      await run(
+        'UPDATE usuarios SET nome=$1 WHERE id=$2',
+        [responsavel.trim(), req.user.id]
+      );
+    }
+
+    res.json({ ok: true });
+  } catch(err){ log.error('app_put_config', err); res.status(500).json({ error: 'Erro interno' }); }
+});
+
 module.exports = router;

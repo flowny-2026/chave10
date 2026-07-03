@@ -291,6 +291,7 @@ router.get('/me', authMiddleware, async (req, res) => {
       data_vencimento: oficina.data_vencimento,
       status_assinatura: oficina.status_assinatura,
       plano: oficina.plano,
+      responsavel: oficina.responsavel || usuario.nome,
     });
   } catch (err) {
     log.error('auth_me', err);

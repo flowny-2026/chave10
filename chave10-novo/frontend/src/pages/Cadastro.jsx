@@ -447,7 +447,7 @@ export default function Cadastro() {
             )}
 
             <form onSubmit={handleCadastroSubmit}>
-              <FormInput label="Nome completo" name="nome" value={formPessoal.values.nome} error={formPessoal.errors.nome} touched={formPessoal.touched.nome} onChange={formPessoal.handleChange} onBlur={formPessoal.handleBlur} placeholder="Seu nome completo" required />
+              <FormInput label="Nome completo do responsável" name="nome" value={formPessoal.values.nome} error={formPessoal.errors.nome} touched={formPessoal.touched.nome} onChange={formPessoal.handleChange} onBlur={formPessoal.handleBlur} placeholder="Seu nome e sobrenome" required />
               <FormInput label="E-mail" name="email" type="email" value={formPessoal.values.email} error={formPessoal.errors.email} touched={formPessoal.touched.email} onChange={formPessoal.handleChange} onBlur={formPessoal.handleBlur} placeholder="seu@email.com" required />
               <FormInput label="Senha" name="senha" type="password" value={formPessoal.values.senha} error={formPessoal.errors.senha} touched={formPessoal.touched.senha} onChange={formPessoal.handleChange} onBlur={formPessoal.handleBlur} placeholder="Mínimo 6 caracteres" helpText="Use letras, números e símbolos para maior segurança" required />
               <FormInput label="Confirmar senha" name="confirmarSenha" type="password" value={formPessoal.values.confirmarSenha} error={formPessoal.errors.confirmarSenha} touched={formPessoal.touched.confirmarSenha} onChange={formPessoal.handleChange} onBlur={formPessoal.handleBlur} placeholder="Digite a senha novamente" required />

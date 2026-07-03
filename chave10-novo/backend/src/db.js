@@ -217,6 +217,7 @@ async function initDB() {
   // Migration: adiciona logo e endereco em oficinas se não existir
   await pool.query(`ALTER TABLE oficinas ADD COLUMN IF NOT EXISTS logo TEXT;`).catch(() => {});
   await pool.query(`ALTER TABLE oficinas ADD COLUMN IF NOT EXISTS endereco TEXT;`).catch(() => {});
+  await pool.query(`ALTER TABLE oficinas ADD COLUMN IF NOT EXISTS whatsapp TEXT;`).catch(() => {});
 
   // ── ÍNDICES para performance ──────────────────────────────
   const indices = [

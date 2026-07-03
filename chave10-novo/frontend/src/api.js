@@ -128,6 +128,10 @@ export const api = {
   },
   app: {
     dashboard: ()                    => get('/app/dashboard'),
+    config: {
+      get:     ()                    => get('/app/config'),
+      save:    (data)                => put('/app/config', data),
+    },
     clientes: {
       list:    (q)                   => get('/app/clientes' + (q ? '?q='+encodeURIComponent(q) : '')),
       create:  (data)                => post('/app/clientes', data),

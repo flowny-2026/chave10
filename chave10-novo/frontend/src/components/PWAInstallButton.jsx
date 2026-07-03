@@ -12,28 +12,40 @@ export default function PWAInstallButton() {
   const [installing, setInstalling] = useState(false);
 
   useEffect(() => {
-    // Se o usuário já instalou, não mostra mais
-    const jaInstalou = localStorage.getItem('c10_pwa_installed');
-    if (jaInstalou) return;
+    // Verifica se já está rodando como PWA instalado (todas as formas possíveis)
+    const checkInstalled = () => {
+      return (
+        window.matchMedia('(display-mode: standalone)').matches ||
+        window.matchMedia('(display-mode: fullscreen)').matches ||
+        window.navigator.standalone === true ||
+        document.referrer.includes('android-app://') ||
+        localStorage.getItem('c10_pwa_installed') === '1'
+      );
+    };
 
-    // Verifica se já está rodando como PWA instalado
-    const isStandalone =
-      window.matchMedia('(display-mode: standalone)').matches ||
-      window.navigator.standalone === true;
-    if (isStandalone) {
+    if (checkInstalled()) {
       localStorage.setItem('c10_pwa_installed', '1');
       return;
     }
+
+    // Escuta mudança de display-mode (quando o app é instalado e reaberto)
+    const mql = window.matchMedia('(display-mode: standalone)');
+    const handleModeChange = (e) => {
+      if (e.matches) {
+        localStorage.setItem('c10_pwa_installed', '1');
+        setVisible(false);
+        setDeferredPrompt(null);
+      }
+    };
+    mql.addEventListener('change', handleModeChange);
 
     function handleBeforeInstall(e) {
       e.preventDefault();
       setDeferredPrompt(e);
       setVisible(true);
     }
-
     window.addEventListener('beforeinstallprompt', handleBeforeInstall);
 
-    // Detecta quando o app foi instalado via evento nativo
     window.addEventListener('appinstalled', () => {
       localStorage.setItem('c10_pwa_installed', '1');
       setVisible(false);
@@ -42,6 +54,7 @@ export default function PWAInstallButton() {
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+      mql.removeEventListener('change', handleModeChange);
     };
   }, []);
 
