@@ -447,13 +447,58 @@ export default function DashboardV2() {
       )}
 
       {/* ── GRID: GRÁFICO + MO/PEÇAS + OS RECENTES ────────── */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))',gap:16,marginBottom:24}}>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))',gap:16,marginBottom:24,alignItems:'start'}}>
         {!isFuncionario && (
-          <div className="modern-chart-card">
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+          <div className="modern-chart-card" style={{display:'flex',flexDirection:'column'}}>
+            {/* Header */}
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
               <span style={{fontSize:14,fontWeight:700,color:'var(--gray-800)'}}>📊 Faturamento mensal</span>
+              <span style={{fontSize:11,color:'#9ca3af'}}>{faturamentoMensal.length} meses</span>
             </div>
+
+            {/* Gráfico */}
             <ModernChart data={faturamentoMensal} />
+
+            {/* Resumo abaixo do gráfico */}
+            {(() => {
+              const comValor = faturamentoMensal.filter(d => (d.total||0) > 0);
+              if (!comValor.length) return null;
+              const melhor = comValor.reduce((a, b) => (b.total||0) > (a.total||0) ? b : a);
+              const totalAcum = comValor.reduce((s, d) => s + (d.total||0), 0);
+              const ultimo = faturamentoMensal[faturamentoMensal.length - 1]?.total || 0;
+              const penultimo = faturamentoMensal[faturamentoMensal.length - 2]?.total || 0;
+              const var_pct = penultimo > 0 ? ((ultimo - penultimo) / penultimo) * 100 : null;
+              return (
+                <div style={{
+                  marginTop:14,
+                  paddingTop:14,
+                  borderTop:'1px solid #f1f5f9',
+                  display:'grid',
+                  gridTemplateColumns:'1fr 1fr 1fr',
+                  gap:8,
+                }}>
+                  <div style={{textAlign:'center'}}>
+                    <div style={{fontSize:10,color:'#9ca3af',marginBottom:3,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.4px'}}>Acumulado</div>
+                    <div style={{fontSize:13,fontWeight:800,color:'#1f2937'}}>{fmt.currency(totalAcum).replace('R$ ','R$')}</div>
+                  </div>
+                  <div style={{textAlign:'center',borderLeft:'1px solid #f1f5f9',borderRight:'1px solid #f1f5f9'}}>
+                    <div style={{fontSize:10,color:'#9ca3af',marginBottom:3,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.4px'}}>Melhor mês</div>
+                    <div style={{fontSize:13,fontWeight:800,color:'#1f2937'}}>{melhor.mes}</div>
+                    <div style={{fontSize:10,color:'#F97316',fontWeight:600}}>{fmt.currency(melhor.total).replace('R$ ','')}</div>
+                  </div>
+                  <div style={{textAlign:'center'}}>
+                    <div style={{fontSize:10,color:'#9ca3af',marginBottom:3,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.4px'}}>vs mês ant.</div>
+                    {var_pct !== null ? (
+                      <div style={{fontSize:13,fontWeight:800,color: var_pct >= 0 ? '#16a34a' : '#dc2626'}}>
+                        {var_pct >= 0 ? '↗' : '↘'} {Math.abs(var_pct).toFixed(0)}%
+                      </div>
+                    ) : (
+                      <div style={{fontSize:12,color:'#9ca3af'}}>—</div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
 
