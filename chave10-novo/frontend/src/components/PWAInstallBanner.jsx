@@ -7,6 +7,12 @@ export default function PWAInstallBanner() {
   const [isDesktop, setIsDesktop] = useState(false);
 
   useEffect(() => {
+    // NÃO mostra o banner se estiver logado (área /app)
+    if (window.location.pathname.startsWith('/app')) {
+      console.log('[PWA] Usuário logado - banner desabilitado');
+      return;
+    }
+
     // Detecta se é desktop
     const checkDesktop = () => {
       const isDesktopDevice = window.innerWidth > 768 && 
