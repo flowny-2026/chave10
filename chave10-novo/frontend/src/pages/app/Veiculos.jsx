@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../../api';
 import { useLocalPagination } from '../../hooks/usePagination';
 import Pagination from '../../components/Pagination';
+import KPICard from '../../components/KPICard';
 
 const EMPTY = { marca: '', modelo: '', ano: '', placa: '', km: '', cliente_id: '' };
 
@@ -114,14 +115,55 @@ export default function AppVeiculos() {
   const STATUS_LABEL = { em_andamento: 'Em andamento', finalizado: 'Finalizado' };
   const STATUS_CLASS = { em_andamento: 'badge-orange', finalizado: 'badge-green' };
 
+  // Estatísticas dos veículos
+  const veiculosVinculados = allVeiculos.filter(v => v.cliente_id).length;
+  const veiculosComAno = allVeiculos.filter(v => v.ano).length;
+  const veiculosComKm = allVeiculos.filter(v => v.km).length;
+  const marcasUnicas = [...new Set(allVeiculos.map(v => v.marca).filter(Boolean))].length;
+
   return (
     <div>
-      <div className="page-header">
+      <div className="page-header" style={{marginBottom:24}}>
         <div>
           <div className="page-title">Veículos</div>
           <div className="page-subtitle">{totalItems} cadastrado(s){search && ` (${filteredVeiculos.length} encontrado(s))`}</div>
         </div>
         <button className="btn btn-primary" onClick={openCreate}>+ Novo Veículo</button>
+      </div>
+
+      {/* KPI Cards */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:16,marginBottom:24}}>
+        <KPICard
+          title="Total de Veículos"
+          value={allVeiculos.length}
+          subvalue="Cadastrados"
+          color="var(--brand)"
+          icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 10h3l3 6v5a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2v-1H6v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-5l3-6h3"/><rect x="5" y="6" width="14" height="4"/><circle cx="8.5" cy="18.5" r="1.5"/><circle cx="17.5" cy="18.5" r="1.5"/></svg>}
+        />
+        
+        <KPICard
+          title="Com Cliente"
+          value={veiculosVinculados}
+          subvalue={`${((veiculosVinculados/Math.max(allVeiculos.length,1))*100).toFixed(0)}% vinculados`}
+          color="var(--success)"
+          icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>}
+        />
+        
+        <KPICard
+          title="Marcas"
+          value={marcasUnicas}
+          subvalue="Diferentes"
+          color="#7c3aed"
+          icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><path d="M9 3v18"/><path d="M15 3v18"/></svg>}
+        />
+        
+        <KPICard
+          title="Com KM Registrada"
+          value={veiculosComKm}
+          subvalue={`${((veiculosComKm/Math.max(allVeiculos.length,1))*100).toFixed(0)}% do total`}
+          color="var(--info)"
+          icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>}
+        />
       </div>
 
       <div className="search-bar">

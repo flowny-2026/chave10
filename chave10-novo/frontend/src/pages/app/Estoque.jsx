@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api';
 import BarcodeScanner from '../../components/BarcodeScanner';
+import KPICard from '../../components/KPICard';
 
 const fmt = { currency: v => 'R$ ' + parseFloat(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.') };
 const EMPTY = { nome:'', categoria:'peca', tipo:'', marca:'', aplicacao:'', quantidade:'', estoque_min:'', preco:'', data_compra:'', obs:'' };
@@ -88,7 +89,7 @@ export default function AppEstoque() {
 
   return (
     <div>
-      <div className="page-header">
+      <div className="page-header" style={{marginBottom:24}}>
         <div><div className="page-title">Estoque & Patrimônio</div><div className="page-subtitle">{itens.length} item(ns) cadastrado(s)</div></div>
         <div style={{display:'flex',gap:8}}>
           {!isFuncionario && <button className={`btn ${view==='patrimonio'?'btn-primary':'btn-outline'} btn-sm`} onClick={()=>setView('patrimonio')}>📊 Patrimônio</button>}
@@ -101,6 +102,43 @@ export default function AppEstoque() {
           <button className="btn btn-primary" onClick={()=>openCreate('peca')}>+ Peça</button>
         </div>
       </div>
+
+      {/* KPI Cards */}
+      {!isFuncionario && (
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:16,marginBottom:24}}>
+          <KPICard
+            title="Valor Total"
+            value={fmt.currency(valTotal)}
+            subvalue="Patrimônio"
+            color="var(--accent)"
+            icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>}
+          />
+          
+          <KPICard
+            title="Peças"
+            value={pecas.length}
+            subvalue={fmt.currency(valPecas)}
+            color="var(--brand)"
+            icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m5.2-10.2l-5.2 5.2m0-5.2l5.2 5.2m-10.4 0l5.2-5.2m0 5.2l-5.2 5.2"/></svg>}
+          />
+          
+          <KPICard
+            title="Ferramentas"
+            value={ferr.length}
+            subvalue={fmt.currency(valFerr)}
+            color="#7c3aed"
+            icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>}
+          />
+          
+          <KPICard
+            title="Estoque Baixo"
+            value={baixo.length}
+            subvalue={`${zerado.length} zerados`}
+            color={baixo.length > 0 ? 'var(--danger)' : 'var(--success)'}
+            icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>}
+          />
+        </div>
+      )}
 
       {(baixo.length>0||zerado.length>0) && (
         <div className="estoque-alerta" style={{marginBottom:20}}>

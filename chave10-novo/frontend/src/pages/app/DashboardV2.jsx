@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../../api';
 import DashboardCustomizer, { DEFAULT_LAYOUT, AVAILABLE_WIDGETS } from '../../components/DashboardCustomizer';
 import PeriodFilter from '../../components/PeriodFilter';
+import WelcomeModal from '../../components/WelcomeModal';
+import OnboardingTour from '../../components/OnboardingTour';
+import { useOnboarding } from '../../hooks/useOnboarding';
 import '../../styles/dashboardPremium.css';
 
 const fmt = {
@@ -119,6 +122,18 @@ export default function DashboardV2() {
     };
   });
   
+  // Onboarding
+  const {
+    showWelcome,
+    tourActive,
+    currentStep,
+    startTour,
+    skipTour,
+    nextStep,
+    prevStep,
+    endTour,
+  } = useOnboarding();
+  
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -177,6 +192,18 @@ export default function DashboardV2() {
 
   return (
     <div>
+      {/* Onboarding Components */}
+      {showWelcome && <WelcomeModal onStartTour={startTour} onSkip={skipTour} />}
+      {tourActive && (
+        <OnboardingTour
+          isActive={tourActive}
+          currentStep={currentStep}
+          onNext={nextStep}
+          onPrev={prevStep}
+          onEnd={endTour}
+        />
+      )}
+
       {/* Header */}
       <div className="page-header" style={{marginBottom:28}}>
         <div>

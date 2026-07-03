@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { maskDocumento, maskPhone } from '../../utils/validation';
 import ImportarClientes from '../../components/ImportarClientes';
 import CepInput from '../../components/CepInput';
+import { useOnboarding } from '../../hooks/useOnboarding';
 
 const KEY = 'c10_oficina';
 function getOficina() { try { return JSON.parse(localStorage.getItem(KEY))||{}; } catch { return {}; } }
@@ -20,6 +21,7 @@ function F({ label, type = 'text', placeholder, value, onChange }) {
 export default function AppConfiguracoes() {
   const [of, setOf] = useState(getOficina);
   const [saved, setSaved] = useState(false);
+  const { resetOnboarding } = useOnboarding();
 
   function save(e) {
     e.preventDefault();
@@ -85,6 +87,28 @@ export default function AppConfiguracoes() {
       </div>
 
       <ImportarClientes onImportado={() => {}} />
+
+      {/* Seção de Ajuda */}
+      <div className="card" style={{maxWidth:720,marginTop:24}}>
+        <h3 style={{fontSize:18,fontWeight:700,color:'var(--gray-800)',marginBottom:16}}>
+          🎓 Ajuda e Tutorial
+        </h3>
+        <p style={{fontSize:14,color:'var(--gray-600)',marginBottom:20,lineHeight:1.6}}>
+          Quer rever como funciona o sistema? Refaça o tour guiado que mostra as principais funcionalidades.
+        </p>
+        <button 
+          className="btn btn-outline" 
+          onClick={() => {
+            resetOnboarding();
+            window.location.href = '/app/dashboard';
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{marginRight:8}}>
+            <polygon points="5 3 19 12 5 21 5 3"/>
+          </svg>
+          Refazer Tour Guiado
+        </button>
+      </div>
     </div>
   );
 }

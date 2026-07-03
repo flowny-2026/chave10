@@ -4,6 +4,7 @@ import { useLocalPagination } from '../../hooks/usePagination';
 import Pagination from '../../components/Pagination';
 import { maskPhone } from '../../utils/validation';
 import CepInput from '../../components/CepInput';
+import KPICard from '../../components/KPICard';
 
 const EMPTY = { nome: '', telefone: '', email: '', obs: '', endereco: '' };
 
@@ -89,14 +90,57 @@ export default function AppClientes() {
     setSearch(e.target.value);
   }
 
+  // Estatísticas dos clientes
+  const clientesComEmail = allClientes.filter(c => c.email).length;
+  const clientesComTelefone = allClientes.filter(c => c.telefone).length;
+  const clientesComEndereco = allClientes.filter(c => c.endereco).length;
+  const clientesCompletosPct = allClientes.length > 0 
+    ? ((clientesComEmail + clientesComTelefone + clientesComEndereco) / (allClientes.length * 3) * 100).toFixed(1) 
+    : 0;
+
   return (
     <div>
-      <div className="page-header">
+      <div className="page-header" style={{marginBottom:24}}>
         <div>
           <div className="page-title">Clientes</div>
           <div className="page-subtitle">{totalItems} cadastrado(s){search && ` (${filteredClientes.length} encontrado(s))`}</div>
         </div>
         <button className="btn btn-primary" onClick={openCreate}>+ Novo Cliente</button>
+      </div>
+
+      {/* KPI Cards */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:16,marginBottom:24}}>
+        <KPICard
+          title="Total de Clientes"
+          value={allClientes.length}
+          subvalue="Base cadastrada"
+          color="#7c3aed"
+          icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>}
+        />
+        
+        <KPICard
+          title="Com E-mail"
+          value={clientesComEmail}
+          subvalue={`${((clientesComEmail/Math.max(allClientes.length,1))*100).toFixed(0)}% do total`}
+          color="var(--info)"
+          icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>}
+        />
+        
+        <KPICard
+          title="Com Telefone"
+          value={clientesComTelefone}
+          subvalue={`${((clientesComTelefone/Math.max(allClientes.length,1))*100).toFixed(0)}% do total`}
+          color="var(--success)"
+          icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>}
+        />
+        
+        <KPICard
+          title="Cadastro Completo"
+          value={`${clientesCompletosPct}%`}
+          subvalue={`${clientesComEndereco} com endereço`}
+          color="var(--accent)"
+          icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>}
+        />
       </div>
 
       <div className="search-bar">
