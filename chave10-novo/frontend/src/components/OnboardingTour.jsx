@@ -11,7 +11,7 @@ const TOUR_STEPS = [
     id: 'welcome',
     title: 'Dashboard - Visão Geral',
     description: 'Este é o coração do sistema! Aqui você vê todas as métricas importantes da sua oficina em tempo real.',
-    target: null, // null = sem highlight, apenas tooltip central
+    target: null,
     position: 'center',
     highlightPadding: 0,
   },
@@ -19,7 +19,7 @@ const TOUR_STEPS = [
     id: 'kpi-cards',
     title: 'Métricas em Tempo Real',
     description: 'Estes cards mostram faturamento, OS finalizadas, clientes e outras métricas importantes. Atualizam automaticamente!',
-    target: '[class*="kpi-premium"]', // Primeiro KPI card
+    target: '[class*="kpi-premium"]',
     position: 'bottom',
     highlightPadding: 12,
   },
@@ -27,7 +27,7 @@ const TOUR_STEPS = [
     id: 'new-os-btn',
     title: 'Criar Ordem de Serviço',
     description: 'Clique aqui para criar uma nova OS rapidamente. É o botão mais usado do sistema!',
-    target: 'button.btn-primary', // Botão "Nova OS"
+    target: 'button.btn-primary',
     position: 'bottom',
     highlightPadding: 8,
   },
@@ -38,6 +38,7 @@ const TOUR_STEPS = [
     target: 'a[href="/app/clientes"]',
     position: 'right',
     highlightPadding: 8,
+    isSidebarItem: true,
   },
   {
     id: 'sidebar-veiculos',
@@ -46,6 +47,7 @@ const TOUR_STEPS = [
     target: 'a[href="/app/veiculos"]',
     position: 'right',
     highlightPadding: 8,
+    isSidebarItem: true,
   },
   {
     id: 'sidebar-os',
@@ -54,6 +56,7 @@ const TOUR_STEPS = [
     target: 'a[href="/app/os"]',
     position: 'right',
     highlightPadding: 8,
+    isSidebarItem: true,
   },
   {
     id: 'sidebar-financeiro',
@@ -62,6 +65,7 @@ const TOUR_STEPS = [
     target: 'a[href="/app/financeiro"]',
     position: 'right',
     highlightPadding: 8,
+    isSidebarItem: true,
   },
   {
     id: 'sidebar-estoque',
@@ -70,6 +74,7 @@ const TOUR_STEPS = [
     target: 'a[href="/app/estoque"]',
     position: 'right',
     highlightPadding: 8,
+    isSidebarItem: true,
   },
   {
     id: 'sidebar-config',
@@ -78,30 +83,57 @@ const TOUR_STEPS = [
     target: 'a[href="/app/configuracoes"]',
     position: 'right',
     highlightPadding: 8,
+    isSidebarItem: true,
   },
   {
     id: 'complete',
     title: 'Pronto para Começar! 🎉',
-    description: 'Você já conhece o básico! Agora é só começar a usar. Se precisar refazer este tour, vá em Configurações > Ajuda.',
+    description: 'Você já conhece o básico! Agora é só começar a usar. Se precisar refazer este tour, clique em "Tour guiado" no menu lateral.',
     target: null,
     position: 'center',
     highlightPadding: 0,
   },
 ];
 
+// Verifica se está no mobile (sidebar recolhida)
+function isMobile() {
+  return window.innerWidth < 768;
+}
+
+// Abre ou fecha a sidebar no mobile manipulando o estado do Layout
+// A sidebar tem a classe .open quando está aberta
+function setSidebarOpen(open) {
+  const sidebar = document.querySelector('.sidebar');
+  const overlay = document.querySelector('.sidebar-overlay');
+  if (!sidebar) return;
+  if (open) {
+    sidebar.classList.add('open');
+    if (overlay) overlay.classList.add('open');
+  } else {
+    sidebar.classList.remove('open');
+    if (overlay) overlay.classList.remove('open');
+  }
+}
+
 export default function OnboardingTour({ isActive, currentStep, onNext, onPrev, onEnd }) {
   const [highlightRect, setHighlightRect] = useState(null);
   const [tooltipStyle, setTooltipStyle] = useState({});
+  const mobile = typeof window !== 'undefined' && isMobile();
 
   const step = TOUR_STEPS[currentStep];
   const isLastStep = currentStep === TOUR_STEPS.length - 1;
   const isFirstStep = currentStep === 0;
 
   const calculateTooltipPosition = useCallback((rect, position) => {
+    // No mobile, o tooltip sempre vai para baixo fixo (bottom sheet)
+    if (isMobile()) {
+      setTooltipStyle({ position: 'fixed', bottom: 0, left: 0, right: 0 });
+      return;
+    }
+
     const tooltipWidth = 360;
     const tooltipHeight = 200;
     const gap = 16;
-
     let style = {};
 
     switch (position) {
@@ -152,13 +184,18 @@ export default function OnboardingTour({ isActive, currentStep, onNext, onPrev, 
   useEffect(() => {
     if (!isActive || !step) return;
 
+    const mobile = isMobile();
+
+    // Se é um item de sidebar no mobile, abrir a sidebar primeiro
+    if (step.isSidebarItem && mobile) {
+      setSidebarOpen(true);
+    }
+
     if (step.target) {
       const element = document.querySelector(step.target);
       if (element) {
-        // Scroll suave até o elemento antes de calcular posição
         element.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-        // Aguarda o scroll terminar para calcular a posição correta
         const timeout = setTimeout(() => {
           const rect = element.getBoundingClientRect();
           const padding = step.highlightPadding || 8;
@@ -171,46 +208,57 @@ export default function OnboardingTour({ isActive, currentStep, onNext, onPrev, 
           });
 
           calculateTooltipPosition(rect, step.position);
-        }, 350);
+        }, 400);
 
         return () => clearTimeout(timeout);
       } else {
+        // Elemento não encontrado — mostra tooltip central
         setHighlightRect(null);
-        setTooltipStyle({
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          position: 'fixed',
-        });
+        setTooltipStyle(
+          isMobile()
+            ? { position: 'fixed', bottom: 0, left: 0, right: 0 }
+            : { top: '50%', left: '50%', transform: 'translate(-50%, -50%)', position: 'fixed' }
+        );
       }
     } else {
       // Step central sem target
       setHighlightRect(null);
-      setTooltipStyle({
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        position: 'fixed',
-      });
+      setTooltipStyle(
+        isMobile()
+          ? { position: 'fixed', bottom: 0, left: 0, right: 0 }
+          : { top: '50%', left: '50%', transform: 'translate(-50%, -50%)', position: 'fixed' }
+      );
     }
+
+    // Cleanup: fecha sidebar se o próximo step não precisar dela
+    return () => {
+      const nextStep = TOUR_STEPS[currentStep + 1];
+      if (step.isSidebarItem && mobile && (!nextStep || !nextStep.isSidebarItem)) {
+        setSidebarOpen(false);
+      }
+    };
   }, [isActive, currentStep, step, calculateTooltipPosition]);
+
+  // Fechar sidebar ao encerrar o tour no mobile
+  const handleEnd = useCallback(() => {
+    if (isMobile()) setSidebarOpen(false);
+    onEnd();
+  }, [onEnd]);
 
   if (!isActive) return null;
 
   const vw = window.innerWidth;
   const vh = window.innerHeight;
 
-  // SVG com recorte (clip) na área do elemento destacado
   const renderBackdrop = () => {
     if (!highlightRect) {
-      // Sem highlight: backdrop sólido
       return (
         <svg
           className="tour-svg-backdrop"
           width={vw}
           height={vh}
           viewBox={`0 0 ${vw} ${vh}`}
-          onClick={onEnd}
+          onClick={handleEnd}
         >
           <rect width={vw} height={vh} fill="rgba(0,0,0,0.75)" />
         </svg>
@@ -218,7 +266,7 @@ export default function OnboardingTour({ isActive, currentStep, onNext, onPrev, 
     }
 
     const { top, left, width, height } = highlightRect;
-    const r = 8; // border-radius do recorte
+    const r = 8;
 
     return (
       <svg
@@ -226,39 +274,18 @@ export default function OnboardingTour({ isActive, currentStep, onNext, onPrev, 
         width={vw}
         height={vh}
         viewBox={`0 0 ${vw} ${vh}`}
-        onClick={onEnd}
+        onClick={handleEnd}
       >
         <defs>
           <mask id="tour-cutout">
-            {/* Tudo branco = visível */}
             <rect width={vw} height={vh} fill="white" />
-            {/* Recorte preto = transparente (mostra o elemento real) */}
-            <rect
-              x={left}
-              y={top}
-              width={width}
-              height={height}
-              rx={r}
-              ry={r}
-              fill="black"
-            />
+            <rect x={left} y={top} width={width} height={height} rx={r} ry={r} fill="black" />
           </mask>
         </defs>
-        {/* Backdrop com buraco no elemento */}
+        <rect width={vw} height={vh} fill="rgba(0,0,0,0.75)" mask="url(#tour-cutout)" />
         <rect
-          width={vw}
-          height={vh}
-          fill="rgba(0,0,0,0.75)"
-          mask="url(#tour-cutout)"
-        />
-        {/* Borda de destaque animada ao redor do recorte */}
-        <rect
-          x={left}
-          y={top}
-          width={width}
-          height={height}
-          rx={r}
-          ry={r}
+          x={left} y={top} width={width} height={height}
+          rx={r} ry={r}
           fill="none"
           stroke="var(--accent, #F97316)"
           strokeWidth="2.5"
@@ -268,21 +295,22 @@ export default function OnboardingTour({ isActive, currentStep, onNext, onPrev, 
     );
   };
 
+  // Detecta se o tooltip é mobile bottom sheet
+  const isMobileSheet = tooltipStyle.bottom === 0;
+
   return (
     <div className="onboarding-tour-overlay">
-      {/* Backdrop SVG com recorte real */}
       {renderBackdrop()}
 
-      {/* Tooltip com conteúdo */}
       <div
-        className={`tour-tooltip ${step.position === 'center' ? 'center' : ''}`}
+        className={`tour-tooltip ${step.position === 'center' && !isMobileSheet ? 'center' : ''} ${isMobileSheet ? 'mobile-sheet' : ''}`}
         style={tooltipStyle}
       >
         <div className="tour-tooltip-header">
           <div className="tour-step-indicator">
             Passo {currentStep + 1} de {TOUR_STEPS.length}
           </div>
-          <button className="tour-close-btn" onClick={onEnd} title="Fechar tour">
+          <button className="tour-close-btn" onClick={handleEnd} title="Fechar tour">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="18" y1="6" x2="6" y2="18"/>
               <line x1="6" y1="6" x2="18" y2="18"/>
@@ -312,12 +340,12 @@ export default function OnboardingTour({ isActive, currentStep, onNext, onPrev, 
               </button>
             )}
 
-            <button className="btn btn-outline btn-sm" onClick={onEnd}>
-              Pular tour
+            <button className="btn btn-outline btn-sm" onClick={handleEnd}>
+              Pular
             </button>
 
             {isLastStep ? (
-              <button className="btn btn-primary btn-sm" onClick={onEnd}>
+              <button className="btn btn-primary btn-sm" onClick={handleEnd}>
                 ✓ Concluir
               </button>
             ) : (

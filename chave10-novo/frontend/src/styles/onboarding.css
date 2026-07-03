@@ -359,16 +359,70 @@
     width: 100%;
   }
 
-  .tour-tooltip {
-    width: calc(100vw - 32px);
+  /* Tooltip mobile: bottom sheet fixo */
+  .tour-tooltip.mobile-sheet {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: auto !important;
+    transform: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.25);
+    animation: slideUpSheet 0.3s ease;
   }
 
-  .tour-actions {
-    flex-direction: column;
+  @keyframes slideUpSheet {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
   }
 
-  .tour-actions button {
-    width: 100%;
+  .tour-tooltip.mobile-sheet .tour-tooltip-body {
+    padding: 12px 16px;
+  }
+
+  .tour-tooltip.mobile-sheet .tour-title {
+    font-size: 15px;
+    margin-bottom: 4px;
+  }
+
+  .tour-tooltip.mobile-sheet .tour-description {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .tour-tooltip.mobile-sheet .tour-tooltip-header {
+    padding: 12px 16px 10px;
+  }
+
+  .tour-tooltip.mobile-sheet .tour-tooltip-footer {
+    padding: 8px 16px 20px;
+  }
+
+  /* Progresso compacto */
+  .tour-tooltip.mobile-sheet .tour-progress {
+    margin-bottom: 8px;
+  }
+
+  /* Ações em linha no mobile sheet */
+  .tour-tooltip.mobile-sheet .tour-actions {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .tour-tooltip.mobile-sheet .tour-actions .btn-ghost {
+    flex: 0 0 auto;
+  }
+
+  .tour-tooltip.mobile-sheet .tour-actions .btn-outline {
+    flex: 0 0 auto;
+  }
+
+  .tour-tooltip.mobile-sheet .tour-actions .btn-primary {
+    flex: 1;
+    margin-left: 8px;
   }
 }
 
