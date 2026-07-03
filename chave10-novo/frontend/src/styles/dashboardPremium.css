@@ -623,3 +623,230 @@
     align-self: flex-start;
   }
 }
+
+/* ══════════════════════════════════════════
+   SAUDAÇÃO INTELIGENTE
+══════════════════════════════════════════ */
+.dash-greeting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, var(--brand) 0%, #2d5a8e 100%);
+  border-radius: 16px;
+  color: #fff;
+}
+
+.dash-greeting-title {
+  font-family: 'Poppins', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.dash-greeting-msg {
+  font-size: 13px;
+  color: rgba(255,255,255,0.82);
+  line-height: 1.4;
+}
+
+.dash-nova-os-btn {
+  white-space: nowrap;
+  flex-shrink: 0;
+  background: #fff !important;
+  color: var(--brand) !important;
+  border-color: transparent !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+.dash-nova-os-btn:hover {
+  background: rgba(255,255,255,0.9) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.2) !important;
+}
+
+/* ══════════════════════════════════════════
+   PAINEL DO DIA
+══════════════════════════════════════════ */
+.painel-do-dia {
+  background: #fff;
+  border: 1px solid var(--gray-200);
+  border-radius: 16px;
+  margin-bottom: 20px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+
+.painel-do-dia-header {
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.painel-do-dia-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--gray-800);
+}
+
+.painel-badge {
+  background: #dc2626;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 99px;
+  line-height: 1.4;
+}
+
+.painel-do-dia-items {
+  padding: 8px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Item individual do painel */
+.painel-item {
+  border-radius: 10px;
+  border: 1px solid transparent;
+  overflow: hidden;
+  transition: border-color .2s;
+}
+
+.painel-item:hover {
+  border-color: color-mix(in srgb, var(--pi-color) 30%, transparent);
+}
+
+.painel-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+  background: color-mix(in srgb, var(--pi-color) 6%, #fff);
+  transition: background .15s;
+}
+
+.painel-item-header:hover {
+  background: color-mix(in srgb, var(--pi-color) 12%, #fff);
+}
+
+.painel-item-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.painel-item-emoji {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.painel-item-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-800);
+  line-height: 1.3;
+}
+
+.painel-item-count {
+  font-size: 11px;
+  color: var(--pi-color);
+  font-weight: 700;
+  margin-top: 1px;
+}
+
+.painel-item-action {
+  background: var(--pi-color);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity .15s;
+  flex-shrink: 0;
+}
+
+.painel-item-action:hover { opacity: .85; }
+
+.painel-item-body {
+  padding: 8px 12px 10px;
+  background: var(--gray-50);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px solid var(--gray-100);
+}
+
+.painel-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.painel-row-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.painel-row-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-800);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.painel-row-sub {
+  font-size: 11px;
+  color: var(--gray-400);
+}
+
+.painel-row-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════
+   KPI COMPACTO (tamanho reduzido)
+══════════════════════════════════════════ */
+.kpi-premium .kpi-icon-wrap {
+  width: 44px;
+  height: 44px;
+}
+
+/* ══════════════════════════════════════════
+   RESPONSIVE DASHBOARD
+══════════════════════════════════════════ */
+@media (max-width: 640px) {
+  .dash-greeting {
+    padding: 16px;
+    border-radius: 12px;
+  }
+  .dash-greeting-title { font-size: 17px; }
+  .dash-greeting-msg   { font-size: 12px; }
+  .dash-nova-os-btn    { padding: 8px 14px; font-size: 13px; }
+
+  .painel-do-dia       { border-radius: 12px; }
+  .painel-item-header  { padding: 9px 10px; }
+  .painel-item-label   { font-size: 12px; }
+}
