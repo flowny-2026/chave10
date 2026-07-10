@@ -1,9 +1,9 @@
-const { exec } = require('child_process');
+const { exec, execFile } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const { promisify } = require('util');
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 // Configurações de backup
 const BACKUP_DIR = path.join(__dirname, '../../backups');
@@ -57,6 +57,7 @@ function cleanOldBackups() {
 
 /**
  * Realiza backup do banco PostgreSQL
+ * Usa execFile (não shell) para evitar command injection via DATABASE_URL.
  */
 async function backupDatabase() {
   try {
@@ -71,10 +72,9 @@ async function backupDatabase() {
 
     console.log('🔄 Iniciando backup do banco de dados...');
 
-    // Usa pg_dump para fazer backup
-    const command = `pg_dump "${databaseUrl}" > "${backupFile}"`;
-    
-    await execAsync(command);
+    // execFile com array de argumentos — sem interpolação de shell, sem command injection.
+    // pg_dump escreve diretamente em arquivo via flag -f.
+    await execFileAsync('pg_dump', [databaseUrl, '-f', backupFile]);
 
     // Verifica se o arquivo foi criado
     if (fs.existsSync(backupFile)) {
@@ -87,7 +87,7 @@ async function backupDatabase() {
       
       return {
         success: true,
-        file: backupFile,
+        file: path.basename(backupFile), // retorna apenas o nome, sem caminho absoluto
         size: stats.size
       };
     } else {
@@ -104,7 +104,7 @@ async function backupDatabase() {
 
 /**
  * Restaura backup do banco de dados
- * @param {string} backupFileName - Nome do arquivo de backup
+ * @param {string} backupFileName - Nome do arquivo de backup (sem caminho)
  */
 async function restoreDatabase(backupFileName) {
   try {
@@ -122,16 +122,14 @@ async function restoreDatabase(backupFileName) {
 
     console.log(`🔄 Restaurando backup: ${backupFileName}...`);
 
-    // Usa psql para restaurar backup
-    const command = `psql "${databaseUrl}" < "${backupFile}"`;
-    
-    await execAsync(command);
+    // execFile com array de argumentos — sem interpolação de shell, sem command injection.
+    await execFileAsync('psql', [databaseUrl, '-f', backupFile]);
 
     console.log('✅ Backup restaurado com sucesso');
     
     return {
       success: true,
-      file: backupFile
+      file: backupFileName
     };
   } catch (error) {
     console.error('❌ Erro ao restaurar backup:', error.message);

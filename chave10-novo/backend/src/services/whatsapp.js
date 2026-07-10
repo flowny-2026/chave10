@@ -99,10 +99,10 @@ async function sendApprovalLink({ phoneNumber, budgetData, approvalLink }) {
       return { success: false, error: 'timeout' };
     }
     if (error.response) {
+      // Não repassa detalhes da API externa — pode conter informações sensíveis
       return {
         success: false,
-        error: 'api_error',
-        details: error.response.data
+        error: 'api_error'
       };
     }
 

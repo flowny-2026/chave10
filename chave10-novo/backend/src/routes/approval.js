@@ -1,7 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { authenticate } = require('../middleware/auth');
+const rateLimit = require('express-rate-limit');
+const { authMiddleware } = require('../middleware/auth');
 const { query, queryOne } = require('../db');
+const log = require('../utils/logger');
+const { validateId } = require('../middleware/validate');
 const {
   generateApprovalLink,
   validateApprovalLink,
@@ -15,14 +18,18 @@ const { sendApprovalLink, isValidPhoneNumber } = require('../services/whatsapp')
 // ────────────────────────────────────────────────────────────────
 // AUTHENTICATED ROUTES (Workshop users)
 // ────────────────────────────────────────────────────────────────
-
 /**
  * POST /api/approval/orcamentos/:id/link
  * Generate approval link for a budget
  */
-router.post('/orcamentos/:id/link', authenticate, async (req, res) => {
-  const orcamento_id = parseInt(req.params.id);
-  const { validityHours = 168, sendViaWhatsApp = false } = req.body;
+router.post('/orcamentos/:id/link', authMiddleware, validateId, async (req, res) => {
+  const orcamento_id = req.params.id; // já validado como inteiro positivo pelo validateId
+  const rawHours = req.body?.validityHours;
+  const validityHours = rawHours !== undefined ? parseInt(rawHours, 10) : 168;
+  if (isNaN(validityHours) || validityHours < 1 || validityHours > 2160) {
+    return res.status(400).json({ error: 'validityHours deve ser entre 1 e 2160' });
+  }
+  const sendViaWhatsApp = req.body?.sendViaWhatsApp === true;
   const user = req.user;
 
   try {
@@ -127,8 +134,8 @@ router.post('/orcamentos/:id/link', authenticate, async (req, res) => {
       whatsappError
     });
   } catch (error) {
-    console.error('Error generating approval link:', error);
-    res.status(500).json({ error: error.message || 'Erro ao gerar link' });
+    log.error('approval_generate_link', error);
+    res.status(500).json({ error: 'Erro ao gerar link' });
   }
 });
 
@@ -136,9 +143,13 @@ router.post('/orcamentos/:id/link', authenticate, async (req, res) => {
  * POST /api/approval/orcamentos/:id/regenerate-link
  * Regenerate approval link for a budget
  */
-router.post('/orcamentos/:id/regenerate-link', authenticate, async (req, res) => {
-  const orcamento_id = parseInt(req.params.id);
-  const { validityHours = 168 } = req.body;
+router.post('/orcamentos/:id/regenerate-link', authMiddleware, validateId, async (req, res) => {
+  const orcamento_id = req.params.id; // já validado como inteiro positivo
+  const rawHours = req.body?.validityHours;
+  const validityHours = rawHours !== undefined ? parseInt(rawHours, 10) : 168;
+  if (isNaN(validityHours) || validityHours < 1 || validityHours > 2160) {
+    return res.status(400).json({ error: 'validityHours deve ser entre 1 e 2160' });
+  }
   const user = req.user;
 
   try {
@@ -183,8 +194,8 @@ router.post('/orcamentos/:id/regenerate-link', authenticate, async (req, res) =>
       expiresAt: linkData.expiresAt
     });
   } catch (error) {
-    console.error('Error regenerating link:', error);
-    res.status(500).json({ error: error.message || 'Erro ao regenerar link' });
+    log.error('approval_regenerate_link', error);
+    res.status(500).json({ error: 'Erro ao regenerar link' });
   }
 });
 
@@ -192,8 +203,8 @@ router.post('/orcamentos/:id/regenerate-link', authenticate, async (req, res) =>
  * GET /api/approval/orcamentos/:id/stats
  * Get approval statistics for a budget
  */
-router.get('/orcamentos/:id/stats', authenticate, async (req, res) => {
-  const orcamento_id = parseInt(req.params.id);
+router.get('/orcamentos/:id/stats', authMiddleware, validateId, async (req, res) => {
+  const orcamento_id = req.params.id; // já validado como inteiro positivo
   const user = req.user;
 
   try {
@@ -210,9 +221,20 @@ router.get('/orcamentos/:id/stats', authenticate, async (req, res) => {
     const stats = await getApprovalStats(orcamento_id);
     res.json(stats);
   } catch (error) {
-    console.error('Error fetching approval stats:', error);
+    log.error('approval_get_stats', error);
     res.status(500).json({ error: 'Erro ao buscar estatísticas' });
   }
+});
+
+// ────────────────────────────────────────────────────────────────
+// RATE LIMIT para rotas públicas de aprovação (clientes externos)
+// ────────────────────────────────────────────────────────────────
+const publicApprovalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 30,                   // máx 30 acessos por IP (GET + POST de aprovação/rejeição)
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Muitas requisições. Tente novamente em 15 minutos.' },
 });
 
 // ────────────────────────────────────────────────────────────────
@@ -223,10 +245,16 @@ router.get('/orcamentos/:id/stats', authenticate, async (req, res) => {
  * GET /api/approval/public/:token
  * Get budget details for client approval (public endpoint)
  */
-router.get('/public/:token', async (req, res) => {
+router.get('/public/:token', publicApprovalLimiter, async (req, res) => {
   const { token } = req.params;
-  const ipAddress = req.ip || req.connection.remoteAddress;
-  const userAgent = req.get('user-agent');
+
+  // Valida formato do token antes de consultar o banco
+  if (!token || typeof token !== 'string' || !/^[A-Za-z0-9_-]{32,64}$/.test(token)) {
+    return res.status(400).json({ valid: false, error: 'invalid_format', message: 'Link inválido' });
+  }
+
+  const ipAddress = req.ip;
+  const userAgent = req.get('user-agent')?.slice(0, 256); // limita tamanho do UA
 
   try {
     const validation = await validateApprovalLink(token, ipAddress, userAgent);
@@ -303,14 +331,16 @@ router.get('/public/:token', async (req, res) => {
     try {
       servicos = budget.servicos ? JSON.parse(budget.servicos) : [];
     } catch (e) {
-      console.error('Error parsing servicos:', e);
+      log.warn('approval_parse_servicos', { orcamento_id: link.orcamento_id });
+      servicos = [];
     }
 
     try {
       pecas = budget.pecas_itens ? JSON.parse(budget.pecas_itens) : 
               (budget.pecas ? JSON.parse(budget.pecas) : []);
     } catch (e) {
-      console.error('Error parsing pecas:', e);
+      log.warn('approval_parse_pecas', { orcamento_id: link.orcamento_id });
+      pecas = [];
     }
 
     const total = (budget.valor_mo || 0) + (budget.valor_pecas || 0) - (budget.desconto || 0);
@@ -350,7 +380,7 @@ router.get('/public/:token', async (req, res) => {
       expiresAt: link.expires_at
     });
   } catch (error) {
-    console.error('Error fetching budget for approval:', error);
+    log.error('approval_get_public', error);
     res.status(500).json({ error: 'Erro ao buscar orçamento' });
   }
 });
@@ -359,10 +389,24 @@ router.get('/public/:token', async (req, res) => {
  * POST /api/approval/public/:token/approve
  * Process budget approval (public endpoint)
  */
-router.post('/public/:token/approve', async (req, res) => {
+router.post('/public/:token/approve', publicApprovalLimiter, async (req, res) => {
   const { token } = req.params;
-  const { signature } = req.body;
-  const ipAddress = req.ip || req.connection.remoteAddress;
+
+  // Valida formato do token
+  if (!token || typeof token !== 'string' || !/^[A-Za-z0-9_-]{32,64}$/.test(token)) {
+    return res.status(400).json({ error: 'invalid_format', message: 'Link inválido' });
+  }
+
+  // Valida assinatura se presente
+  let signature = null;
+  if (req.body?.signature !== undefined) {
+    if (typeof req.body.signature !== 'string') {
+      return res.status(400).json({ error: 'invalid_signature_format', message: 'Formato de assinatura inválido' });
+    }
+    signature = req.body.signature;
+  }
+
+  const ipAddress = req.ip;
 
   try {
     const result = await approveBudget(token, signature, ipAddress);
@@ -398,7 +442,7 @@ router.post('/public/:token/approve', async (req, res) => {
 
     res.json(result);
   } catch (error) {
-    console.error('Error approving budget:', error);
+    log.error('approval_approve_budget', error);
     res.status(500).json({ error: 'Erro ao aprovar orçamento' });
   }
 });
@@ -407,10 +451,24 @@ router.post('/public/:token/approve', async (req, res) => {
  * POST /api/approval/public/:token/reject
  * Process budget rejection (public endpoint)
  */
-router.post('/public/:token/reject', async (req, res) => {
+router.post('/public/:token/reject', publicApprovalLimiter, async (req, res) => {
   const { token } = req.params;
-  const { reason } = req.body;
-  const ipAddress = req.ip || req.connection.remoteAddress;
+
+  // Valida formato do token
+  if (!token || typeof token !== 'string' || !/^[A-Za-z0-9_-]{32,64}$/.test(token)) {
+    return res.status(400).json({ error: 'invalid_format', message: 'Link inválido' });
+  }
+
+  // Valida e sanitiza motivo
+  let reason = null;
+  if (req.body?.reason !== undefined) {
+    if (typeof req.body.reason !== 'string') {
+      return res.status(400).json({ error: 'reason deve ser uma string' });
+    }
+    reason = req.body.reason.replace(/<[^>]*>/g, '').trim().slice(0, 500) || null;
+  }
+
+  const ipAddress = req.ip;
 
   try {
     const result = await rejectBudget(token, reason, ipAddress);
@@ -437,7 +495,7 @@ router.post('/public/:token/reject', async (req, res) => {
 
     res.json(result);
   } catch (error) {
-    console.error('Error rejecting budget:', error);
+    log.error('approval_reject_budget', error);
     res.status(500).json({ error: 'Erro ao recusar orçamento' });
   }
 });

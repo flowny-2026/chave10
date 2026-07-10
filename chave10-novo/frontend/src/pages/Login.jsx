@@ -277,12 +277,11 @@ export default function Login() {
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
   function afterLogin(token, usuario) {
-    // Usa funções robustas de storage que funcionam em mobile
     saveToken(token);
     saveUser(usuario);
-    
-    console.log('✅ Login bem-sucedido, dados salvos com persistência mobile');
-    
+    // Garante que não sobra token temporário de cadastros anteriores
+    localStorage.removeItem('c10_token_temp');
+    sessionStorage.removeItem('c10_token_temp');
     setShowLoader(true);
     setTimeout(() => {
       if (usuario.perfil === 'master_admin') navigate('/admin/dashboard');
@@ -295,11 +294,21 @@ export default function Login() {
     setErro('');
     setLoading(true);
     try {
-      const { token, usuario } = await api.auth.login(email, senha);
-      afterLogin(token, usuario);
+      const result = await api.auth.login(email, senha);
+      // Backend pode retornar needsOficina se a oficina foi deletada
+      if (result.needsOficina) {
+        saveToken(result.token);
+        navigate('/cadastro?step=2');
+        return;
+      }
+      afterLogin(result.token, result.usuario);
     } catch (err) {
       setLoading(false);
       if (err.error === 'blocked' || err.error === 'overdue') navigate('/bloqueado');
+      else if (err.needsOficina) { saveToken(err.token); navigate('/cadastro?step=2'); }
+      else setErro(err.error || 'Credenciais inválidas');
+    }
+  }
       else setErro(err.error || 'Credenciais inválidas');
     }
   }
@@ -310,7 +319,9 @@ export default function Login() {
     try {
       const result = await api.auth.googleLogin(credential);
       if (result.needsOficina) {
-        localStorage.setItem('c10_token_temp', result.token);
+        // Usa saveToken para garantir persistência em mobile
+        saveToken(result.token);
+        localStorage.setItem('c10_token_temp', result.token); // compatibilidade com Cadastro.jsx
         navigate('/cadastro?step=2');
         return;
       }

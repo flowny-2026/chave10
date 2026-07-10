@@ -3,7 +3,12 @@ const bcrypt = require('bcryptjs');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  // Em produção: exige certificado SSL válido (evita MITM).
+  // Para provedores com certificado auto-assinado (ex.: Railway, Supabase), defina
+  // DATABASE_SSL_REJECT_UNAUTHORIZED=false no .env apenas após validar a CA manualmente.
+  ssl: process.env.NODE_ENV === 'production'
+    ? { rejectUnauthorized: process.env.DATABASE_SSL_REJECT_UNAUTHORIZED !== 'false' }
+    : false,
   // Otimização: limita conexões para não estourar o plano free
   max: 10,                    // máx 10 conexões simultâneas (free tier suporta ~20)
   idleTimeoutMillis: 30000,   // fecha conexão ociosa após 30s
@@ -209,12 +214,92 @@ async function initDB() {
     );
   `);
 
+  // ── Migrations de features adicionais ───────────────────────
+  // Tabelas do módulo de aprovação de orçamentos via link
+  // Incluídas aqui para garantir que o banco esteja completo sem migration manual obrigatória.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS approval_links (
+      id SERIAL PRIMARY KEY,
+      oficina_id INTEGER NOT NULL REFERENCES oficinas(id) ON DELETE CASCADE,
+      orcamento_id INTEGER NOT NULL REFERENCES orcamentos(id) ON DELETE CASCADE,
+      token TEXT NOT NULL UNIQUE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      expires_at TIMESTAMPTZ NOT NULL,
+      sent_at TIMESTAMPTZ,
+      invalidated_at TIMESTAMPTZ,
+      access_count INTEGER DEFAULT 0,
+      first_accessed_at TIMESTAMPTZ,
+      last_accessed_at TIMESTAMPTZ
+    );
+  `).catch(() => {});
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS approval_link_accesses (
+      id SERIAL PRIMARY KEY,
+      link_id INTEGER NOT NULL REFERENCES approval_links(id) ON DELETE CASCADE,
+      accessed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      ip_address INET,
+      user_agent TEXT
+    );
+  `).catch(() => {});
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS approval_actions (
+      id SERIAL PRIMARY KEY,
+      oficina_id INTEGER NOT NULL REFERENCES oficinas(id) ON DELETE CASCADE,
+      orcamento_id INTEGER NOT NULL REFERENCES orcamentos(id) ON DELETE CASCADE,
+      link_id INTEGER REFERENCES approval_links(id) ON DELETE SET NULL,
+      action_type TEXT NOT NULL CHECK(action_type IN (
+        'link_generated','link_sent','link_accessed','approved','rejected','expired','regenerated'
+      )),
+      performed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      performed_by_user_id INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+      client_ip_address INET,
+      metadata JSONB,
+      link_token TEXT
+    );
+  `).catch(() => {});
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS budget_signatures (
+      id SERIAL PRIMARY KEY,
+      oficina_id INTEGER NOT NULL REFERENCES oficinas(id) ON DELETE CASCADE,
+      orcamento_id INTEGER NOT NULL REFERENCES orcamentos(id) ON DELETE CASCADE,
+      signature_data TEXT NOT NULL,
+      signed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      client_ip_address INET
+    );
+  `).catch(() => {});
+
+  // Colunas de aprovação em orcamentos e config em oficinas
+  await pool.query(`
+    ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS approval_status TEXT DEFAULT 'pending'
+      CHECK(approval_status IN ('pending','approved','rejected','expired'));
+    ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ;
+    ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS rejected_at TIMESTAMPTZ;
+    ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
+    ALTER TABLE oficinas   ADD COLUMN IF NOT EXISTS require_signature BOOLEAN DEFAULT false;
+  `).catch(() => {});
+
+  // Índices das tabelas de aprovação
+  const approvalIndices = [
+    'CREATE INDEX IF NOT EXISTS idx_approval_links_token     ON approval_links(token)',
+    'CREATE INDEX IF NOT EXISTS idx_approval_links_orcamento ON approval_links(orcamento_id)',
+    'CREATE INDEX IF NOT EXISTS idx_approval_links_expires   ON approval_links(expires_at)',
+    'CREATE INDEX IF NOT EXISTS idx_approval_links_oficina   ON approval_links(oficina_id)',
+    'CREATE INDEX IF NOT EXISTS idx_link_accesses_link       ON approval_link_accesses(link_id)',
+    'CREATE INDEX IF NOT EXISTS idx_approval_actions_orcamento ON approval_actions(orcamento_id)',
+    'CREATE INDEX IF NOT EXISTS idx_approval_actions_type    ON approval_actions(action_type)',
+    'CREATE INDEX IF NOT EXISTS idx_approval_actions_time    ON approval_actions(performed_at DESC)',
+    'CREATE INDEX IF NOT EXISTS idx_budget_sigs_orcamento    ON budget_signatures(orcamento_id)',
+    'CREATE INDEX IF NOT EXISTS idx_orcamentos_approval      ON orcamentos(oficina_id, approval_status)',
+  ];
+  for (const idx of approvalIndices) { await pool.query(idx).catch(() => {}); }
+
   // Migration: adiciona pecas_itens em orcamentos se não existir
   await pool.query(`
     ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS pecas_itens TEXT;
   `).catch(() => {});
-
-  // Migration: adiciona logo e endereco em oficinas se não existir
   await pool.query(`ALTER TABLE oficinas ADD COLUMN IF NOT EXISTS logo TEXT;`).catch(() => {});
   await pool.query(`ALTER TABLE oficinas ADD COLUMN IF NOT EXISTS endereco TEXT;`).catch(() => {});
   await pool.query(`ALTER TABLE oficinas ADD COLUMN IF NOT EXISTS whatsapp TEXT;`).catch(() => {});
@@ -245,12 +330,22 @@ async function initDB() {
   // Cria master_admin se não existir
   const admin = await queryOne("SELECT id FROM usuarios WHERE perfil = 'master_admin'");
   if (!admin) {
-    const hash = bcrypt.hashSync('admin123', 10);
+    // ⚠️  IMPORTANTE: defina MASTER_ADMIN_PASSWORD no .env antes do primeiro deploy.
+    // Se não estiver definido, um aviso é emitido e a senha padrão INSEGURA é usada
+    // apenas para ambiente de desenvolvimento. Em produção, troque via /api/admin/trocar-senha.
+    const defaultPassword = process.env.MASTER_ADMIN_PASSWORD || 'admin123';
+    if (process.env.NODE_ENV === 'production' && !process.env.MASTER_ADMIN_PASSWORD) {
+      console.warn('⚠️  AVISO DE SEGURANÇA: MASTER_ADMIN_PASSWORD não definido. Troque a senha após o primeiro login!');
+    }
+    const hash = bcrypt.hashSync(defaultPassword, 12);
     await run(
       "INSERT INTO usuarios (oficina_id, nome, email, senha_hash, perfil) VALUES (NULL, 'Administrador', 'admin@chave10.com', $1, 'master_admin')",
       [hash]
     );
-    console.log('✅ master_admin criado: admin@chave10.com / admin123');
+    console.log('✅ master_admin criado: admin@chave10.com');
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('   Senha padrão de desenvolvimento: admin123');
+    }
   }
 
   console.log('✅ Banco PostgreSQL inicializado');

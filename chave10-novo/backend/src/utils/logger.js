@@ -28,6 +28,9 @@ const log = {
   // Eventos de negócio relevantes
   info(event, data)  { console.log(fmt(event, data)); },
 
+  // Avisos (não erros críticos)
+  warn(event, data)  { console.warn(fmt(event, data)); },
+
   // Erros internos (sem stack trace para o cliente)
   error(event, err)  {
     console.error(fmt(event, { message: err?.message }));

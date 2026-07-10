@@ -8,6 +8,15 @@ const rateLimit = require('express-rate-limit');
 
 const app = express();
 
+// ── TRUST PROXY: necessário para req.ip e rate limit funcionarem corretamente
+// atrás de proxies reversos (Nginx, Heroku, Railway, Render, etc.)
+// Em produção, ajuste para o número de proxies confiáveis na sua infraestrutura.
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1); // confia no primeiro proxy (load balancer / reverse proxy)
+} else {
+  app.set('trust proxy', false);
+}
+
 // ── CACHE SIMPLES EM MEMÓRIA ─────────────────────────────────
 const cache = new Map();
 function cacheMiddleware(ttlSeconds = 30) {
@@ -83,45 +92,11 @@ const writeLimiter = rateLimit({
 app.use('/api/auth',     loginLimiter, require('./routes/auth'));
 app.use('/api/admin',    writeLimiter, require('./routes/admin'));
 app.use('/api/app',      writeLimiter, cacheMiddleware(15), require('./routes/app'));
-app.use('/api/backup',   require('./routes/backup'));
-// app.use('/api/approval', require('./routes/approval')); // Temporariamente desabilitado - causando erro
+app.use('/api/backup',   writeLimiter, require('./routes/backup'));
+app.use('/api/approval', writeLimiter, require('./routes/approval'));
 
 // ── HEALTH CHECK ──────────────────────────────────────────────
 app.get('/health', (_, res) => res.json({ ok: true }));
-
-// ── DEBUG: Teste conexão banco ────────────────────────────────
-app.get('/api/debug/db-test', async (req, res) => {
-  try {
-    const { query } = require('./db');
-    
-    // Teste 1: Conexão básica
-    const version = await query('SELECT version()');
-    
-    // Teste 2: Listar tabelas
-    const tables = await query(`
-      SELECT table_name 
-      FROM information_schema.tables 
-      WHERE table_schema = 'public'
-      ORDER BY table_name
-    `);
-    
-    // Teste 3: Contar usuários
-    const userCount = await query('SELECT COUNT(*) as count FROM usuarios');
-    
-    res.json({
-      ok: true,
-      postgres_version: version[0]?.version?.substring(0, 50),
-      tables: tables.map(t => t.table_name),
-      total_users: userCount[0]?.count
-    });
-  } catch (err) {
-    res.status(500).json({
-      ok: false,
-      error: err.message,
-      code: err.code
-    });
-  }
-});
 
 // ── SEED DEMO (protegido por chave secreta) ───────────────────
 app.get('/seed-demo', async (req, res) => {
@@ -135,7 +110,10 @@ app.get('/seed-demo', async (req, res) => {
     await seed();
     res.json({ ok: true, message: 'Conta demo criada! Email: teste@teste.com | Senha: demo1234' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    // Nunca expõe o erro interno ao cliente
+    const log = require('./utils/logger');
+    log.error('seed_demo', err);
+    res.status(500).json({ error: 'Erro ao criar conta demo' });
   }
 });
 
@@ -160,13 +138,34 @@ app.use((err, req, res, next) => {
 
 // ── START ─────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;
-const { initDB } = require('./db');
+const { initDB, run } = require('./db');
 const { scheduleBackup } = require('./utils/backup');
 
+/**
+ * Job agendado: atualiza status de assinaturas vencidas.
+ * Roda a cada hora — evita a necessidade de chamar em cada login/me.
+ */
+async function jobAtualizarVencidos() {
+  try {
+    const hoje = new Date().toISOString().split('T')[0];
+    const grace = new Date(); grace.setDate(grace.getDate() - 3);
+    const graceStr = grace.toISOString().split('T')[0];
+    await run("UPDATE oficinas SET status_assinatura='blocked' WHERE status_assinatura='overdue' AND data_vencimento < $1", [graceStr]);
+    await run("UPDATE oficinas SET status_assinatura='overdue' WHERE status_assinatura IN ('active','pending') AND data_vencimento < $1", [hoje]);
+  } catch (err) {
+    const log = require('./utils/logger');
+    log.error('job_atualizar_vencidos', err);
+  }
+}
+
 initDB()
-  .then(() => {
+  .then(async () => {
     app.listen(PORT, () => console.log(`✅ Chave 10 backend rodando na porta ${PORT} [${process.env.NODE_ENV || 'development'}]`));
-    
+
+    // Roda imediatamente ao iniciar e depois a cada 1 hora
+    await jobAtualizarVencidos();
+    setInterval(jobAtualizarVencidos, 60 * 60 * 1000);
+
     // Configura backup automático (a cada 24 horas por padrão)
     const backupInterval = parseInt(process.env.BACKUP_INTERVAL_HOURS) || 24;
     scheduleBackup(backupInterval);

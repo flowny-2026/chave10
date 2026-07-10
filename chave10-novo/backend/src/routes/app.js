@@ -1,7 +1,11 @@
 const router = require('express').Router();
 const { query, queryOne, run } = require('../db');
 const { authMiddleware, oficinaSelf, naoFuncionario } = require('../middleware/auth');
-const { validateCliente, validateVeiculo, validateOS, validateId } = require('../middleware/validate');
+const {
+  validateCliente, validateVeiculo, validateOS, validateId,
+  validateDespesa, validateLembrete, validateAgenda, validateEstoque,
+  validatePagamentoOS, validateQuery, validateOrcamento, validatePagination,
+} = require('../middleware/validate');
 const log = require('../utils/logger');
 
 router.use(authMiddleware, oficinaSelf);
@@ -102,7 +106,7 @@ router.get('/dashboard', async (req,res) => {
 });
 
 // CLIENTES
-router.get('/clientes', async (req,res) => {
+router.get('/clientes', validateQuery, async (req,res) => {
   try {
     const {q}=req.query;
     let sql="SELECT c.*,COUNT(v.id) as total_veiculos FROM clientes c LEFT JOIN veiculos v ON v.cliente_id=c.id WHERE c.oficina_id=$1";
@@ -137,10 +141,16 @@ router.delete('/clientes/:id', validateId, async (req,res) => {
 // VEÍCULOS
 router.get('/veiculos', async (req,res) => {
   try {
-    const {cliente_id}=req.query;
+    const rawClienteId = req.query.cliente_id;
     let q="SELECT v.*,c.nome as cliente_nome FROM veiculos v LEFT JOIN clientes c ON c.id=v.cliente_id WHERE v.oficina_id=$1";
     const p=[oid(req)];
-    if(cliente_id){q+=' AND v.cliente_id=$2';p.push(Number(cliente_id));}
+    if(rawClienteId !== undefined){
+      const clienteId = parseInt(rawClienteId, 10);
+      if (!Number.isInteger(clienteId) || clienteId <= 0) {
+        return res.status(400).json({error:'cliente_id inválido'});
+      }
+      q+=' AND v.cliente_id=$2';p.push(clienteId);
+    }
     q+=' ORDER BY v.modelo';
     res.json(await query(q,p));
   } catch(err){res.status(500).json({error:'Erro interno'});}
@@ -206,24 +216,27 @@ router.post('/os', validateOS, async (req,res) => {
   } catch(err){log.error('app_post_os',err);res.status(500).json({error:'Erro interno'});}
 });
 
-router.put('/os/:id', validateId, async (req,res) => {
+router.put('/os/:id', validateId, validateOS, async (req,res) => {
   try {
     const {descricao,servicos,pecas,pecas_itens,valor_mo,valor_pecas,status,observacao,cliente_id,veiculo_id,data}=req.body;
     const isFuncionario = req.user?.perfil === 'funcionario';
     if(status&&!['em_andamento','finalizado'].includes(status)) return res.status(400).json({error:'Status inválido'});
     // Funcionários não podem alterar valores financeiros
-    const valorMO = isFuncionario ? null : (valor_mo !== undefined ? parseFloat(valor_mo)||0 : null);
-    const valorPecas = isFuncionario ? null : (valor_pecas !== undefined ? parseFloat(valor_pecas)||0 : null);
-    const valor = (valorMO !== null && valorPecas !== null) ? valorMO + valorPecas : null;
-    await run("UPDATE ordens_servico SET descricao=COALESCE($1,descricao),servicos=COALESCE($2,servicos),pecas=COALESCE($3,pecas),pecas_itens=COALESCE($4,pecas_itens),valor_mo=COALESCE($5,valor_mo),valor_pecas=COALESCE($6,valor_pecas),valor=COALESCE($7,valor),status=COALESCE($8,status),observacao=COALESCE($9,observacao),cliente_id=COALESCE($10,cliente_id),veiculo_id=COALESCE($11,veiculo_id),data=COALESCE($12,data) WHERE id=$13 AND oficina_id=$14",[descricao,servicos||null,pecas||null,pecas_itens?JSON.stringify(pecas_itens):null,valorMO,valorPecas,valor,status||null,observacao||null,cliente_id||null,veiculo_id||null,data||null,req.params.id,oid(req)]);
+    const valorMO    = isFuncionario ? null : (valor_mo     !== undefined ? Math.max(0, parseFloat(valor_mo)    || 0) : null);
+    const valorPecas = isFuncionario ? null : (valor_pecas  !== undefined ? Math.max(0, parseFloat(valor_pecas) || 0) : null);
+    const valor      = (valorMO !== null && valorPecas !== null) ? valorMO + valorPecas : null;
+    await run(
+      "UPDATE ordens_servico SET descricao=COALESCE($1,descricao),servicos=COALESCE($2,servicos),pecas=COALESCE($3,pecas),pecas_itens=COALESCE($4,pecas_itens),valor_mo=COALESCE($5,valor_mo),valor_pecas=COALESCE($6,valor_pecas),valor=COALESCE($7,valor),status=COALESCE($8,status),observacao=COALESCE($9,observacao),cliente_id=COALESCE($10,cliente_id),veiculo_id=COALESCE($11,veiculo_id),data=COALESCE($12,data) WHERE id=$13 AND oficina_id=$14",
+      [descricao||null,servicos||null,pecas||null,pecas_itens?JSON.stringify(pecas_itens):null,valorMO,valorPecas,valor,status||null,observacao||null,cliente_id||null,veiculo_id||null,data||null,req.params.id,oid(req)]
+    );
     res.json({ok:true});
   } catch(err){log.error('app_put_os',err);res.status(500).json({error:'Erro interno'});}
 });
 
 router.patch('/os/:id/status', validateId, async (req,res) => {
   try {
-    const {status}=req.body;
-    if(!['em_andamento','finalizado'].includes(status)) return res.status(400).json({error:'Status inválido'});
+    const status = req.body?.status;
+    if(!status || !['em_andamento','finalizado'].includes(status)) return res.status(400).json({error:'Status inválido'});
     await run('UPDATE ordens_servico SET status=$1 WHERE id=$2 AND oficina_id=$3',[status,req.params.id,oid(req)]);
     res.json({ok:true});
   } catch(err){res.status(500).json({error:'Erro interno'});}
@@ -241,7 +254,7 @@ router.get('/lembretes', async (req,res) => {
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
-router.post('/lembretes', async (req,res) => {
+router.post('/lembretes', validateLembrete, async (req,res) => {
   try {
     const {veiculo_id,tipo,descricao,data_previsao,km_previsao}=req.body;
     const r=await queryOne("INSERT INTO lembretes(oficina_id,veiculo_id,tipo,descricao,data_previsao,km_previsao) VALUES($1,$2,$3,$4,$5,$6) RETURNING id",[oid(req),veiculo_id||null,tipo||'outro',descricao,data_previsao||null,km_previsao||null]);
@@ -249,7 +262,7 @@ router.post('/lembretes', async (req,res) => {
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
-router.put('/lembretes/:id', validateId, async (req,res) => {
+router.put('/lembretes/:id', validateId, validateLembrete, async (req,res) => {
   try {
     const {veiculo_id,tipo,descricao,data_previsao,km_previsao,visto}=req.body;
     await run("UPDATE lembretes SET veiculo_id=COALESCE($1,veiculo_id),tipo=COALESCE($2,tipo),descricao=COALESCE($3,descricao),data_previsao=COALESCE($4,data_previsao),km_previsao=COALESCE($5,km_previsao),visto=COALESCE($6,visto) WHERE id=$7 AND oficina_id=$8",[veiculo_id||null,tipo||null,descricao||null,data_previsao||null,km_previsao||null,visto!=null?visto:null,req.params.id,oid(req)]);
@@ -265,10 +278,17 @@ router.delete('/lembretes/:id', validateId, async (req,res) => {
 // ESTOQUE
 router.get('/estoque', async (req,res) => {
   try {
-    const {categoria}=req.query;
+    let rawCategoria = req.query.categoria;
     const isFuncionario = req.user?.perfil === 'funcionario';
     let q='SELECT * FROM estoque WHERE oficina_id=$1';const p=[oid(req)];
-    if(categoria){q+=' AND categoria=$2';p.push(categoria);}
+    if(rawCategoria !== undefined){
+      // Sanitiza categoria: deve ser string, max 50 chars
+      if (typeof rawCategoria !== 'string') {
+        return res.status(400).json({error:'Parâmetro categoria inválido'});
+      }
+      rawCategoria = rawCategoria.trim().slice(0, 50);
+      if (rawCategoria) { q+=' AND categoria=$2'; p.push(rawCategoria); }
+    }
     q+=' ORDER BY nome';
     const rows = await query(q,p);
     // Omite preços para funcionários
@@ -280,7 +300,7 @@ router.get('/estoque', async (req,res) => {
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
-router.post('/estoque', async (req,res) => {
+router.post('/estoque', validateEstoque, async (req,res) => {
   try {
     const {nome,categoria,tipo,marca,aplicacao,quantidade,estoque_min,preco,data_compra,obs,codigo_barras}=req.body;
     const isFuncionario = req.user?.perfil === 'funcionario';
@@ -293,7 +313,7 @@ router.post('/estoque', async (req,res) => {
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
-router.put('/estoque/:id', validateId, async (req,res) => {
+router.put('/estoque/:id', validateId, validateEstoque, async (req,res) => {
   try {
     const {nome,categoria,tipo,marca,aplicacao,quantidade,estoque_min,preco,data_compra,obs,codigo_barras}=req.body;
     const isFuncionario = req.user?.perfil === 'funcionario';
@@ -314,15 +334,22 @@ router.delete('/estoque/:id', validateId, async (req,res) => {
 router.get('/despesas', naoFuncionario, async (req,res) => {
   try {
     const {inicio,fim}=req.query;
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     let q='SELECT * FROM despesas WHERE oficina_id=$1';const p=[oid(req)];
-    if(inicio){q+=' AND data>=$2';p.push(inicio);}
-    if(fim){q+=` AND data<=$${p.length+1}`;p.push(fim);}
+    if(inicio !== undefined){
+      if(!dateRegex.test(inicio)) return res.status(400).json({error:'Formato de data início inválido (YYYY-MM-DD)'});
+      q+=' AND data>=$2';p.push(inicio);
+    }
+    if(fim !== undefined){
+      if(!dateRegex.test(fim)) return res.status(400).json({error:'Formato de data fim inválido (YYYY-MM-DD)'});
+      q+=` AND data<=$${p.length+1}`;p.push(fim);
+    }
     q+=' ORDER BY data DESC';
     res.json(await query(q,p));
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
-router.post('/despesas', naoFuncionario, async (req,res) => {
+router.post('/despesas', naoFuncionario, validateDespesa, async (req,res) => {
   try {
     const {descricao,categoria,valor,data,vencimento,pago,obs}=req.body;
     const r=await queryOne("INSERT INTO despesas(oficina_id,descricao,categoria,valor,data,vencimento,pago,obs) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id",[oid(req),descricao,categoria||'Outros',valor,data,vencimento||null,pago?1:0,obs||null]);
@@ -330,7 +357,7 @@ router.post('/despesas', naoFuncionario, async (req,res) => {
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
-router.put('/despesas/:id', naoFuncionario, validateId, async (req,res) => {
+router.put('/despesas/:id', naoFuncionario, validateId, validateDespesa, async (req,res) => {
   try {
     const {descricao,categoria,valor,data,vencimento,pago,obs}=req.body;
     await run("UPDATE despesas SET descricao=COALESCE($1,descricao),categoria=COALESCE($2,categoria),valor=COALESCE($3,valor),data=COALESCE($4,data),vencimento=COALESCE($5,vencimento),pago=COALESCE($6,pago),obs=COALESCE($7,obs) WHERE id=$8 AND oficina_id=$9",[descricao||null,categoria||null,valor||null,data||null,vencimento||null,pago!=null?pago:null,obs||null,req.params.id,oid(req)]);
@@ -348,7 +375,13 @@ router.get('/orcamentos', async (req,res) => {
   try {
     const isFuncionario = req.user?.perfil === 'funcionario';
     const rows = await query("SELECT o.*,c.nome as cliente_nome,v.modelo as veiculo_modelo,v.placa FROM orcamentos o LEFT JOIN clientes c ON c.id=o.cliente_id LEFT JOIN veiculos v ON v.id=o.veiculo_id WHERE o.oficina_id=$1 ORDER BY o.id DESC",[oid(req)]);
-    const parsed = rows.map(r=>({...r, pecas_itens: r.pecas_itens ? JSON.parse(r.pecas_itens) : []}));
+    const parsed = rows.map(r => {
+      let pecas_itens = [];
+      if (r.pecas_itens) {
+        try { pecas_itens = JSON.parse(r.pecas_itens); } catch (_) { pecas_itens = []; }
+      }
+      return { ...r, pecas_itens };
+    });
     if(isFuncionario) {
       res.json(parsed.map(({valor_mo, valor_pecas, desconto, ...rest}) => rest));
     } else {
@@ -357,46 +390,74 @@ router.get('/orcamentos', async (req,res) => {
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
-router.post('/orcamentos', async (req,res) => {
+router.post('/orcamentos', validateOrcamento, async (req,res) => {
   try {
-    const {cliente_id,veiculo_id,descricao,servicos,pecas_itens,valor_mo,desconto,status,validade,obs}=req.body;
+    const { cliente_id, veiculo_id, descricao, servicos, obs, status, validade, valor_mo, desconto, pecas_itens } = req.body;
     const isFuncionario = req.user?.perfil === 'funcionario';
-    const valorMO = isFuncionario ? 0 : (parseFloat(valor_mo)||0);
-    const itens = Array.isArray(pecas_itens) ? pecas_itens.filter(p=>p.nome?.trim()) : [];
-    const valorPecas = isFuncionario ? 0 : itens.reduce((s,p)=>(s+(parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1)),0);
-    const descontoFinal = isFuncionario ? 0 : (parseFloat(desconto)||0);
-    const pecasTexto = itens.map(p=>`${p.qtd||1}x ${p.nome} (R$ ${parseFloat(p.valor_unit||0).toFixed(2)})`).join('\n');
-    const cnt=await queryOne("SELECT COUNT(*) n FROM orcamentos WHERE oficina_id=$1",[oid(req)]);
-    const numero='ORC-'+String(+cnt.n+1).padStart(4,'0');
-    const r=await queryOne(
+
+    // Funcionários não podem definir valores financeiros
+    const valorMO       = isFuncionario ? 0 : (valor_mo !== undefined ? Math.max(0, parseFloat(valor_mo) || 0) : 0);
+    const descontoFinal = isFuncionario ? 0 : (desconto !== undefined ? Math.max(0, parseFloat(desconto) || 0) : 0);
+
+    const itens = Array.isArray(pecas_itens) ? pecas_itens.filter(p => p.nome?.trim()) : [];
+    const valorPecas = isFuncionario ? 0 : itens.reduce((s,p) => s + Math.max(0, parseFloat(p.valor_unit)||0) * Math.max(0, parseFloat(p.qtd)||1), 0);
+    const pecasTexto = itens.map(p => `${p.qtd||1}x ${String(p.nome).slice(0,100)} (R$ ${parseFloat(p.valor_unit||0).toFixed(2)})`).join('\n');
+
+    const cnt = await queryOne("SELECT COUNT(*) n FROM orcamentos WHERE oficina_id=$1", [oid(req)]);
+    const numero = 'ORC-' + String(+cnt.n + 1).padStart(4, '0');
+
+    const r = await queryOne(
       "INSERT INTO orcamentos(oficina_id,cliente_id,veiculo_id,numero,descricao,servicos,pecas,pecas_itens,valor_mo,valor_pecas,desconto,status,validade,obs) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id",
-      [oid(req),cliente_id||null,veiculo_id||null,numero,descricao||null,servicos||null,pecasTexto||null,itens.length?JSON.stringify(itens):null,valorMO,valorPecas,descontoFinal,status||'pendente',validade||null,obs||null]
+      [oid(req), cliente_id||null, veiculo_id||null, numero, descricao||null, servicos||null, pecasTexto||null, itens.length ? JSON.stringify(itens) : null, valorMO, valorPecas, descontoFinal, status||'pendente', validade||null, obs||null]
     );
-    res.status(201).json({id:r.id,numero});
-  } catch(err){res.status(500).json({error:'Erro interno'});}
+    res.status(201).json({ id: r.id, numero });
+  } catch(err) { res.status(500).json({ error: 'Erro interno' }); }
+});
 });
 
-router.put('/orcamentos/:id', validateId, async (req,res) => {
+router.put('/orcamentos/:id', validateId, validateOrcamento, async (req,res) => {
   try {
-    const {descricao,servicos,pecas_itens,valor_mo,desconto,status,validade,obs,cliente_id,veiculo_id}=req.body;
+    const { descricao, servicos, obs, status, validade, valor_mo, desconto, pecas_itens, cliente_id, veiculo_id } = req.body;
     const isFuncionario = req.user?.perfil === 'funcionario';
-    const valorMO = isFuncionario ? null : (valor_mo!==undefined ? parseFloat(valor_mo)||0 : null);
-    const itens = Array.isArray(pecas_itens) ? pecas_itens.filter(p=>p.nome?.trim()) : null;
-    const valorPecas = (itens && !isFuncionario) ? itens.reduce((s,p)=>(s+(parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1)),0) : null;
-    const descontoFinal = isFuncionario ? null : (desconto!==undefined ? parseFloat(desconto)||0 : null);
-    const pecasTexto = itens ? itens.map(p=>`${p.qtd||1}x ${p.nome} (R$ ${parseFloat(p.valor_unit||0).toFixed(2)})`).join('\n') : null;
+
+    let itens = null;
+    if (pecas_itens !== undefined) {
+      itens = Array.isArray(pecas_itens) ? pecas_itens.filter(p => p.nome?.trim()) : null;
+    }
+
+    const valorMO       = isFuncionario ? null : (valor_mo  !== undefined ? Math.max(0, parseFloat(valor_mo)  || 0) : null);
+    const valorPecas    = (itens && !isFuncionario) ? itens.reduce((s,p) => s + Math.max(0, parseFloat(p.valor_unit)||0) * Math.max(0, parseFloat(p.qtd)||1), 0) : null;
+    const descontoFinal = isFuncionario ? null : (desconto !== undefined ? Math.max(0, parseFloat(desconto) || 0) : null);
+    const pecasTexto    = itens ? itens.map(p => `${p.qtd||1}x ${String(p.nome).slice(0,100)} (R$ ${parseFloat(p.valor_unit||0).toFixed(2)})`).join('\n') : null;
+
     await run(
       "UPDATE orcamentos SET descricao=COALESCE($1,descricao),servicos=COALESCE($2,servicos),pecas=COALESCE($3,pecas),pecas_itens=COALESCE($4,pecas_itens),valor_mo=COALESCE($5,valor_mo),valor_pecas=COALESCE($6,valor_pecas),desconto=COALESCE($7,desconto),status=COALESCE($8,status),validade=COALESCE($9,validade),obs=COALESCE($10,obs),cliente_id=COALESCE($11,cliente_id),veiculo_id=COALESCE($12,veiculo_id) WHERE id=$13 AND oficina_id=$14",
-      [descricao||null,servicos||null,pecasTexto,itens?JSON.stringify(itens):null,valorMO,valorPecas,descontoFinal,status||null,validade||null,obs||null,cliente_id||null,veiculo_id||null,req.params.id,oid(req)]
+      [
+        descricao    || null,
+        servicos     || null,
+        pecasTexto,
+        itens ? JSON.stringify(itens) : null,
+        valorMO,
+        valorPecas,
+        descontoFinal,
+        status       || null,
+        validade     || null,
+        obs          || null,
+        cliente_id   !== undefined ? (cliente_id || null) : null,
+        veiculo_id   !== undefined ? (veiculo_id || null) : null,
+        req.params.id,
+        oid(req),
+      ]
     );
-    res.json({ok:true});
-  } catch(err){res.status(500).json({error:'Erro interno'});}
+    res.json({ ok: true });
+  } catch(err) { res.status(500).json({ error: 'Erro interno' }); }
+});
 });
 
 router.patch('/orcamentos/:id/status', validateId, async (req,res) => {
   try {
-    const {status}=req.body;
-    if(!['pendente','aprovado','rejeitado'].includes(status)) return res.status(400).json({error:'Status inválido'});
+    const status = req.body?.status;
+    if(!status || !['pendente','aprovado','rejeitado'].includes(status)) return res.status(400).json({error:'Status inválido'});
     await run('UPDATE orcamentos SET status=$1 WHERE id=$2 AND oficina_id=$3',[status,req.params.id,oid(req)]);
     res.json({ok:true});
   } catch(err){res.status(500).json({error:'Erro interno'});}
@@ -408,12 +469,10 @@ router.delete('/orcamentos/:id', validateId, async (req,res) => {
 });
 
 // PAGAMENTOS DE OS
-router.post('/os/:id/pagamento', validateId, async (req,res) => {
+router.post('/os/:id/pagamento', validateId, validatePagamentoOS, async (req,res) => {
   try {
     const {forma, valor_total, parcelas, bandeira, taxa_maquininha, observacao} = req.body;
-    const formasValidas = ['pix','dinheiro','debito','credito'];
-    if (!forma || !formasValidas.includes(forma)) return res.status(400).json({error:'Forma de pagamento inválida'});
-    if (!valor_total || parseFloat(valor_total) <= 0) return res.status(400).json({error:'Valor inválido'});
+    // validatePagamentoOS já validou: forma, valor_total, parcelas, taxa_maquininha
 
     const osId = req.params.id;
     const id = oid(req);
@@ -459,13 +518,15 @@ router.post('/os/:id/pagamento', validateId, async (req,res) => {
 });
 
 // Parcelas a receber
-router.get('/parcelas-receber', async (req,res) => {
+router.get('/parcelas-receber', validatePagination, async (req,res) => {
   try {
+    const { limit, offset } = req.pagination;
     const rows = await query(
-      "SELECT pr.*, c.nome as cliente_nome FROM parcelas_receber pr LEFT JOIN clientes c ON c.id=pr.cliente_id WHERE pr.oficina_id=$1 ORDER BY pr.data_recebimento",
-      [oid(req)]
+      "SELECT pr.*, c.nome as cliente_nome FROM parcelas_receber pr LEFT JOIN clientes c ON c.id=pr.cliente_id WHERE pr.oficina_id=$1 ORDER BY pr.data_recebimento LIMIT $2 OFFSET $3",
+      [oid(req), limit, offset]
     );
     res.json(rows);
+  } catch(err){res.status(500).json({error:'Erro interno'});}
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
@@ -487,7 +548,8 @@ router.get('/os/:id/pagamentos', validateId, async (req,res) => {
 // Todos os pagamentos de OS da oficina (para gráficos)
 router.get('/pagamentos-os', async (req,res) => {
   try {
-    const rows = await query('SELECT * FROM pagamentos_os WHERE oficina_id=$1 ORDER BY data_pagamento DESC', [oid(req)]);
+    // Limita a 500 registros para proteger contra dump acidental
+    const rows = await query('SELECT * FROM pagamentos_os WHERE oficina_id=$1 ORDER BY data_pagamento DESC LIMIT 500', [oid(req)]);
     res.json(rows);
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
@@ -496,6 +558,10 @@ router.get('/pagamentos-os', async (req,res) => {
 router.get('/agenda', async (req,res) => {
   try {
     const {data}=req.query;
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if(data !== undefined && !dateRegex.test(data)){
+      return res.status(400).json({error:'Formato de data inválido (YYYY-MM-DD)'});
+    }
     let q="SELECT a.*,c.nome as cliente_nome,v.modelo as veiculo_modelo FROM agenda a LEFT JOIN clientes c ON c.id=a.cliente_id LEFT JOIN veiculos v ON v.id=a.veiculo_id WHERE a.oficina_id=$1";
     const p=[oid(req)];
     if(data){q+=' AND a.data=$2';p.push(data);}
@@ -504,11 +570,25 @@ router.get('/agenda', async (req,res) => {
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
-router.post('/agenda', async (req,res) => {
+router.post('/agenda', validateAgenda, async (req,res) => {
   try {
     const {cliente_id,veiculo_id,titulo,data,hora,descricao}=req.body;
-    const r=await queryOne("INSERT INTO agenda(oficina_id,cliente_id,veiculo_id,titulo,data,hora,descricao) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id",[oid(req),cliente_id||null,veiculo_id||null,titulo,data,hora||null,descricao||null]);
+    const r=await queryOne(
+      "INSERT INTO agenda(oficina_id,cliente_id,veiculo_id,titulo,data,hora,descricao) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id",
+      [oid(req),cliente_id||null,veiculo_id||null,titulo,data||new Date().toISOString().split('T')[0],hora||null,descricao||null]
+    );
     res.status(201).json({id:r.id});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+router.put('/agenda/:id', validateId, validateAgenda, async (req,res) => {
+  try {
+    const {cliente_id,veiculo_id,titulo,data,hora,descricao}=req.body;
+    await run(
+      "UPDATE agenda SET titulo=COALESCE($1,titulo),data=COALESCE($2,data),hora=COALESCE($3,hora),descricao=COALESCE($4,descricao),cliente_id=COALESCE($5,cliente_id),veiculo_id=COALESCE($6,veiculo_id) WHERE id=$7 AND oficina_id=$8",
+      [titulo||null,data||null,hora||null,descricao||null,cliente_id||null,veiculo_id||null,req.params.id,oid(req)]
+    );
+    res.json({ok:true});
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
@@ -540,11 +620,43 @@ router.get('/config', naoFuncionario, async (req,res) => {
 
 router.put('/config', naoFuncionario, async (req,res) => {
   try {
-    const { nome, responsavel, telefone, whatsapp, email, endereco, logo, documento } = req.body;
-    if (!nome || !nome.trim()) return res.status(400).json({ error: 'Nome da oficina é obrigatório' });
+    // Valida e sanitiza campos de configuração da oficina
+    const nomeRaw = req.body?.nome;
+    if (!nomeRaw || typeof nomeRaw !== 'string' || !nomeRaw.trim()) {
+      return res.status(400).json({ error: 'Nome da oficina é obrigatório' });
+    }
+    const nome = nomeRaw.trim().slice(0, 120);
 
-    if (logo && logo.length > 3 * 1024 * 1024) {
-      return res.status(400).json({ error: 'Logo muito grande. Use uma imagem de até 2MB.' });
+    const responsavel = req.body.responsavel ? String(req.body.responsavel).replace(/<[^>]*>/g, '').trim().slice(0, 120) || null : null;
+    const telefone    = req.body.telefone    ? String(req.body.telefone).replace(/[^\d\s\-\+\(\)]/g, '').slice(0, 30) || null : null;
+    const whatsapp    = req.body.whatsapp    ? String(req.body.whatsapp).replace(/[^\d\s\-\+\(\)]/g, '').slice(0, 30) || null : null;
+    const endereco    = req.body.endereco    ? String(req.body.endereco).replace(/<[^>]*>/g, '').trim().slice(0, 300) || null : null;
+    const documento   = req.body.documento   ? String(req.body.documento).replace(/<[^>]*>/g, '').trim().slice(0, 500) || null : null;
+
+    // Valida email se fornecido
+    let emailVal = null;
+    if (req.body.email) {
+      const e = String(req.body.email).trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) || e.length > 254) {
+        return res.status(400).json({ error: 'E-mail inválido' });
+      }
+      emailVal = e;
+    }
+
+    // Valida logo (data URL, máx. 2MB)
+    let logo = undefined;
+    if (req.body.logo !== undefined) {
+      if (req.body.logo === null || req.body.logo === '') {
+        logo = null;
+      } else if (typeof req.body.logo === 'string') {
+        if (req.body.logo.length > 2 * 1024 * 1024 * 1.37) { // base64 overhead ~37%
+          return res.status(400).json({ error: 'Logo muito grande. Use uma imagem de até 2MB.' });
+        }
+        if (!req.body.logo.startsWith('data:image/')) {
+          return res.status(400).json({ error: 'Formato de logo inválido' });
+        }
+        logo = req.body.logo;
+      }
     }
 
     await run(
@@ -555,24 +667,23 @@ router.put('/config', naoFuncionario, async (req,res) => {
         whatsapp    = $4,
         email       = COALESCE($5, email),
         endereco    = $6,
-        logo        = $7,
+        logo        = COALESCE($7, logo),
         observacoes = $8
        WHERE id = $9`,
       [
-        nome.trim(),
+        nome,
         responsavel || null,
         telefone    || null,
         whatsapp    || null,
-        email       || null,
+        emailVal    || null,
         endereco    || null,
-        logo !== undefined ? (logo || null) : undefined,
+        logo !== undefined ? (logo || null) : null,  // garante que nunca seja undefined no driver pg
         documento   || null,
         oid(req),
       ]
     );
 
-    // Se o responsável foi alterado, atualiza também na tabela de usuários
-    // (para refletir na saudação do dashboard sem precisar fazer logout)
+    // Atualiza nome do usuário se responsável foi alterado
     if (responsavel?.trim()) {
       await run(
         'UPDATE usuarios SET nome=$1 WHERE id=$2',

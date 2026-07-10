@@ -54,7 +54,10 @@ const appNavGestao = [
 ];
 
 function getUser() {
-  try { return JSON.parse(localStorage.getItem('c10_user')); } catch { return null; }
+  try {
+    const raw = localStorage.getItem('c10_user') || sessionStorage.getItem('c10_user');
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
 }
 
 // ── Popup de aviso de boletos/contas a vencer ────────────────
@@ -549,8 +552,10 @@ export default function Layout({ area }) {
     if (area !== 'app') return;
     api.auth.me()
       .then(userData => {
-        // Atualiza localStorage com dados frescos do servidor
-        localStorage.setItem('c10_user', JSON.stringify(userData));
+        // Sincroniza em ambos os storages para garantir consistência
+        const serialized = JSON.stringify(userData);
+        localStorage.setItem('c10_user', serialized);
+        sessionStorage.setItem('c10_user', serialized);
       })
       .catch(() => {
         // Silencioso — se falhar, usa os dados do localStorage mesmo

@@ -2,7 +2,7 @@ const router = require('express').Router();
 const bcrypt = require('bcryptjs');
 const { query, queryOne, run } = require('../db');
 const { authMiddleware, masterAdminOnly } = require('../middleware/auth');
-const { validateOficina, validateUsuario, validatePagamento, validateId } = require('../middleware/validate');
+const { validateOficina, validateUsuario, validatePagamento, validateId, validateRenovarLote, validateRedefinirSenha } = require('../middleware/validate');
 const log = require('../utils/logger');
 
 router.use(authMiddleware, masterAdminOnly);
@@ -58,9 +58,9 @@ router.get('/oficinas', async (req,res) => {
     
     baseQuery += ' GROUP BY o.id ORDER BY o.nome';
     
-    res.json(await query(baseQuery, ...p));
+    res.json(await query(baseQuery, p));
   } catch(err){
-    console.error('Erro ao buscar oficinas:', err);
+    log.error('admin_get_oficinas', err);
     res.status(500).json({error:'Erro interno'});
   }
 });
@@ -84,11 +84,11 @@ router.put('/oficinas/:id', validateId, validateOficina, async (req,res) => {
 
 router.patch('/oficinas/:id/status', validateId, async (req,res) => {
   try {
-    const {status}=req.body;
-    if(!['active','pending','overdue','blocked'].includes(status)) return res.status(400).json({error:'Status inválido'});
+    const status = req.body?.status;
+    if(!status || !['active','pending','overdue','blocked'].includes(status)) return res.status(400).json({error:'Status inválido'});
     await run('UPDATE oficinas SET status_assinatura=$1 WHERE id=$2',[status,req.params.id]);
     res.json({ok:true});
-  } catch(err){res.status(500).json({error:'Erro interno'});}
+  } catch(err){log.error('admin_status_oficina',err);res.status(500).json({error:'Erro interno'});}
 });
 
 router.delete('/oficinas/:id', validateId, async (req,res) => {
@@ -144,12 +144,18 @@ router.post('/pagamentos', validatePagamento, async (req,res) => {
 
 router.get('/pagamentos', async (req,res) => {
   try {
-    const {oficina_id}=req.query;
+    const rawOficinaId = req.query.oficina_id;
     let q="SELECT p.*,o.nome as nome_oficina FROM pagamentos p JOIN oficinas o ON o.id=p.oficina_id";
     const p=[];
-    if(oficina_id){q+=' WHERE p.oficina_id=$1';p.push(Number(oficina_id));}
+    if(rawOficinaId !== undefined){
+      const oficId = parseInt(rawOficinaId, 10);
+      if(!Number.isInteger(oficId) || oficId <= 0){
+        return res.status(400).json({error:'oficina_id inválido'});
+      }
+      q+=' WHERE p.oficina_id=$1';p.push(oficId);
+    }
     q+=' ORDER BY p.data_pagamento DESC';
-    res.json(await query(q,...p.length?[p]:[]));
+    res.json(await query(q, p.length ? p : []));
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
@@ -163,10 +169,10 @@ router.get('/vencendo', async (req,res) => {
 });
 
 // RENOVAÇÃO EM LOTE
-router.post('/renovar-lote', async (req,res) => {
+router.post('/renovar-lote', validateRenovarLote, async (req,res) => {
   try {
     const {ids,novo_vencimento,valor,forma_pagamento}=req.body;
-    if(!ids?.length||!novo_vencimento) return res.status(400).json({error:'ids e novo_vencimento obrigatórios'});
+    // validateRenovarLote já garantiu ids válidos e novo_vencimento válido
     const hoje=new Date().toISOString().split('T')[0];
     for(const id of ids){
       await run("UPDATE oficinas SET status_assinatura='active',data_vencimento=$1 WHERE id=$2",[novo_vencimento,id]);
@@ -179,11 +185,15 @@ router.post('/renovar-lote', async (req,res) => {
 // TROCAR SENHA DO ADMIN
 router.post('/trocar-senha', async (req,res) => {
   try {
-    const {senha_atual, senha_nova} = req.body;
-    
+    const senha_atual = req.body?.senha_atual;
+    const senha_nova  = req.body?.senha_nova;
+
     // Validações
-    if (!senha_atual || !senha_nova) {
+    if (!senha_atual || typeof senha_atual !== 'string' || !senha_nova || typeof senha_nova !== 'string') {
       return res.status(400).json({error:'Senha atual e nova senha são obrigatórias'});
+    }
+    if (senha_atual.length > 128 || senha_nova.length > 128) {
+      return res.status(400).json({error:'Senha muito longa (máximo 128 caracteres)'});
     }
     if (senha_nova.length < 8) {
       return res.status(400).json({error:'Nova senha deve ter no mínimo 8 caracteres'});
@@ -218,12 +228,10 @@ router.post('/trocar-senha', async (req,res) => {
 });
 
 // REDEFINIR SENHA DE USUÁRIO (pelo admin)
-router.patch('/usuarios/:id/redefinir-senha', validateId, async (req,res) => {
+router.patch('/usuarios/:id/redefinir-senha', validateId, validateRedefinirSenha, async (req,res) => {
   try {
     const { nova_senha } = req.body;
-    if (!nova_senha || nova_senha.length < 6) {
-      return res.status(400).json({ error: 'Nova senha deve ter no mínimo 6 caracteres' });
-    }
+    // validateRedefinirSenha já validou nova_senha (min 6, max 128 chars)
     const usuario = await queryOne('SELECT id, perfil, nome, email FROM usuarios WHERE id=$1', [req.params.id]);
     if (!usuario) return res.status(404).json({ error: 'Usuário não encontrado' });
     if (usuario.perfil === 'master_admin') return res.status(403).json({ error: 'Não é possível redefinir a senha do admin master por aqui' });

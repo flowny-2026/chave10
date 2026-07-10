@@ -1,5 +1,6 @@
 const crypto = require('crypto');
-const { query, queryOne, run } = require('../db');
+const { query, queryOne, run, pool } = require('../db');
+const log = require('../utils/logger');
 
 /**
  * Generate a cryptographically secure URL-safe token
@@ -217,52 +218,66 @@ async function approveBudget(token, signatureData = null, ipAddress = null) {
   }
 
   try {
-    // Start transaction-like operations
-    // Update budget status
-    const result = await run(
-      `UPDATE orcamentos 
-       SET approval_status = 'approved', approved_at = NOW() 
-       WHERE id = $1 AND approval_status = 'pending'
-       RETURNING id`,
-      [link.orcamento_id]
-    );
+    // Executa aprovação dentro de uma transação para garantir atomicidade.
+    // Sem transação, uma falha entre o UPDATE do orçamento e a invalidação do link
+    // deixaria o estado inconsistente.
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
 
-    if (result.rowCount === 0) {
-      return { success: false, error: 'budget_already_processed' };
-    }
-
-    // Invalidate link
-    await run(
-      `UPDATE approval_links 
-       SET invalidated_at = NOW() 
-       WHERE id = $1`,
-      [link.id]
-    );
-
-    // Save signature if provided
-    if (signatureData) {
-      await run(
-        `INSERT INTO budget_signatures 
-         (oficina_id, orcamento_id, signature_data, client_ip_address) 
-         VALUES ($1, $2, $3, $4)`,
-        [link.oficina_id, link.orcamento_id, signatureData, ipAddress]
+      // Update budget status
+      const result = await client.query(
+        `UPDATE orcamentos 
+         SET approval_status = 'approved', approved_at = NOW() 
+         WHERE id = $1 AND approval_status = 'pending'`,
+        [link.orcamento_id]
       );
-    }
 
-    // Log approval action
-    await run(
-      `INSERT INTO approval_actions 
-       (oficina_id, orcamento_id, link_id, action_type, client_ip_address, link_token, metadata) 
-       VALUES ($1, $2, $3, 'approved', $4, $5, $6)`,
-      [
-        link.oficina_id,
-        link.orcamento_id,
-        link.id,
-        ipAddress,
-        token,
-        JSON.stringify({ hasSignature: !!signatureData })
-      ]
-    );
+      if (result.rowCount === 0) {
+        await client.query('ROLLBACK');
+        return { success: false, error: 'budget_already_processed' };
+      }
+
+      // Invalidate link
+      await client.query(
+        `UPDATE approval_links 
+         SET invalidated_at = NOW() 
+         WHERE id = $1`,
+        [link.id]
+      );
+
+      // Save signature if provided
+      if (signatureData) {
+        await client.query(
+          `INSERT INTO budget_signatures 
+           (oficina_id, orcamento_id, signature_data, client_ip_address) 
+           VALUES ($1, $2, $3, $4)`,
+          [link.oficina_id, link.orcamento_id, signatureData, ipAddress]
+        );
+      }
+
+      // Log approval action
+      await client.query(
+        `INSERT INTO approval_actions 
+         (oficina_id, orcamento_id, link_id, action_type, client_ip_address, link_token, metadata) 
+         VALUES ($1, $2, $3, 'approved', $4, $5, $6)`,
+        [
+          link.oficina_id,
+          link.orcamento_id,
+          link.id,
+          ipAddress,
+          token,
+          JSON.stringify({ hasSignature: !!signatureData })
+        ]
+      );
+
+      await client.query('COMMIT');
+    } catch (txErr) {
+      await client.query('ROLLBACK');
+      throw txErr;
+    } finally {
+      client.release();
+    }
 
     return {
       success: true,
@@ -270,7 +285,7 @@ async function approveBudget(token, signatureData = null, ipAddress = null) {
       approvedAt: new Date().toISOString()
     };
   } catch (error) {
-    console.error('Error approving budget:', error);
+    log.error('approval_links_approve', error);
     return { success: false, error: 'approval_failed' };
   }
 }
@@ -298,43 +313,56 @@ async function rejectBudget(token, reason = null, ipAddress = null) {
   }
 
   try {
-    // Update budget status
-    const result = await run(
-      `UPDATE orcamentos 
-       SET approval_status = 'rejected', 
-           rejected_at = NOW(), 
-           rejection_reason = $2 
-       WHERE id = $1 AND approval_status = 'pending'
-       RETURNING id`,
-      [link.orcamento_id, sanitizedReason]
-    );
+    // Executa rejeição dentro de uma transação para garantir atomicidade.
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
 
-    if (result.rowCount === 0) {
-      return { success: false, error: 'budget_already_processed' };
+      // Update budget status
+      const result = await client.query(
+        `UPDATE orcamentos 
+         SET approval_status = 'rejected', 
+             rejected_at = NOW(), 
+             rejection_reason = $2 
+         WHERE id = $1 AND approval_status = 'pending'`,
+        [link.orcamento_id, sanitizedReason]
+      );
+
+      if (result.rowCount === 0) {
+        await client.query('ROLLBACK');
+        return { success: false, error: 'budget_already_processed' };
+      }
+
+      // Invalidate link
+      await client.query(
+        `UPDATE approval_links 
+         SET invalidated_at = NOW() 
+         WHERE id = $1`,
+        [link.id]
+      );
+
+      // Log rejection action
+      await client.query(
+        `INSERT INTO approval_actions 
+         (oficina_id, orcamento_id, link_id, action_type, client_ip_address, link_token, metadata) 
+         VALUES ($1, $2, $3, 'rejected', $4, $5, $6)`,
+        [
+          link.oficina_id,
+          link.orcamento_id,
+          link.id,
+          ipAddress,
+          token,
+          JSON.stringify({ reason: sanitizedReason })
+        ]
+      );
+
+      await client.query('COMMIT');
+    } catch (txErr) {
+      await client.query('ROLLBACK');
+      throw txErr;
+    } finally {
+      client.release();
     }
-
-    // Invalidate link
-    await run(
-      `UPDATE approval_links 
-       SET invalidated_at = NOW() 
-       WHERE id = $1`,
-      [link.id]
-    );
-
-    // Log rejection action
-    await run(
-      `INSERT INTO approval_actions 
-       (oficina_id, orcamento_id, link_id, action_type, client_ip_address, link_token, metadata) 
-       VALUES ($1, $2, $3, 'rejected', $4, $5, $6)`,
-      [
-        link.oficina_id,
-        link.orcamento_id,
-        link.id,
-        ipAddress,
-        token,
-        JSON.stringify({ reason: sanitizedReason })
-      ]
-    );
 
     return {
       success: true,
@@ -342,7 +370,7 @@ async function rejectBudget(token, reason = null, ipAddress = null) {
       rejectedAt: new Date().toISOString()
     };
   } catch (error) {
-    console.error('Error rejecting budget:', error);
+    log.error('approval_links_reject', error);
     return { success: false, error: 'rejection_failed' };
   }
 }
@@ -373,7 +401,7 @@ async function getApprovalStats(orcamento_id) {
 
   // Get signature if exists
   const signature = await queryOne(
-    `SELECT signature_data, signed_at 
+    `SELECT signed_at 
      FROM budget_signatures 
      WHERE orcamento_id = $1 
      ORDER BY signed_at DESC 
@@ -413,7 +441,7 @@ async function getApprovalStats(orcamento_id) {
     rejectedAt: budget?.rejected_at,
     rejectionReason: budget?.rejection_reason,
     signature: signature ? {
-      data: signature.signature_data,
+      hasSignature: true, // não retorna o base64 — evita payload gigantesco
       signedAt: signature.signed_at
     } : null,
     auditTrail: auditTrail.map(entry => ({
