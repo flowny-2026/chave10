@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const { query, queryOne, run } = require('../db');
 const { authMiddleware, masterAdminOnly } = require('../middleware/auth');
 const { validateOficina, validateUsuario, validatePagamento, validateId, validateRenovarLote, validateRedefinirSenha } = require('../middleware/validate');
+const { sensitiveOpsLimiter } = require('../middleware/rateLimits');
 const log = require('../utils/logger');
 
 router.use(authMiddleware, masterAdminOnly);
@@ -182,8 +183,8 @@ router.post('/renovar-lote', validateRenovarLote, async (req,res) => {
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
-// TROCAR SENHA DO ADMIN
-router.post('/trocar-senha', async (req,res) => {
+// TROCAR SENHA DO ADMIN — sensitiveOpsLimiter: 10 tentativas / 15 min por IP
+router.post('/trocar-senha', sensitiveOpsLimiter, async (req,res) => {
   try {
     const senha_atual = req.body?.senha_atual;
     const senha_nova  = req.body?.senha_nova;
@@ -227,8 +228,8 @@ router.post('/trocar-senha', async (req,res) => {
   }
 });
 
-// REDEFINIR SENHA DE USUÁRIO (pelo admin)
-router.patch('/usuarios/:id/redefinir-senha', validateId, validateRedefinirSenha, async (req,res) => {
+// REDEFINIR SENHA DE USUÁRIO (pelo admin) — sensitiveOpsLimiter: 10 tentativas / 15 min
+router.patch('/usuarios/:id/redefinir-senha', sensitiveOpsLimiter, validateId, validateRedefinirSenha, async (req,res) => {
   try {
     const { nova_senha } = req.body;
     // validateRedefinirSenha já validou nova_senha (min 6, max 128 chars)

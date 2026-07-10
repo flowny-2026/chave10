@@ -5,11 +5,18 @@ const { OAuth2Client } = require('google-auth-library');
 const { queryOne, run } = require('../db');
 const { SECRET, authMiddleware } = require('../middleware/auth');
 const { validateLogin } = require('../middleware/validate');
+const {
+  registerLimiter,
+  googleAuthLimiter,
+  sensitiveOpsLimiter,
+} = require('../middleware/rateLimits');
 const log = require('../utils/logger');
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // ── LOGIN ─────────────────────────────────────────────────────
+// loginLimiter já aplicado no router pai (index.js) para /api/auth.
+// Aqui não duplicamos — o limiter global de auth cobre esta rota.
 router.post('/login', validateLogin, async (req, res) => {
   const { email, senha } = req.body;
   const ip = req.ip;
@@ -83,7 +90,8 @@ router.post('/login', validateLogin, async (req, res) => {
 });
 
 // ── REGISTRO MANUAL ───────────────────────────────────────────
-router.post('/register', async (req, res) => {
+// registerLimiter: 3 cadastros / hora por IP — anti spam de contas.
+router.post('/register', registerLimiter, async (req, res) => {
   // Rota pública — validação inline (sem middleware de negócio)
   const nomeRaw  = req.body?.nome;
   const emailRaw = req.body?.email;
@@ -123,7 +131,8 @@ router.post('/register', async (req, res) => {
 });
 
 // ── LOGIN COM GOOGLE ──────────────────────────────────────────
-router.post('/google', async (req, res) => {
+// googleAuthLimiter: 10 autenticações / 15 min por IP.
+router.post('/google', googleAuthLimiter, async (req, res) => {
   const { credential } = req.body;
   if (!credential || typeof credential !== 'string' || credential.length > 4096) {
     return res.status(400).json({ error: 'Token Google não fornecido ou inválido' });
@@ -193,7 +202,8 @@ router.post('/google', async (req, res) => {
 });
 
 // ── REGISTRO COM GOOGLE ───────────────────────────────────────
-router.post('/google-register', async (req, res) => {
+// googleAuthLimiter + registerLimiter em cadeia: restringe criação de contas via Google.
+router.post('/google-register', googleAuthLimiter, registerLimiter, async (req, res) => {
   const { credential } = req.body;
   if (!credential || typeof credential !== 'string' || credential.length > 4096) {
     return res.status(400).json({ error: 'Token Google não fornecido ou inválido' });
@@ -244,8 +254,8 @@ router.post('/google-register', async (req, res) => {
 });
 
 // ── COMPLETAR DADOS DA OFICINA (após registro) ────────────────
-// Usa authMiddleware para validar o token temporário emitido no /register
-router.post('/complete-oficina', authMiddleware, async (req, res) => {
+// sensitiveOpsLimiter: 10 tentativas / 15 min — evita abuso do fluxo de onboarding.
+router.post('/complete-oficina', sensitiveOpsLimiter, authMiddleware, async (req, res) => {
   // Valida e sanitiza campos
   const nomeOficinaRaw = req.body?.nome_oficina;
   const telefoneRaw    = req.body?.telefone;

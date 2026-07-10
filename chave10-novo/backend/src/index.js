@@ -4,13 +4,19 @@ require('dotenv').config();
 const express   = require('express');
 const cors      = require('cors');
 const helmet    = require('helmet');
-const rateLimit = require('express-rate-limit');
 const {
   errorHandler,
   notFoundHandler,
   blockUnusedMethods,
   requireJsonContentType,
 } = require('./middleware/errorHandler');
+const {
+  globalLimiter,
+  readLimiter,
+  writeLimiter,
+  adminLimiter,
+  loginLimiter,
+} = require('./middleware/rateLimits');
 
 const app = express();
 
@@ -22,6 +28,28 @@ if (process.env.NODE_ENV === 'production') {
 } else {
   app.set('trust proxy', false);
 }
+
+// ── TIMEOUT DE REQUISIÇÃO ─────────────────────────────────────
+// Mata requisições que demoram mais de 30s — protege contra slowloris e
+// ataques que mantêm conexões abertas para esgotar recursos do servidor.
+// O timeout é aplicado antes de qualquer rota.
+const REQUEST_TIMEOUT_MS = parseInt(process.env.REQUEST_TIMEOUT_MS) || 30000;
+app.use((req, res, next) => {
+  res.setTimeout(REQUEST_TIMEOUT_MS, () => {
+    if (!res.headersSent) {
+      res.status(503).json({ error: 'Requisição excedeu o tempo limite' });
+    }
+  });
+  next();
+});
+
+// ── FLOOD GLOBAL ─────────────────────────────────────────────
+// Última linha antes do Helmet — corta floods antes de processar qualquer lógica.
+app.use(globalLimiter);
+
+// ── RATE LIMIT POR MÉTODO ─────────────────────────────────────
+// Limites separados para leitura e escrita — GETs têm orçamento maior.
+app.use(readLimiter);
 
 // ── BLOQUEAR MÉTODOS HTTP DESNECESSÁRIOS ──────────────────────
 // Bloqueia TRACE, TRACK, CONNECT, etc. — apenas GET/POST/PUT/PATCH/DELETE/OPTIONS
@@ -206,38 +234,17 @@ function cacheMiddleware(ttlSeconds = 30) {
 }
 
 // ── RATE LIMIT: login / registro ─────────────────────────────
-// Proteção contra brute force de credenciais.
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 20,                   // máx 20 tentativas por IP
-  standardHeaders: 'draft-7',
-  legacyHeaders: false,
-  message: { error: 'Muitas tentativas de login. Tente novamente em 15 minutos.' },
-  skipSuccessfulRequests: false, // conta também logins bem-sucedidos
-});
+// Importados de middleware/rateLimits.js — configurações detalhadas lá.
 
 // ── RATE LIMIT: rotas de escrita ──────────────────────────────
-// Proteção geral contra abuso de escrita (POST/PUT/PATCH/DELETE).
-const writeLimiter = rateLimit({
-  windowMs: 60 * 1000,       // 1 minuto
-  max: 120,                  // máx 120 requisições por IP por minuto
-  standardHeaders: 'draft-7',
-  legacyHeaders: false,
-  message: { error: 'Muitas requisições. Tente novamente em instantes.' },
-  skip: (req) => req.method === 'GET',
-});
+// Importados de middleware/rateLimits.js — configurações detalhadas lá.
 
 // ── RATE LIMIT: rotas administrativas ────────────────────────
-// Admin tem acesso a operações de alto impacto — limite mais conservador.
-const adminLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 60,
-  standardHeaders: 'draft-7',
-  legacyHeaders: false,
-  message: { error: 'Muitas requisições administrativas. Tente novamente em instantes.' },
-});
+// Importados de middleware/rateLimits.js — configurações detalhadas lá.
 
 // ── ROTAS ─────────────────────────────────────────────────────
+// loginLimiter aplicado em /api/auth — cobre /login, /register, /google e /google-register.
+// Cada rota sensível dentro do auth router tem seu limiter específico (ver routes/auth.js).
 app.use('/api/auth',     loginLimiter, require('./routes/auth'));
 app.use('/api/admin',    adminLimiter, require('./routes/admin'));
 app.use('/api/app',      writeLimiter, cacheMiddleware(15), require('./routes/app'));
