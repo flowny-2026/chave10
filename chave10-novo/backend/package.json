@@ -7,6 +7,9 @@
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "backup": "node -e \"require('./src/utils/backup').backupDatabase().then(r => console.log(r))\"",
+    "db:migrate": "node src/migrations/migrationRunner.js",
+    "db:migrate:status": "node src/migrations/migrationRunner.js --status",
+    "db:health": "node src/services/dbHealthService.js",
     "seed:demo": "node src/scripts/seed-demo.js",
     "migrate:approval": "node src/migrations/run-migrations.js"
   },

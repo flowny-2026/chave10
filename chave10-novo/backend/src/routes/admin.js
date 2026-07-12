@@ -5,6 +5,7 @@ const { authMiddleware, masterAdminOnly } = require('../middleware/auth');
 const { validateOficina, validateUsuario, validatePagamento, validateId, validateRenovarLote, validateRedefinirSenha } = require('../middleware/validate');
 const { sensitiveOpsLimiter } = require('../middleware/rateLimits');
 const { audit, ACOES } = require('../services/auditService');
+const { runHealthCheck } = require('../services/dbHealthService');
 const log = require('../utils/logger');
 
 router.use(authMiddleware, masterAdminOnly);
@@ -436,6 +437,18 @@ router.get('/audit-alerts/tipos', async (req, res) => {
     res.json(rows.map(r => r.tipo));
   } catch (err) {
     res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+// ── DB HEALTH ────────────────────────────────────────────────
+// Verificação de integridade do banco — apenas master_admin
+router.get('/db-health', async (req, res) => {
+  try {
+    const resultado = await runHealthCheck();
+    res.json(resultado);
+  } catch (err) {
+    log.error('admin_db_health', err);
+    res.status(500).json({ error: 'Erro ao verificar saúde do banco' });
   }
 });
 

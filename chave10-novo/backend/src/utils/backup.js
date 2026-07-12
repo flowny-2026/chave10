@@ -58,12 +58,14 @@ function cleanOldBackups() {
 /**
  * Realiza backup do banco PostgreSQL
  * Usa execFile (não shell) para evitar command injection via DATABASE_URL.
+ * Grava também um arquivo .json de metadata com checksum SHA-256.
  */
 async function backupDatabase() {
   try {
     ensureBackupDir();
 
     const backupFile = path.join(BACKUP_DIR, getBackupFileName());
+    const metaFile   = backupFile + '.json';
     const databaseUrl = process.env.DATABASE_URL;
 
     if (!databaseUrl) {
@@ -73,32 +75,37 @@ async function backupDatabase() {
     console.log('🔄 Iniciando backup do banco de dados...');
 
     // execFile com array de argumentos — sem interpolação de shell, sem command injection.
-    // pg_dump escreve diretamente em arquivo via flag -f.
     await execFileAsync('pg_dump', [databaseUrl, '-f', backupFile]);
 
-    // Verifica se o arquivo foi criado
-    if (fs.existsSync(backupFile)) {
-      const stats = fs.statSync(backupFile);
-      const sizeMB = (stats.size / (1024 * 1024)).toFixed(2);
-      console.log(`✅ Backup realizado com sucesso: ${path.basename(backupFile)} (${sizeMB} MB)`);
-      
-      // Limpa backups antigos
-      cleanOldBackups();
-      
-      return {
-        success: true,
-        file: path.basename(backupFile), // retorna apenas o nome, sem caminho absoluto
-        size: stats.size
-      };
-    } else {
+    if (!fs.existsSync(backupFile)) {
       throw new Error('Arquivo de backup não foi criado');
     }
+
+    const stats   = fs.statSync(backupFile);
+    const content = fs.readFileSync(backupFile);
+    const checksum = require('crypto').createHash('sha256').update(content).digest('hex');
+    const sizeMB  = (stats.size / (1024 * 1024)).toFixed(2);
+
+    // Salva metadata para verificação de integridade na restauração
+    const meta = {
+      arquivo:    path.basename(backupFile),
+      criado_em:  new Date().toISOString(),
+      tamanho_bytes: stats.size,
+      tamanho_mb:    parseFloat(sizeMB),
+      checksum_sha256: checksum,
+      node_env:   process.env.NODE_ENV || 'development',
+    };
+    fs.writeFileSync(metaFile, JSON.stringify(meta, null, 2));
+
+    console.log(`✅ Backup realizado com sucesso: ${path.basename(backupFile)} (${sizeMB} MB)`);
+    console.log(`   SHA-256: ${checksum}`);
+
+    cleanOldBackups();
+
+    return { success: true, file: path.basename(backupFile), size: stats.size, checksum };
   } catch (error) {
     console.error('❌ Erro ao realizar backup:', error.message);
-    return {
-      success: false,
-      error: error.message
-    };
+    return { success: false, error: error.message };
   }
 }
 
@@ -137,6 +144,36 @@ async function restoreDatabase(backupFileName) {
       success: false,
       error: error.message
     };
+  }
+}
+
+/**
+ * Verifica integridade de um arquivo de backup comparando o checksum SHA-256
+ * com o arquivo de metadata gerado no momento do backup.
+ */
+function verifyBackup(backupFileName) {
+  try {
+    const backupFile = path.join(BACKUP_DIR, backupFileName);
+    const metaFile   = backupFile + '.json';
+
+    if (!fs.existsSync(backupFile)) {
+      return { valid: false, error: 'Arquivo de backup não encontrado' };
+    }
+    if (!fs.existsSync(metaFile)) {
+      return { valid: false, error: 'Arquivo de metadata não encontrado — backup pode ser antigo' };
+    }
+
+    const meta    = JSON.parse(fs.readFileSync(metaFile, 'utf8'));
+    const content = fs.readFileSync(backupFile);
+    const atual   = require('crypto').createHash('sha256').update(content).digest('hex');
+
+    if (atual !== meta.checksum_sha256) {
+      return { valid: false, error: 'Checksum diverge — arquivo pode estar corrompido', esperado: meta.checksum_sha256, atual };
+    }
+
+    return { valid: true, meta };
+  } catch (err) {
+    return { valid: false, error: err.message };
   }
 }
 
@@ -189,6 +226,7 @@ function scheduleBackup(intervalHours = 24) {
 module.exports = {
   backupDatabase,
   restoreDatabase,
+  verifyBackup,
   listBackups,
   scheduleBackup,
   BACKUP_DIR

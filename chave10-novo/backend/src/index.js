@@ -302,6 +302,25 @@ async function jobAtualizarVencidos() {
   }
 }
 
+// Job de verificação de integridade do banco — roda 1x por dia
+async function jobDbHealth() {
+  try {
+    const { runHealthCheck } = require('./services/dbHealthService');
+    const resultado = await runHealthCheck();
+    const log = require('./utils/logger');
+    if (resultado.erros > 0) {
+      log.error('db_health_erros', { erros: resultado.erros, avisos: resultado.avisos, duracao_ms: resultado.duracao_ms });
+    } else if (resultado.avisos > 0) {
+      log.warn('db_health_avisos', { avisos: resultado.avisos, duracao_ms: resultado.duracao_ms });
+    } else {
+      log.info('db_health_ok', { duracao_ms: resultado.duracao_ms });
+    }
+  } catch (err) {
+    const log = require('./utils/logger');
+    log.error('job_db_health', err);
+  }
+}
+
 initDB()
   .then(async () => {
     app.listen(PORT, () =>
@@ -309,6 +328,12 @@ initDB()
     );
     await jobAtualizarVencidos();
     setInterval(jobAtualizarVencidos, 60 * 60 * 1000);
+
+    // Health check do banco 1x por dia (offset de 5 min para não coincidir com outros jobs)
+    setTimeout(() => {
+      jobDbHealth();
+      setInterval(jobDbHealth, 24 * 60 * 60 * 1000);
+    }, 5 * 60 * 1000);
 
     const backupInterval = parseInt(process.env.BACKUP_INTERVAL_HOURS) || 24;
     scheduleBackup(backupInterval);
