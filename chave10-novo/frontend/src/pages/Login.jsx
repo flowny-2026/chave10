@@ -309,9 +309,6 @@ export default function Login() {
       else setErro(err.error || 'Credenciais inválidas');
     }
   }
-      else setErro(err.error || 'Credenciais inválidas');
-    }
-  }
 
   async function handleGoogleSuccess({ credential }) {
     setErro('');
