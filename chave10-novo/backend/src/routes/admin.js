@@ -290,6 +290,7 @@ router.get('/audit-logs', async (req, res) => {
     const usuario_id  = req.query.usuario_id  ? parseInt(req.query.usuario_id)  : null;
     const acao        = req.query.acao        ? String(req.query.acao).slice(0, 60)  : null;
     const resultado   = ['sucesso','falha'].includes(req.query.resultado) ? req.query.resultado : null;
+    const severidade  = ['info','aviso','alto','critico'].includes(req.query.severidade) ? req.query.severidade : null;
     const data_inicio = /^\d{4}-\d{2}-\d{2}$/.test(req.query.data_inicio) ? req.query.data_inicio : null;
     const data_fim    = /^\d{4}-\d{2}-\d{2}$/.test(req.query.data_fim)    ? req.query.data_fim    : null;
     const busca       = req.query.busca ? String(req.query.busca).slice(0, 100) : null;
@@ -301,6 +302,7 @@ router.get('/audit-logs', async (req, res) => {
     if (usuario_id) { params.push(usuario_id);  conditions.push(`a.usuario_id = $${params.length}`); }
     if (acao)       { params.push(acao);        conditions.push(`a.acao = $${params.length}`); }
     if (resultado)  { params.push(resultado);   conditions.push(`a.resultado = $${params.length}`); }
+    if (severidade) { params.push(severidade);  conditions.push(`a.severidade = $${params.length}`); }
     if (data_inicio){ params.push(data_inicio + 'T00:00:00Z'); conditions.push(`a.created_at >= $${params.length}`); }
     if (data_fim)   { params.push(data_fim    + 'T23:59:59Z'); conditions.push(`a.created_at <= $${params.length}`); }
     if (busca) {
@@ -348,6 +350,93 @@ router.get('/audit-logs', async (req, res) => {
 router.get('/audit-logs/acoes', (req, res) => {
   const { ACOES } = require('../services/auditService');
   res.json(Object.values(ACOES).sort());
+});
+
+// ── AUDIT ALERTS ─────────────────────────────────────────────
+// Consulta de alertas de segurança automáticos — apenas master_admin
+
+router.get('/audit-alerts', async (req, res) => {
+  try {
+    const page       = Math.max(1, parseInt(req.query.page) || 1);
+    const limit      = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50));
+    const offset     = (page - 1) * limit;
+    const severidade = ['info','aviso','alto','critico'].includes(req.query.severidade) ? req.query.severidade : null;
+    const tipo       = req.query.tipo ? String(req.query.tipo).slice(0, 60) : null;
+    const resolvido  = req.query.resolvido === 'true' ? true : req.query.resolvido === 'false' ? false : null;
+    const data_inicio = /^\d{4}-\d{2}-\d{2}$/.test(req.query.data_inicio) ? req.query.data_inicio : null;
+    const data_fim    = /^\d{4}-\d{2}-\d{2}$/.test(req.query.data_fim)    ? req.query.data_fim    : null;
+
+    const conditions = [];
+    const params     = [];
+
+    if (severidade !== null) { params.push(severidade); conditions.push(`a.severidade = $${params.length}`); }
+    if (tipo !== null)       { params.push(tipo);        conditions.push(`a.tipo = $${params.length}`); }
+    if (resolvido !== null)  { params.push(resolvido);   conditions.push(`a.resolvido = $${params.length}`); }
+    if (data_inicio)         { params.push(data_inicio + 'T00:00:00Z'); conditions.push(`a.created_at >= $${params.length}`); }
+    if (data_fim)            { params.push(data_fim    + 'T23:59:59Z'); conditions.push(`a.created_at <= $${params.length}`); }
+
+    const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
+
+    const countRow = await queryOne(`SELECT COUNT(*) n FROM audit_alerts a ${where}`, params);
+    params.push(limit, offset);
+
+    const rows = await query(
+      `SELECT a.*,
+              to_char(a.created_at AT TIME ZONE 'America/Sao_Paulo', 'DD/MM/YYYY HH24:MI:SS') AS created_at_br,
+              u.nome AS usuario_nome_ref,
+              o.nome AS oficina_nome
+       FROM audit_alerts a
+       LEFT JOIN usuarios u  ON u.id  = a.usuario_id
+       LEFT JOIN oficinas o  ON o.id  = a.oficina_id
+       ${where}
+       ORDER BY a.created_at DESC
+       LIMIT $${params.length - 1} OFFSET $${params.length}`,
+      params
+    );
+
+    // Contadores por severidade (para dashboard de alertas)
+    const contadores = await query(
+      `SELECT severidade, COUNT(*) n FROM audit_alerts WHERE resolvido = false GROUP BY severidade`
+    );
+
+    res.json({
+      total: +countRow.n,
+      page,
+      limit,
+      pages: Math.ceil(+countRow.n / limit),
+      contadores: contadores.reduce((acc, r) => { acc[r.severidade] = +r.n; return acc; }, {}),
+      alerts: rows,
+    });
+  } catch (err) {
+    log.error('admin_audit_alerts', err);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+// PATCH /audit-alerts/:id/resolver — marca alerta como resolvido
+router.patch('/audit-alerts/:id/resolver', validateId, async (req, res) => {
+  try {
+    const result = await run(
+      `UPDATE audit_alerts SET resolvido=true, resolvido_em=NOW(), resolvido_por=$1
+       WHERE id=$2 AND resolvido=false`,
+      [req.user.id, req.params.id]
+    );
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Alerta não encontrado ou já resolvido' });
+    res.json({ ok: true });
+  } catch (err) {
+    log.error('admin_resolver_alert', err);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+// Lista tipos de alerta disponíveis
+router.get('/audit-alerts/tipos', async (req, res) => {
+  try {
+    const rows = await query(`SELECT DISTINCT tipo FROM audit_alerts ORDER BY tipo`);
+    res.json(rows.map(r => r.tipo));
+  } catch (err) {
+    res.status(500).json({ error: 'Erro interno' });
+  }
 });
 
 module.exports = router;

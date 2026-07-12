@@ -20,6 +20,15 @@
 const { queryOne } = require('../db');
 const log = require('../utils/logger');
 
+// Import lazy para evitar dependência circular (auditService usa db, authorization usa db)
+let _auditAlert = null;
+function getAuditAlert() {
+  if (!_auditAlert) {
+    try { _auditAlert = require('../services/auditService').auditAlert; } catch { _auditAlert = () => {}; }
+  }
+  return _auditAlert;
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /**
@@ -73,6 +82,12 @@ function checkOwns(table) {
           id_solicitado: req.params.id,
           path: req.path,
           ip: req.ip,
+        });
+        // Registra alerta de IDOR na tabela de alertas de segurança
+        getAuditAlert()('idor', 'critico', req.ip, req.user?.id, req.user?.oficina_id, {
+          tabela: table,
+          id_solicitado: req.params.id,
+          path: req.path,
         });
         return res.status(404).json({ error: 'Recurso não encontrado' });
       }

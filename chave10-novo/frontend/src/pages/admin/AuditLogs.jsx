@@ -1,6 +1,26 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../../api';
 
+// ── Badge de severidade ───────────────────────────────────────
+function SeveridadeBadge({ sev }) {
+  const map = {
+    info:    { label: 'Info',    bg: '#f0f9ff', color: '#0369a1', border: '#bae6fd' },
+    aviso:   { label: 'Aviso',  bg: '#fffbeb', color: '#b45309', border: '#fde68a' },
+    alto:    { label: 'Alto',   bg: '#fff7ed', color: '#c2410c', border: '#fed7aa' },
+    critico: { label: '⚠ Crítico', bg: '#fef2f2', color: '#b91c1c', border: '#fecaca' },
+  };
+  const s = map[sev] || { label: sev || '—', bg: '#f9fafb', color: '#6b7280', border: '#e5e7eb' };
+  return (
+    <span style={{
+      display: 'inline-block', padding: '2px 7px', borderRadius: 9999,
+      fontSize: 11, fontWeight: 600,
+      background: s.bg, color: s.color, border: `1px solid ${s.border}`,
+    }}>
+      {s.label}
+    </span>
+  );
+}
+
 // ── Badge de resultado ────────────────────────────────────────
 function ResultadoBadge({ resultado }) {
   const cor = resultado === 'sucesso'
@@ -98,7 +118,7 @@ export default function AuditLogs() {
   const [loading,   setLoading]   = useState(false);
   const [acoes,     setAcoes]     = useState([]);
   const [filtros, setFiltros] = useState({
-    busca: '', acao: '', resultado: '', data_inicio: '', data_fim: '',
+    busca: '', acao: '', resultado: '', severidade: '', data_inicio: '', data_fim: '',
   });
 
   // Carrega lista de ações disponíveis para o filtro
@@ -115,6 +135,7 @@ export default function AuditLogs() {
       if (f.busca)       params.set('busca',       f.busca);
       if (f.acao)        params.set('acao',         f.acao);
       if (f.resultado)   params.set('resultado',    f.resultado);
+      if (f.severidade)  params.set('severidade',   f.severidade);
       if (f.data_inicio) params.set('data_inicio',  f.data_inicio);
       if (f.data_fim)    params.set('data_fim',     f.data_fim);
       const r = await api.get(`/api/admin/audit-logs?${params}`);
@@ -141,7 +162,7 @@ export default function AuditLogs() {
   }
 
   function handleLimpar() {
-    const vazio = { busca: '', acao: '', resultado: '', data_inicio: '', data_fim: '' };
+    const vazio = { busca: '', acao: '', resultado: '', severidade: '', data_inicio: '', data_fim: '' };
     setFiltros(vazio);
     fetchLogs(1, vazio);
   }
@@ -190,6 +211,13 @@ export default function AuditLogs() {
           <option value="sucesso">Sucesso</option>
           <option value="falha">Falha</option>
         </select>
+        <select name="severidade" value={filtros.severidade} onChange={handleFiltroChange} style={{ ...inputSt, minWidth: 120 }}>
+          <option value="">Todas as severidades</option>
+          <option value="info">Info</option>
+          <option value="aviso">Aviso</option>
+          <option value="alto">Alto</option>
+          <option value="critico">Crítico</option>
+        </select>
         <input type="date" name="data_inicio" value={filtros.data_inicio} onChange={handleFiltroChange}
           style={{ ...inputSt, minWidth: 140 }} title="Data início" />
         <input type="date" name="data_fim" value={filtros.data_fim} onChange={handleFiltroChange}
@@ -222,7 +250,7 @@ export default function AuditLogs() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ background: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
-                {['Data/Hora', 'Usuário', 'Perfil', 'Oficina', 'Ação', 'Entidade', 'Resultado', 'IP', 'Detalhes'].map(h => (
+                {['Data/Hora', 'Usuário', 'Perfil', 'Oficina', 'Ação', 'Severidade', 'Entidade', 'Resultado', 'IP', 'Detalhes'].map(h => (
                   <th key={h} style={{
                     padding: '10px 12px', textAlign: 'left', fontWeight: 600,
                     color: '#374151', fontSize: 12, whiteSpace: 'nowrap',
@@ -252,6 +280,9 @@ export default function AuditLogs() {
                   </td>
                   <td style={{ padding: '9px 12px' }}>
                     <AcaoBadge acao={l.acao} />
+                  </td>
+                  <td style={{ padding: '9px 12px' }}>
+                    <SeveridadeBadge sev={l.severidade} />
                   </td>
                   <td style={{ padding: '9px 12px', color: '#6b7280', fontSize: 12 }}>
                     {l.entidade

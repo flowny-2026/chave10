@@ -230,16 +230,46 @@ async function initDB() {
       entidade_id  INTEGER,
       detalhes     JSONB,
       resultado    TEXT NOT NULL DEFAULT 'sucesso' CHECK(resultado IN ('sucesso','falha')),
+      severidade   TEXT NOT NULL DEFAULT 'info'
+                     CHECK(severidade IN ('info','aviso','alto','critico')),
       ip           TEXT,
       user_agent   TEXT,
       created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    );
-    CREATE INDEX IF NOT EXISTS idx_audit_logs_oficina    ON audit_logs(oficina_id, created_at DESC);
-    CREATE INDEX IF NOT EXISTS idx_audit_logs_usuario    ON audit_logs(usuario_id, created_at DESC);
-    CREATE INDEX IF NOT EXISTS idx_audit_logs_acao       ON audit_logs(acao, created_at DESC);
-    CREATE INDEX IF NOT EXISTS idx_audit_logs_created    ON audit_logs(created_at DESC);
-    CREATE INDEX IF NOT EXISTS idx_audit_logs_resultado  ON audit_logs(resultado);
+    )
   `).catch(() => {});
+
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_audit_logs_oficina    ON audit_logs(oficina_id, created_at DESC)`).catch(() => {});
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_audit_logs_usuario    ON audit_logs(usuario_id, created_at DESC)`).catch(() => {});
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_audit_logs_acao       ON audit_logs(acao, created_at DESC)`).catch(() => {});
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_audit_logs_created    ON audit_logs(created_at DESC)`).catch(() => {});
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_audit_logs_resultado  ON audit_logs(resultado)`).catch(() => {});
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_audit_logs_severidade ON audit_logs(severidade, created_at DESC)`).catch(() => {});
+
+  // Migração: adiciona coluna severidade caso a tabela já exista sem ela
+  await pool.query(`ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS severidade TEXT NOT NULL DEFAULT 'info' CHECK(severidade IN ('info','aviso','alto','critico'))`).catch(() => {});
+
+  // Tabela de alertas automáticos de segurança
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS audit_alerts (
+      id           BIGSERIAL PRIMARY KEY,
+      tipo         TEXT NOT NULL,
+      severidade   TEXT NOT NULL DEFAULT 'alto'
+                     CHECK(severidade IN ('info','aviso','alto','critico')),
+      ip           TEXT,
+      usuario_id   INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+      oficina_id   INTEGER REFERENCES oficinas(id) ON DELETE SET NULL,
+      detalhes     JSONB,
+      resolvido    BOOLEAN NOT NULL DEFAULT false,
+      resolvido_em TIMESTAMPTZ,
+      resolvido_por INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+      created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `).catch(() => {});
+
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_alerts_tipo       ON audit_alerts(tipo, created_at DESC)`).catch(() => {});
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_alerts_severidade ON audit_alerts(severidade, created_at DESC)`).catch(() => {});
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_alerts_resolvido  ON audit_alerts(resolvido, created_at DESC)`).catch(() => {});
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_alerts_created    ON audit_alerts(created_at DESC)`).catch(() => {});
 
   // ── Migrations de features adicionais ───────────────────────
   // Tabelas do módulo de aprovação de orçamentos via link
