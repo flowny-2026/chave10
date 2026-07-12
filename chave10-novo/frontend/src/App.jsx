@@ -18,6 +18,7 @@ const AdminDashboard   = lazy(() => import('./pages/admin/Dashboard'));
 const AdminOficinas    = lazy(() => import('./pages/admin/Oficinas'));
 const AdminPagamentos  = lazy(() => import('./pages/admin/Pagamentos'));
 const AdminTrocarSenha = lazy(() => import('./pages/admin/TrocarSenha'));
+const AdminAuditLogs   = lazy(() => import('./pages/admin/AuditLogs'));
 const AppDashboard     = lazy(() => import('./pages/app/DashboardV2'));
 const AppClientes      = lazy(() => import('./pages/app/Clientes'));
 const AppVeiculos      = lazy(() => import('./pages/app/Veiculos'));
@@ -145,6 +146,7 @@ export default function App() {
             <Route path="dashboard"    element={<AdminDashboard />} />
             <Route path="oficinas"     element={<AdminOficinas />} />
             <Route path="pagamentos"   element={<AdminPagamentos />} />
+            <Route path="audit-logs"   element={<AdminAuditLogs />} />
             <Route path="trocar-senha" element={<AdminTrocarSenha />} />
             <Route index element={<Navigate to="dashboard" replace />} />
           </Route>

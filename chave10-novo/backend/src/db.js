@@ -216,6 +216,31 @@ async function initDB() {
     );
   `);
 
+  // ── Tabela de auditoria ─────────────────────────────────────
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id           BIGSERIAL PRIMARY KEY,
+      oficina_id   INTEGER REFERENCES oficinas(id) ON DELETE SET NULL,
+      usuario_id   INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+      usuario_nome TEXT,
+      usuario_email TEXT,
+      perfil       TEXT,
+      acao         TEXT NOT NULL,
+      entidade     TEXT,
+      entidade_id  INTEGER,
+      detalhes     JSONB,
+      resultado    TEXT NOT NULL DEFAULT 'sucesso' CHECK(resultado IN ('sucesso','falha')),
+      ip           TEXT,
+      user_agent   TEXT,
+      created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_audit_logs_oficina    ON audit_logs(oficina_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_audit_logs_usuario    ON audit_logs(usuario_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_audit_logs_acao       ON audit_logs(acao, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_audit_logs_created    ON audit_logs(created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_audit_logs_resultado  ON audit_logs(resultado);
+  `).catch(() => {});
+
   // ── Migrations de features adicionais ───────────────────────
   // Tabelas do módulo de aprovação de orçamentos via link
   // Incluídas aqui para garantir que o banco esteja completo sem migration manual obrigatória.

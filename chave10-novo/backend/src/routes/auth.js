@@ -10,6 +10,7 @@ const {
   googleAuthLimiter,
   sensitiveOpsLimiter,
 } = require('../middleware/rateLimits');
+const { audit, ACOES } = require('../services/auditService');
 const log = require('../utils/logger');
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -30,6 +31,8 @@ router.post('/login', validateLogin, async (req, res) => {
 
     if (!usuario || !senhaOk) {
       log.loginFail({ email, ip });
+      audit(req, ACOES.LOGIN_FALHA, 'usuarios', null, { email, motivo: 'credenciais_invalidas' }, 'falha',
+        { id: null, nome: null, email, perfil: null, oficina_id: null });
       return res.status(401).json({ error: 'Credenciais inválidas' });
     }
 
@@ -41,6 +44,8 @@ router.post('/login', validateLogin, async (req, res) => {
         { expiresIn: '30d' }
       );
       log.loginOk({ email, perfil: 'master_admin', ip });
+      audit(req, ACOES.LOGIN, 'usuarios', usuario.id, { via: 'email', perfil: 'master_admin' }, 'sucesso',
+        { id: usuario.id, nome: usuario.nome, email: usuario.email, perfil: 'master_admin', oficina_id: null });
       return res.json({
         token,
         usuario: { id: usuario.id, nome: usuario.nome, email: usuario.email, perfil: 'master_admin', oficina_id: null }
@@ -70,6 +75,8 @@ router.post('/login', validateLogin, async (req, res) => {
       { expiresIn: '30d' }
     );
     log.loginOk({ email, perfil: usuario.perfil, oficina_id: usuario.oficina_id, ip });
+    audit(req, ACOES.LOGIN, 'usuarios', usuario.id, { via: 'email', perfil: usuario.perfil, oficina_id: usuario.oficina_id }, 'sucesso',
+      { id: usuario.id, nome: usuario.nome, email: usuario.email, perfil: usuario.perfil, oficina_id: usuario.oficina_id });
     res.json({
       token,
       usuario: {
@@ -123,6 +130,8 @@ router.post('/register', registerLimiter, async (req, res) => {
       [nome, email, hash]
     );
     const token = jwt.sign({ id: r.id, perfil: 'admin_oficina', oficina_id: null, nome }, SECRET, { expiresIn: '7d' });
+    audit(req, ACOES.REGISTRO, 'usuarios', r.id, { nome, email }, 'sucesso',
+      { id: r.id, nome, email, perfil: 'admin_oficina', oficina_id: null });
     res.status(201).json({ token, needsOficina: true });
   } catch (err) {
     log.error('auth_register', err);

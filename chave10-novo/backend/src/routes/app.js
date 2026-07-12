@@ -13,6 +13,7 @@ const {
   checkClienteVeiculoOwnership,
   checkQueryClienteOwnership,
 } = require('../middleware/authorization');
+const { audit, ACOES } = require('../services/auditService');
 const log = require('../utils/logger');
 
 router.use(authMiddleware, oficinaSelf);
@@ -130,6 +131,7 @@ router.post('/clientes', validateCliente, async (req,res) => {
   try {
     const {nome,telefone,email,obs,endereco}=req.body;
     const r=await queryOne("INSERT INTO clientes(oficina_id,nome,telefone,email,obs,endereco) VALUES($1,$2,$3,$4,$5,$6) RETURNING id",[oid(req),nome,telefone||null,email||null,obs||null,endereco||null]);
+    audit(req, ACOES.CRIAR_CLIENTE, 'clientes', r.id, { nome, telefone });
     res.status(201).json({id:r.id,nome,telefone,email,obs,endereco});
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
@@ -140,6 +142,7 @@ router.put('/clientes/:id', validateId, checkOwns('clientes'), validateCliente, 
     const {nome,telefone,email,obs,endereco}=req.body;
     const result = await run("UPDATE clientes SET nome=COALESCE($1,nome),telefone=COALESCE($2,telefone),email=COALESCE($3,email),obs=COALESCE($4,obs),endereco=COALESCE($5,endereco) WHERE id=$6 AND oficina_id=$7",[nome,telefone||null,email||null,obs||null,endereco||null,req.params.id,oid(req)]);
     if(result.rowCount === 0) return res.status(404).json({error:'Cliente não encontrado'});
+    audit(req, ACOES.EDITAR_CLIENTE, 'clientes', req.params.id, { nome, telefone });
     res.json({ok:true});
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
@@ -149,6 +152,7 @@ router.delete('/clientes/:id', validateId, checkOwns('clientes'), async (req,res
   try {
     const result = await run('DELETE FROM clientes WHERE id=$1 AND oficina_id=$2',[req.params.id,oid(req)]);
     if(result.rowCount === 0) return res.status(404).json({error:'Cliente não encontrado'});
+    audit(req, ACOES.DELETAR_CLIENTE, 'clientes', req.params.id, {});
     res.json({ok:true});
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
@@ -226,7 +230,6 @@ router.post('/os', validateOS, checkClienteVeiculoOwnership, async (req,res) => 
   try {
     const {cliente_id,veiculo_id,descricao,servicos,pecas,pecas_itens,valor_mo,valor_pecas,observacao,data}=req.body;
     const isFuncionario = req.user?.perfil === 'funcionario';
-    // Funcionários não podem definir valores financeiros
     const valorMO = isFuncionario ? 0 : (parseFloat(valor_mo)||0);
     const valorPecas = isFuncionario ? 0 : (parseFloat(valor_pecas)||0);
     const valor = valorMO + valorPecas;
@@ -234,6 +237,7 @@ router.post('/os', validateOS, checkClienteVeiculoOwnership, async (req,res) => 
     const cnt=await queryOne("SELECT COUNT(*) n FROM ordens_servico WHERE oficina_id=$1",[id]);
     const numero=String(+cnt.n+1).padStart(4,'0');
     const r=await queryOne("INSERT INTO ordens_servico(oficina_id,cliente_id,veiculo_id,descricao,servicos,pecas,pecas_itens,valor_mo,valor_pecas,valor,observacao,data,numero) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id",[id,cliente_id||null,veiculo_id||null,descricao,servicos||null,pecas||null,pecas_itens?JSON.stringify(pecas_itens):null,valorMO,valorPecas,valor,observacao||null,data||new Date().toISOString().split('T')[0],numero]);
+    audit(req, ACOES.CRIAR_OS, 'ordens_servico', r.id, { numero, cliente_id, veiculo_id, data: data||new Date().toISOString().split('T')[0] });
     res.status(201).json({id:r.id,numero});
   } catch(err){log.error('app_post_os',err);res.status(500).json({error:'Erro interno'});}
 });
@@ -252,6 +256,7 @@ router.put('/os/:id', validateId, checkOwns('ordens_servico'), validateOS, check
       [descricao||null,servicos||null,pecas||null,pecas_itens?JSON.stringify(pecas_itens):null,valorMO,valorPecas,valor,status||null,observacao||null,cliente_id||null,veiculo_id||null,data||null,req.params.id,oid(req)]
     );
     if(result.rowCount === 0) return res.status(404).json({error:'OS não encontrada'});
+    audit(req, ACOES.EDITAR_OS, 'ordens_servico', req.params.id, { status, cliente_id, veiculo_id });
     res.json({ok:true});
   } catch(err){log.error('app_put_os',err);res.status(500).json({error:'Erro interno'});}
 });
@@ -263,6 +268,7 @@ router.patch('/os/:id/status', validateId, checkOwns('ordens_servico'), async (r
     if(!status || !['em_andamento','finalizado'].includes(status)) return res.status(400).json({error:'Status inválido'});
     const result = await run('UPDATE ordens_servico SET status=$1 WHERE id=$2 AND oficina_id=$3',[status,req.params.id,oid(req)]);
     if(result.rowCount === 0) return res.status(404).json({error:'OS não encontrada'});
+    audit(req, ACOES.ALTERAR_STATUS_OS, 'ordens_servico', req.params.id, { novo_status: status });
     res.json({ok:true});
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
@@ -272,6 +278,7 @@ router.delete('/os/:id', validateId, checkOwns('ordens_servico'), async (req,res
   try {
     const result = await run('DELETE FROM ordens_servico WHERE id=$1 AND oficina_id=$2',[req.params.id,oid(req)]);
     if(result.rowCount === 0) return res.status(404).json({error:'OS não encontrada'});
+    audit(req, ACOES.DELETAR_OS, 'ordens_servico', req.params.id, {});
     res.json({ok:true});
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
