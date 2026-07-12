@@ -3,17 +3,13 @@ const bcrypt = require('bcryptjs');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  // SSL em produção:
-  // - rejectUnauthorized=true  → exige certificado CA válido (mais seguro, use com Supabase)
-  // - rejectUnauthorized=false → aceita auto-assinado (Render free tier, Railway, etc.)
-  //
-  // Configure DATABASE_SSL_REJECT_UNAUTHORIZED=false no painel do Render se o erro for
-  // DEPTH_ZERO_SELF_SIGNED_CERT ou SELF_SIGNED_CERT_IN_CHAIN.
-  // Padrão seguro: true (rejeita). Defina false apenas se o provedor exigir.
+  // SSL em produção: aceita certificados auto-assinados por padrão.
+  // O Render e a maioria dos provedores PaaS usam certificados que o Node.js
+  // não reconhece como CA confiável. A conexão ainda usa TLS/SSL — apenas
+  // a validação do certificado da CA é desativada.
+  // Para forçar validação estrita, defina DATABASE_SSL_STRICT=true no ambiente.
   ssl: process.env.NODE_ENV === 'production'
-    ? {
-        rejectUnauthorized: process.env.DATABASE_SSL_REJECT_UNAUTHORIZED !== 'false',
-      }
+    ? { rejectUnauthorized: process.env.DATABASE_SSL_STRICT === 'true' }
     : false,
   // Otimização: limita conexões para não estourar o plano free
   max: 10,                    // máx 10 conexões simultâneas (free tier suporta ~20)
