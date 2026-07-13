@@ -1,43 +1,83 @@
 /**
- * KPI Card Component - Padrão visual reutilizável em todo o sistema
- * Baseado no design do Dashboard Premium
+ * KPICard — Cartão de métrica compacto e elegante.
+ * Usado em Clientes, Veículos e outras páginas do app.
  */
-
-export default function KPICard({ 
-  title, 
-  value, 
-  subvalue, 
-  trend, 
-  icon, 
-  color = 'var(--accent)', 
+export default function KPICard({
+  title,
+  value,
+  subvalue,
+  trend,
+  icon,
+  color = '#F97316',
   size = 'normal',
-  onClick 
+  onClick,
 }) {
   const trendNum = parseFloat(trend || 0);
-  const isUp = trendNum > 0;
+  const isUp   = trendNum > 0;
   const isDown = trendNum < 0;
-  
-  const cardClass = `kpi-premium ${size}${onClick ? ' clickable' : ''}`;
-  const style = { '--kpi-color': color };
-  
-  if (onClick) {
-    style.cursor = 'pointer';
-  }
-  
+
   return (
-    <div className={cardClass} style={style} onClick={onClick}>
-      <div className="kpi-icon-wrap" style={{ background: `${color}12` }}>
-        <div className="kpi-icon" style={{ color }}>{icon}</div>
+    <div
+      onClick={onClick}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 14,
+        padding: '14px 18px',
+        background: '#fff',
+        border: '1px solid #e5e7eb',
+        borderLeft: `4px solid ${color}`,
+        borderRadius: 10,
+        cursor: onClick ? 'pointer' : 'default',
+        transition: 'box-shadow .15s, transform .15s',
+        boxShadow: '0 1px 4px rgba(0,0,0,.06)',
+        minWidth: 0,
+      }}
+      onMouseOver={e => {
+        if (!onClick) return;
+        e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,.10)';
+        e.currentTarget.style.transform = 'translateY(-1px)';
+      }}
+      onMouseOut={e => {
+        e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,.06)';
+        e.currentTarget.style.transform = '';
+      }}
+    >
+      {/* Ícone */}
+      <div style={{
+        width: 42, height: 42, flexShrink: 0, borderRadius: 10,
+        background: color + '18',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color,
+      }}>
+        {icon}
       </div>
-      <div className="kpi-data">
-        <div className="kpi-label">{title}</div>
-        <div className="kpi-value">{value}</div>
-        {subvalue && <div className="kpi-sub">{subvalue}</div>}
+
+      {/* Dados */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+          {title}
+        </div>
+        <div style={{ fontSize: size === 'large' ? 26 : 22, fontWeight: 800, color: '#111827', lineHeight: 1.1, marginTop: 2 }}>
+          {value}
+        </div>
+        {subvalue && (
+          <div style={{ fontSize: 11, color: '#6b7280', marginTop: 3 }}>
+            {subvalue}
+          </div>
+        )}
       </div>
+
+      {/* Trend badge */}
       {trend !== undefined && (
-        <div className={`kpi-trend-badge ${isUp?'up':isDown?'down':'neutral'}`}>
-          <span className="trend-icon">{isUp?'↗':isDown?'↘':'→'}</span>
-          <span className="trend-val">{Math.abs(trendNum).toFixed(1)}%</span>
+        <div style={{
+          flexShrink: 0,
+          fontSize: 11, fontWeight: 700,
+          padding: '3px 8px', borderRadius: 20,
+          background: isUp ? '#dcfce7' : isDown ? '#fee2e2' : '#f3f4f6',
+          color:      isUp ? '#16a34a' : isDown ? '#dc2626' : '#6b7280',
+        }}>
+          {isUp ? '▲' : isDown ? '▼' : '—'} {Math.abs(trendNum).toFixed(0)}%
         </div>
       )}
     </div>
