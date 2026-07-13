@@ -18,6 +18,7 @@ export default function KPICard({
 
   return (
     <div
+      className="kpi-card"
       onClick={onClick}
       style={{
         display: 'flex',
@@ -29,18 +30,8 @@ export default function KPICard({
         borderLeft: `4px solid ${color}`,
         borderRadius: 10,
         cursor: onClick ? 'pointer' : 'default',
-        transition: 'box-shadow .15s, transform .15s',
         boxShadow: '0 1px 4px rgba(0,0,0,.06)',
         minWidth: 0,
-      }}
-      onMouseOver={e => {
-        if (!onClick) return;
-        e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,.10)';
-        e.currentTarget.style.transform = 'translateY(-1px)';
-      }}
-      onMouseOut={e => {
-        e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,.06)';
-        e.currentTarget.style.transform = '';
       }}
     >
       {/* Ícone */}

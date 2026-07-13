@@ -1178,32 +1178,112 @@ input.success, select.success, textarea.success {
 .nav-item.active::before { background: var(--accent); width: 3px; }
 
 /* ══════════════════════════════════════════
-   MICROINTERAÇÕES
+   MICROINTERAÇÕES & ANIMAÇÕES DE CARDS
 ══════════════════════════════════════════ */
+
+/* ── Entrada de página ── */
 @keyframes pageEnter {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 .page-enter { animation: pageEnter .22s ease forwards; }
 
+/* ── Animação de entrada dos cards (aplicada por nth-child para efeito cascata) ── */
+@keyframes cardFadeUp {
+  from { opacity: 0; transform: translateY(16px) scale(.98); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+
+/* ── Shimmer de destaque ao entrar ── */
+@keyframes cardShimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+/* ── Pulso de borda suave ── */
+@keyframes borderPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(249,115,22,0); }
+  50%       { box-shadow: 0 0 0 3px rgba(249,115,22,.15); }
+}
+
+/* ══ stat-card ══════════════════════════════ */
 .stat-card {
-  transition: transform .2s cubic-bezier(.4,0,.2,1), box-shadow .2s;
+  transition:
+    transform .22s cubic-bezier(.34,1.56,.64,1),
+    box-shadow .22s ease,
+    background .15s;
   cursor: default;
+  animation: cardFadeUp .4s cubic-bezier(.4,0,.2,1) both;
 }
+.stat-card:nth-child(1) { animation-delay: .04s; }
+.stat-card:nth-child(2) { animation-delay: .09s; }
+.stat-card:nth-child(3) { animation-delay: .14s; }
+.stat-card:nth-child(4) { animation-delay: .19s; }
+.stat-card:nth-child(5) { animation-delay: .24s; }
+.stat-card:nth-child(6) { animation-delay: .29s; }
+
 .stat-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 24px rgba(0,0,0,.1);
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 12px 32px rgba(0,0,0,.13);
 }
+.stat-card:active { transform: translateY(-1px) scale(.99); }
 
-.card { transition: box-shadow .2s; }
-.card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.09); }
+/* ══ .card genérico ══════════════════════════ */
+.card {
+  transition:
+    box-shadow .22s ease,
+    transform .18s cubic-bezier(.4,0,.2,1);
+  animation: cardFadeUp .35s cubic-bezier(.4,0,.2,1) both;
+}
+.card:hover { box-shadow: 0 6px 24px rgba(0,0,0,.10); }
 
-.btn { transition: all .18s cubic-bezier(.4,0,.2,1); }
-.btn:active { transform: scale(.97); }
-.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(249,115,22,.4); }
+/* ══ KPICard (.kpi-card) ═════════════════════
+   Classe adicionada ao div wrapper do KPICard */
+.kpi-card {
+  animation: cardFadeUp .4s cubic-bezier(.4,0,.2,1) both;
+  transition:
+    transform .22s cubic-bezier(.34,1.56,.64,1),
+    box-shadow .22s ease;
+}
+.kpi-card:nth-child(1) { animation-delay: .04s; }
+.kpi-card:nth-child(2) { animation-delay: .09s; }
+.kpi-card:nth-child(3) { animation-delay: .14s; }
+.kpi-card:nth-child(4) { animation-delay: .19s; }
+.kpi-card:nth-child(5) { animation-delay: .24s; }
+.kpi-card:nth-child(6) { animation-delay: .29s; }
+
+.kpi-card:hover {
+  transform: translateY(-3px) scale(1.01);
+  box-shadow: 0 8px 28px rgba(0,0,0,.12) !important;
+}
+.kpi-card:active { transform: scale(.98); }
+
+/* ══ Botões ══════════════════════════════════ */
+.btn {
+  transition:
+    transform .18s cubic-bezier(.34,1.56,.64,1),
+    box-shadow .18s ease,
+    background .12s,
+    color .12s;
+}
+.btn:active { transform: scale(.96); }
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(249,115,22,.45);
+}
 .btn-outline:hover { transform: translateY(-1px); }
 
-tbody tr { transition: background .12s; }
+/* ══ Linhas de tabela ════════════════════════ */
+tbody tr {
+  transition: background .12s;
+}
+tbody tr:hover td { background: rgba(249,115,22,.04); }
+
+/* ══ Badges ══════════════════════════════════ */
+.badge {
+  transition: transform .15s, box-shadow .15s;
+}
+.badge:hover { transform: scale(1.06); }
 
 /* ══════════════════════════════════════════
    DASHBOARD — MELHORIAS VISUAIS
