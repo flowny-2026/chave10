@@ -30,6 +30,8 @@ function gerarHTMLOrcamento(orc, clientes, veiculos, oficina) {
   const totalPecas = pecas.reduce((s,p)=>s+(parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1),0);
   const subtotal = (parseFloat(orc.valor_mo)||0) + totalPecas;
   const total = subtotal - (parseFloat(orc.desconto)||0);
+  // cnpj/cpf fica em observacoes quando salvo pelo admin, ou em cnpj_cpf se salvo pela config
+  const docFiscal = oficina?.cnpj_cpf || oficina?.observacoes || '';
 
   return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/>
   <title>Orçamento ${orc.numero||''}</title>
@@ -37,7 +39,9 @@ function gerarHTMLOrcamento(orc, clientes, veiculos, oficina) {
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:Arial,sans-serif;font-size:13px;color:#1a1a1a;padding:32px}
     .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #1E3A5F}
-    .brand{font-size:24px;font-weight:800;color:#1E3A5F}.brand span{color:#F97316}
+    .oficina-info{display:flex;flex-direction:column;gap:2px}
+    .oficina-nome{font-size:20px;font-weight:800;color:#1E3A5F}
+    .oficina-detalhe{font-size:11px;color:#6B7280}
     .orc-num{font-size:20px;font-weight:700;color:#1E3A5F}
     .section{margin-bottom:20px}
     .section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#6B7280;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #E5E7EB}
@@ -55,15 +59,21 @@ function gerarHTMLOrcamento(orc, clientes, veiculos, oficina) {
     @media print{body{padding:16px}}
   </style></head><body>
   <div class="header">
-    <div>
-      ${oficina?.logo?`<img src="${oficina.logo}" style="max-height:60px;max-width:180px;object-fit:contain;margin-bottom:4px" alt="Logo" /><br/>`:``}
-      <div class="brand">${oficina?.logo?'':'Chave <span>10</span>'}</div>
-      <div style="font-size:11px;color:#9CA3AF;margin-top:2px">${oficina?.nome||''}</div>
-      ${oficina?.endereco?`<div style="font-size:11px;color:#9CA3AF">${oficina.endereco}</div>`:''}
-      ${oficina?.telefone?`<div style="font-size:11px;color:#9CA3AF">Tel: ${oficina.telefone}</div>`:''}
+    <div class="oficina-info">
+      ${oficina?.logo
+        ? `<img src="${oficina.logo}" style="max-height:70px;max-width:200px;object-fit:contain;margin-bottom:6px" alt="${oficina.nome||''}" />`
+        : `<div class="oficina-nome">${oficina?.nome || 'Chave 10'}</div>`
+      }
+      ${oficina?.logo && oficina?.nome ? `<div class="oficina-nome" style="font-size:15px">${oficina.nome}</div>` : ''}
+      ${oficina?.endereco   ? `<div class="oficina-detalhe">📍 ${oficina.endereco}</div>` : ''}
+      ${oficina?.telefone   ? `<div class="oficina-detalhe">📞 ${oficina.telefone}</div>` : ''}
+      ${oficina?.whatsapp   ? `<div class="oficina-detalhe">💬 WhatsApp: ${oficina.whatsapp}</div>` : ''}
+      ${oficina?.email      ? `<div class="oficina-detalhe">✉ ${oficina.email}</div>` : ''}
+      ${docFiscal           ? `<div class="oficina-detalhe">CNPJ/CPF: ${docFiscal}</div>` : ''}
     </div>
     <div style="text-align:right">
       <div class="orc-num">${orc.numero||'Orçamento'}</div>
+      <div style="font-size:12px;color:#6B7280;margin-top:2px">${new Date().toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
       ${orc.validade?`<div style="font-size:12px;color:#6B7280;margin-top:2px">Válido até: ${fmt.date(orc.validade)}</div>`:''}
       <div style="margin-top:4px"><span class="status" style="background:${orc.status==='aprovado'?'#f0fdf4':orc.status==='rejeitado'?'#fef2f2':'#fff7ed'};color:${orc.status==='aprovado'?'#16a34a':orc.status==='rejeitado'?'#dc2626':'#d97706'}">${STATUS_LABEL[orc.status]||orc.status}</span></div>
     </div>
@@ -77,9 +87,10 @@ function gerarHTMLOrcamento(orc, clientes, veiculos, oficina) {
   </div></div>`:''}
 
   ${v?`<div class="section"><div class="section-title">Veículo</div><div class="grid-2">
-    <div class="field"><label>Veículo</label><span>${v.marca} ${v.modelo}</span></div>
+    <div class="field"><label>Veículo</label><span>${(v.marca||'')+' '+(v.modelo||'')}</span></div>
     <div class="field"><label>Placa</label><span>${v.placa||'—'}</span></div>
     <div class="field"><label>Ano</label><span>${v.ano||'—'}</span></div>
+    ${v.km?`<div class="field"><label>KM</label><span>${v.km}</span></div>`:''}
   </div></div>`:''}
 
   ${orc.descricao?`<div class="section"><div class="section-title">Descrição / Problema</div><p style="background:#F9FAFB;padding:10px 12px;border-radius:6px">${orc.descricao}</p></div>`:''}
@@ -107,7 +118,7 @@ function gerarHTMLOrcamento(orc, clientes, veiculos, oficina) {
   ${orc.obs?`<div class="section"><div class="section-title">Observações</div><p style="background:#F9FAFB;padding:10px 12px;border-radius:6px">${orc.obs}</p></div>`:''}
 
   <div class="footer">
-    ${oficina?.nome||'Chave 10'} ${oficina?.telefone?'· '+oficina.telefone:''}<br/>
+    ${oficina?.nome||''}${oficina?.telefone?' · '+oficina.telefone:''}${oficina?.email?' · '+oficina.email:''}<br/>
     Documento gerado em ${new Date().toLocaleDateString('pt-BR')}
   </div>
   </body></html>`;
@@ -193,14 +204,23 @@ export default function AppOrcamentos() {
     await api.app.orcamentos.remove(id); load(); showToast('Orçamento excluído');
   }
 
-  function imprimir(orc) {
-    const oficina = (() => { try { return JSON.parse(localStorage.getItem('c10_oficina'))||{}; } catch { return {}; } })();
+  async function imprimir(orc) {
+    // Busca dados atualizados da oficina da API (não depende só do localStorage)
+    let oficina = (() => { try { return JSON.parse(localStorage.getItem('c10_oficina'))||{}; } catch { return {}; } })();
+    try {
+      const config = await api.app.config.get();
+      if (config) {
+        oficina = { ...config, cnpj_cpf: config.documento || oficina.cnpj_cpf };
+        // Atualiza o cache local com os dados mais recentes
+        localStorage.setItem('c10_oficina', JSON.stringify(oficina));
+      }
+    } catch { /* usa o cache local se a API falhar */ }
     const html = gerarHTMLOrcamento(orc, clientes, veiculos, oficina);
     const win = window.open('', '_blank');
     win.document.write(html);
     win.document.close();
     win.focus();
-    setTimeout(() => win.print(), 500);
+    setTimeout(() => win.print(), 600);
   }
 
   function enviarWhatsApp(orc) {

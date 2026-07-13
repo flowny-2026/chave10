@@ -37,7 +37,8 @@ function gerarHTMLOS(os, clientes, veiculos, oficina) {
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:Arial,sans-serif;font-size:13px;color:#1a1a1a;padding:32px}
     .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #1E3A5F}
-    .brand{font-size:24px;font-weight:800;color:#1E3A5F}.brand span{color:#F97316}
+    .oficina-nome{font-size:20px;font-weight:800;color:#1E3A5F}
+    .oficina-detalhe{font-size:11px;color:#6B7280;margin-top:2px}
     .os-num{font-size:20px;font-weight:700;color:#1E3A5F}
     .section{margin-bottom:20px}
     .section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#6B7280;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #E5E7EB}
@@ -56,11 +57,16 @@ function gerarHTMLOS(os, clientes, veiculos, oficina) {
   </style></head><body>
   <div class="header">
     <div>
-      ${oficina?.logo?`<img src="${oficina.logo}" style="max-height:60px;max-width:180px;object-fit:contain;margin-bottom:4px" alt="Logo" /><br/>`:``}
-      <div class="brand">${oficina?.logo?'':' Chave <span>10</span>'}</div>
-      <div style="font-size:11px;color:#9CA3AF;margin-top:2px">${oficina?.nome||''}</div>
-      ${oficina?.endereco?`<div style="font-size:11px;color:#9CA3AF">${oficina.endereco}</div>`:''}
-      ${oficina?.telefone?`<div style="font-size:11px;color:#9CA3AF">Tel: ${oficina.telefone}</div>`:''}
+      ${oficina?.logo
+        ? `<img src="${oficina.logo}" style="max-height:70px;max-width:200px;object-fit:contain;margin-bottom:6px" alt="${oficina.nome||''}" />`
+        : `<div class="oficina-nome">${oficina?.nome || 'Minha Oficina'}</div>`
+      }
+      ${oficina?.logo && oficina?.nome ? `<div class="oficina-nome" style="font-size:15px">${oficina.nome}</div>` : ''}
+      ${oficina?.endereco   ? `<div class="oficina-detalhe">📍 ${oficina.endereco}</div>` : ''}
+      ${oficina?.telefone   ? `<div class="oficina-detalhe">📞 ${oficina.telefone}</div>` : ''}
+      ${oficina?.whatsapp   ? `<div class="oficina-detalhe">💬 WhatsApp: ${oficina.whatsapp}</div>` : ''}
+      ${oficina?.email      ? `<div class="oficina-detalhe">✉ ${oficina.email}</div>` : ''}
+      ${(oficina?.documento || oficina?.cnpj_cpf) ? `<div class="oficina-detalhe">CNPJ/CPF: ${oficina.documento || oficina.cnpj_cpf}</div>` : ''}
     </div>
     <div style="text-align:right">
       <div class="os-num">OS #${String(os.id).padStart(4,'0')}</div>
@@ -117,7 +123,7 @@ function gerarHTMLOS(os, clientes, veiculos, oficina) {
   ${os.observacao?`<div class="section"><div class="section-title">Observações</div><p style="background:#F9FAFB;padding:10px 12px;border-radius:6px">${os.observacao}</p></div>`:''}
 
   <div class="footer">
-    ${oficina?.nome||'Chave 10'} ${oficina?.telefone?'· '+oficina.telefone:''} ${oficina?.endereco?'· '+oficina.endereco:''}<br/>
+    ${oficina?.nome||''}${oficina?.telefone?' · '+oficina.telefone:''}${oficina?.email?' · '+oficina.email:''}<br/>
     Documento gerado em ${new Date().toLocaleDateString('pt-BR')}
   </div>
   </body></html>`;
@@ -336,14 +342,22 @@ export default function AppOS() {
     await api.app.os.remove(id); load(statusFiltro); showToast('OS excluída');
   }
 
-  function imprimir(os) {
-    const oficina = (() => { try { return JSON.parse(localStorage.getItem('c10_oficina'))||{}; } catch { return {}; } })();
+  async function imprimir(os) {
+    // Busca dados atualizados da oficina da API
+    let oficina = (() => { try { return JSON.parse(localStorage.getItem('c10_oficina'))||{}; } catch { return {}; } })();
+    try {
+      const config = await api.app.config.get();
+      if (config) {
+        oficina = { ...config, cnpj_cpf: config.documento || oficina.cnpj_cpf };
+        localStorage.setItem('c10_oficina', JSON.stringify(oficina));
+      }
+    } catch { /* usa o cache local */ }
     const html = gerarHTMLOS(os, clientes, veiculos, oficina);
     const win = window.open('', '_blank');
     win.document.write(html);
     win.document.close();
     win.focus();
-    setTimeout(() => win.print(), 500);
+    setTimeout(() => win.print(), 600);
   }
 
   function enviarWhatsApp(os) {
