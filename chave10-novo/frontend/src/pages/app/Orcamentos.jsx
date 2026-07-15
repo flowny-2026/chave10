@@ -196,7 +196,10 @@ export default function AppOrcamentos() {
 
   async function setStatus(id, status) {
     await api.app.orcamentos.setStatus(id, status);
-    load(); showToast('Status atualizado!');
+    load();
+    // Atualiza viewing imediatamente para refletir o novo status sem fechar o modal
+    setViewing(v => v && v.id === id ? { ...v, status } : v);
+    showToast('Status atualizado!');
   }
 
   async function remove(id) {
@@ -550,9 +553,9 @@ export default function AppOrcamentos() {
                   <button className="btn btn-outline" onClick={()=>imprimir(viewing)}>🖨️ Imprimir</button>
                   <button className="btn btn-outline" onClick={()=>enviarWhatsApp(viewing)}>💬 WhatsApp</button>
                   <button className="btn btn-primary" onClick={()=>openEdit(viewing)}>✏️ Editar</button>
-                  {viewing.status==='pendente'&&<button className="btn btn-success" onClick={()=>{setStatus(viewing.id,'aprovado');setModal(null);}}>✅ Aprovar</button>}
-                  {viewing.status==='pendente'&&<button className="btn btn-outline" style={{color:'var(--danger)',borderColor:'var(--danger)'}} onClick={()=>{setStatus(viewing.id,'rejeitado');setModal(null);}}>❌ Rejeitar</button>}
-                  {viewing.status!=='pendente'&&<button className="btn btn-outline" onClick={()=>{setStatus(viewing.id,'pendente');setModal(null);}}>↩ Reabrir</button>}
+                  {viewing.status==='pendente'&&<button className="btn btn-success" onClick={()=>setStatus(viewing.id,'aprovado')}>✅ Aprovar</button>}
+                  {viewing.status==='pendente'&&<button className="btn btn-outline" style={{color:'var(--danger)',borderColor:'var(--danger)'}} onClick={()=>setStatus(viewing.id,'rejeitado')}>❌ Rejeitar</button>}
+                  {viewing.status!=='pendente'&&<button className="btn btn-outline" onClick={()=>setStatus(viewing.id,'pendente')}>↩ Reabrir</button>}
                 </div>
               </div>
             </div>
