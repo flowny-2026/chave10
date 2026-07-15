@@ -324,8 +324,11 @@ export default function AppOS() {
     if (!pagForm.forma) { showToast('Selecione a forma de pagamento','error'); return; }
     try {
       const res = await api.app.os.pagamento(pagForm.os_id, pagForm);
-      setModal(null);
-      load(statusFiltro);
+      await load(statusFiltro);
+      // Atualiza o viewing com o novo status para refletir imediatamente no modal
+      setViewing(v => v ? { ...v, status: 'finalizado' } : v);
+      // Volta para o modal de detalhes se estava aberto, senão fecha tudo
+      setModal(prev => prev === 'pagamento' && viewing ? 'view' : null);
       const msg = pagForm.forma === 'credito' && pagForm.parcelas > 1
         ? `OS finalizada! ${pagForm.parcelas}x de ${fmt.currency(res.valor_parcela)} — Líquido: ${fmt.currency(res.valor_liquido)}`
         : `OS finalizada! Recebimento: ${fmt.currency(res.valor_liquido)}`;
@@ -336,7 +339,13 @@ export default function AppOS() {
   const taxaCalculada = pagForm.taxa_maquininha && pagForm.valor_total
     ? pagForm.valor_total - (pagForm.valor_total * parseFloat(pagForm.taxa_maquininha) / 100)
     : pagForm.valor_total;
-  async function reabrir(id)   { await api.app.os.setStatus(id,'em_andamento'); load(statusFiltro); showToast('OS reaberta'); }
+  async function reabrir(id) {
+    await api.app.os.setStatus(id, 'em_andamento');
+    await load(statusFiltro);
+    // Atualiza viewing para refletir o novo status imediatamente no modal
+    setViewing(v => v && v.id === id ? { ...v, status: 'em_andamento' } : v);
+    showToast('OS reaberta');
+  }
   async function remove(id) {
     if (!window.confirm('Deseja excluir esta ordem de serviço?')) return;
     await api.app.os.remove(id); load(statusFiltro); showToast('OS excluída');
