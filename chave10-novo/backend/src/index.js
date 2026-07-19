@@ -8,6 +8,7 @@ validateEnv();
 const express   = require('express');
 const cors      = require('cors');
 const helmet    = require('helmet');
+const compression = require('compression');
 const {
   errorHandler,
   notFoundHandler,
@@ -148,6 +149,17 @@ app.use((req, res, next) => {
   next();
 });
 
+// ── COMPRESSÃO GZIP/BROTLI ───────────────────────────────────
+// Reduz tamanho das respostas JSON em ~70%. Aplicado após headers de segurança.
+app.use(compression({
+  level: 6,
+  threshold: 1024, // só comprime respostas > 1KB
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) return false;
+    return compression.filter(req, res);
+  },
+}));
+
 // ── CORS ─────────────────────────────────────────────────────
 // Permite apenas os domínios oficiais do Chave 10.
 // Em produção: lê FRONTEND_URL e FRONTEND_URL_2 do .env.
@@ -194,11 +206,10 @@ app.use(cors({
 app.use(requireJsonContentType);
 
 // ── BODY PARSER ───────────────────────────────────────────────
-// Limite conservador: 50kb para JSON (suficiente para todos os payloads da API,
-// incluindo logos em base64 — que têm limite próprio na rota /config).
-// Se a logo precisar de mais, o limite da rota /config (2MB) já valida no handler.
+// Limite global: 3MB para cobrir logos em base64 (2MB original * 1.37 de overhead base64).
+// A validação real de tamanho é feita pelo uploadValidator em cada rota específica.
 app.use(express.json({
-  limit: '50kb',
+  limit: '3mb',
   strict: true,   // rejeita qualquer coisa que não seja array ou objeto JSON
   type: 'application/json',
 }));
@@ -206,10 +217,16 @@ app.use(express.json({
 // ── REMOVER HEADERS QUE IDENTIFICAM A STACK ───────────────────
 // X-Powered-By já foi removido pelo Helmet (hidePoweredBy: true).
 // Server header: Express não adiciona — mas adicionamos remoção explícita por garantia.
+// Cache-Control: respostas de API nunca devem ser cacheadas por proxies/CDN.
 app.use((req, res, next) => {
   res.removeHeader('Server');
   res.removeHeader('X-AspNet-Version');
   res.removeHeader('X-AspNetMvc-Version');
+  // API responses não devem ser cacheadas por proxies intermediários
+  if (req.path.startsWith('/api/')) {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.setHeader('Pragma', 'no-cache');
+  }
   next();
 });
 
