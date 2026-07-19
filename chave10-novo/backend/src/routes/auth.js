@@ -11,6 +11,7 @@ const {
   sensitiveOpsLimiter,
 } = require('../middleware/rateLimits');
 const { audit, ACOES } = require('../services/auditService');
+const { validateLogoUpload } = require('../middleware/uploadValidator');
 const log = require('../utils/logger');
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -264,7 +265,7 @@ router.post('/google-register', googleAuthLimiter, registerLimiter, async (req, 
 
 // ── COMPLETAR DADOS DA OFICINA (após registro) ────────────────
 // sensitiveOpsLimiter: 10 tentativas / 15 min — evita abuso do fluxo de onboarding.
-router.post('/complete-oficina', sensitiveOpsLimiter, authMiddleware, async (req, res) => {
+router.post('/complete-oficina', sensitiveOpsLimiter, authMiddleware, validateLogoUpload, async (req, res) => {
   // Valida e sanitiza campos
   const nomeOficinaRaw = req.body?.nome_oficina;
   const telefoneRaw    = req.body?.telefone;

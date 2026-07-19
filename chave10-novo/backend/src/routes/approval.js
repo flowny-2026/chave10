@@ -14,6 +14,7 @@ const {
   markLinkAsSent
 } = require('../services/approval-links');
 const { sendApprovalLink, isValidPhoneNumber } = require('../services/whatsapp');
+const { validateSignatureUpload } = require('../middleware/uploadValidator');
 
 // ────────────────────────────────────────────────────────────────
 // AUTHENTICATED ROUTES (Workshop users)
@@ -389,7 +390,7 @@ router.get('/public/:token', publicApprovalLimiter, async (req, res) => {
  * POST /api/approval/public/:token/approve
  * Process budget approval (public endpoint)
  */
-router.post('/public/:token/approve', publicApprovalLimiter, async (req, res) => {
+router.post('/public/:token/approve', publicApprovalLimiter, validateSignatureUpload, async (req, res) => {
   const { token } = req.params;
 
   // Valida formato do token

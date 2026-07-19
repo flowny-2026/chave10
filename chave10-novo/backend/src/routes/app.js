@@ -13,6 +13,7 @@ const {
   checkClienteVeiculoOwnership,
   checkQueryClienteOwnership,
 } = require('../middleware/authorization');
+const { validateLogoUpload } = require('../middleware/uploadValidator');
 const { audit, ACOES } = require('../services/auditService');
 const log = require('../utils/logger');
 
@@ -687,7 +688,7 @@ router.get('/config', naoFuncionario, async (req,res) => {
   } catch(err){ log.error('app_get_config', err); res.status(500).json({ error: 'Erro interno' }); }
 });
 
-router.put('/config', naoFuncionario, async (req,res) => {
+router.put('/config', naoFuncionario, validateLogoUpload, async (req,res) => {
   try {
     // Valida e sanitiza campos de configuração da oficina
     const nomeRaw = req.body?.nome;
