@@ -1,6 +1,10 @@
 // Carrega variáveis de ambiente antes de tudo
 require('dotenv').config();
 
+// Valida variáveis obrigatórias — encerra o processo se algo crítico estiver faltando
+const { validateEnv } = require('./utils/envValidator');
+validateEnv();
+
 const express   = require('express');
 const cors      = require('cors');
 const helmet    = require('helmet');

@@ -2,10 +2,8 @@ const jwt = require('jsonwebtoken');
 const log = require('../utils/logger');
 
 const SECRET = process.env.JWT_SECRET;
-if (!SECRET) {
-  console.error('❌ FATAL: JWT_SECRET não definido. Configure o arquivo .env');
-  process.exit(1);
-}
+// Nota: validação de JWT_SECRET é feita pelo envValidator.js na inicialização.
+// Se chegou aqui, a variável já foi validada.
 
 function authMiddleware(req, res, next) {
   const token = req.headers.authorization?.split(' ')[1];
