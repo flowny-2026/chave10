@@ -40,16 +40,17 @@ function sanitize(msg) {
 }
 
 // ─── Hook para envio a backend/serviço externo (stub) ────────────────────────
-// Substituir quando integrar Sentry, Better Stack, etc.
+// Integração com Sentry — desabilitado até configurar VITE_SENTRY_DSN.
+// Para habilitar: npm install @sentry/react e definir VITE_SENTRY_DSN no .env
+// import * as Sentry from '@sentry/react';
+// if (import.meta.env.VITE_SENTRY_DSN) {
+//   Sentry.init({ dsn: import.meta.env.VITE_SENTRY_DSN, environment: import.meta.env.MODE });
+// }
 function sendToBackend(entry) {
-  // Exemplo futuro com Sentry:
+  // Quando Sentry estiver habilitado:
   // if (window.Sentry) Sentry.captureException(new Error(entry.message));
 
-  // Exemplo futuro com endpoint próprio:
-  // fetch('/api/frontend-errors', { method: 'POST', body: JSON.stringify(entry) }).catch(() => {});
-
-  // Por enquanto apenas armazena localmente
-  if (process.env.NODE_ENV !== 'production') {
+  if (import.meta.env.DEV) {
     console.groupCollapsed(`[ErrorMonitor] ${entry.type}`);
     console.error(entry);
     console.groupEnd();

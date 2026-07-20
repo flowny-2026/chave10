@@ -34,6 +34,25 @@ const {
 // Captura exceções globais antes de qualquer coisa
 setupProcessHandlers();
 
+// ── SENTRY (desabilitado até configurar SENTRY_DSN) ──────────
+// Para habilitar: defina SENTRY_DSN no .env do Render.
+// Instalação futura: npm install @sentry/node
+// if (process.env.SENTRY_DSN) {
+//   const Sentry = require('@sentry/node');
+//   Sentry.init({
+//     dsn: process.env.SENTRY_DSN,
+//     environment: process.env.NODE_ENV || 'development',
+//     tracesSampleRate: 0.1,
+//     beforeSend(event) {
+//       // Remove dados sensíveis antes de enviar ao Sentry
+//       if (event.request?.headers) delete event.request.headers.authorization;
+//       if (event.request?.cookies) delete event.request.cookies;
+//       return event;
+//     },
+//   });
+//   app.use(Sentry.Handlers.requestHandler());
+// }
+
 const app = express();
 
 // ── TRUST PROXY ───────────────────────────────────────────────

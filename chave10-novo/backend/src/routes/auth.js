@@ -42,7 +42,7 @@ router.post('/login', validateLogin, async (req, res) => {
       const token = jwt.sign(
         { id: usuario.id, perfil: 'master_admin', nome: usuario.nome },
         SECRET,
-        { expiresIn: '30d' }
+        { expiresIn: '7d' }
       );
       log.loginOk({ email, perfil: 'master_admin', ip });
       audit(req, ACOES.LOGIN, 'usuarios', usuario.id, { via: 'email', perfil: 'master_admin' }, 'sucesso',
@@ -73,7 +73,7 @@ router.post('/login', validateLogin, async (req, res) => {
     const token = jwt.sign(
       { id: usuario.id, perfil: usuario.perfil, oficina_id: usuario.oficina_id, nome: usuario.nome },
       SECRET,
-      { expiresIn: '30d' }
+      { expiresIn: '7d' }
     );
     log.loginOk({ email, perfil: usuario.perfil, oficina_id: usuario.oficina_id, ip });
     audit(req, ACOES.LOGIN, 'usuarios', usuario.id, { via: 'email', perfil: usuario.perfil, oficina_id: usuario.oficina_id }, 'sucesso',
@@ -123,7 +123,12 @@ router.post('/register', registerLimiter, async (req, res) => {
 
   try {
     const existe = await queryOne('SELECT id FROM usuarios WHERE email=$1', [email]);
-    if (existe) return res.status(409).json({ error: 'E-mail já cadastrado' });
+    if (existe) {
+      // Resposta genérica — não revela se o e-mail existe (anti-enumeração)
+      // Gera um token falso com delay similar para manter timing constante
+      await new Promise(r => setTimeout(r, 80 + Math.random() * 40));
+      return res.status(201).json({ token: 'pending', needsOficina: true, message: 'Verifique seu e-mail para continuar' });
+    }
 
     const hash = bcrypt.hashSync(senhaRaw, 12);
     const r = await queryOne(
@@ -189,7 +194,7 @@ router.post('/google', googleAuthLimiter, async (req, res) => {
     const token = jwt.sign(
       { id: usuario.id, perfil: usuario.perfil, oficina_id: usuario.oficina_id, nome: usuario.nome },
       SECRET,
-      { expiresIn: '30d' }
+      { expiresIn: '7d' }
     );
     log.loginOk({ email, perfil: usuario.perfil, oficina_id: usuario.oficina_id, via: 'google' });
     return res.json({
@@ -241,7 +246,7 @@ router.post('/google-register', googleAuthLimiter, registerLimiter, async (req, 
         if (oficina.status_assinatura === 'blocked') return res.status(403).json({ error: 'blocked' });
         if (oficina.status_assinatura === 'overdue')  return res.status(403).json({ error: 'overdue' });
         await run('UPDATE usuarios SET ultimo_acesso=$1 WHERE id=$2', [new Date().toISOString(), existe.id]);
-        const token = jwt.sign({ id: existe.id, perfil: existe.perfil, oficina_id: existe.oficina_id, nome: existe.nome }, SECRET, { expiresIn: '30d' });
+        const token = jwt.sign({ id: existe.id, perfil: existe.perfil, oficina_id: existe.oficina_id, nome: existe.nome }, SECRET, { expiresIn: '7d' });
         return res.json({ token, needsOficina: false, usuario: { id: existe.id, nome: existe.nome, email, perfil: existe.perfil, oficina_id: existe.oficina_id } });
       }
       // Tem conta mas sem oficina
@@ -321,7 +326,7 @@ router.post('/complete-oficina', sensitiveOpsLimiter, authMiddleware, validateLo
     const newToken = jwt.sign(
       { id: req.user.id, perfil: 'admin_oficina', oficina_id: oficina.id, nome: usuario.nome },
       SECRET,
-      { expiresIn: '30d' }
+      { expiresIn: '7d' }
     );
 
     log.info('oficina_auto_criada', { oficina_id: oficina.id, nome: nome_oficina, usuario_id: req.user.id });
