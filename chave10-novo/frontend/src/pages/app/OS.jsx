@@ -2,6 +2,7 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../../api';
 import { offlineManager, OPERATION_TYPES, useOfflineManager } from '../../utils/offlineManager';
+import FotoUploader from '../../components/FotoUploader';
 
 const fmt = {
   currency: v => 'R$ ' + parseFloat(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.'),
@@ -396,10 +397,12 @@ export default function AppOS() {
   function openView(os) {
     setViewing(os);
     setModal('ver');
-    // Carrega pagamentos da OS
+    // Carrega pagamentos e fotos da OS
     api.app.os.pagamentos(os.id).then(data => setViewPagamentos(data||[])).catch(()=>setViewPagamentos([]));
+    api.app.os.fotos.list(os.id).then(data => setViewFotos(data||[])).catch(()=>setViewFotos([]));
   }
   const [viewPagamentos, setViewPagamentos] = useState([]);
+  const [viewFotos, setViewFotos] = useState([]);
 
   const veiculosFiltrados = form.cliente_id ? veiculos.filter(v=>String(v.cliente_id)===String(form.cliente_id)) : veiculos;
   const listaFiltrada = search
@@ -775,6 +778,13 @@ export default function AppOS() {
                     })}
                   </div>
                 )}
+
+                <FotoUploader
+                  osId={viewing.id}
+                  fotos={viewFotos}
+                  onUpdate={() => api.app.os.fotos.list(viewing.id).then(data => setViewFotos(data||[])).catch(()=>{})}
+                  disabled={viewing.status === 'finalizado'}
+                />
 
                 <div className="os-view-actions">
                   <button className="btn btn-outline" onClick={()=>setModal(null)}>Fechar</button>
