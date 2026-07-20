@@ -8,7 +8,7 @@ const fmt = {
 
 const STATUS_CLASS = { pendente:'badge-orange', aprovado:'badge-green', rejeitado:'badge-red' };
 const STATUS_LABEL = { pendente:'Pendente', aprovado:'Aprovado', rejeitado:'Rejeitado' };
-const PECA_EMPTY = { nome:'', qtd:'1', valor_unit:'' };
+const PECA_EMPTY = { nome:'', qtd:'1', valor_unit:'', cliente_fornece: false };
 
 function novaPeca() { return { ...PECA_EMPTY, id: Date.now() + Math.random() }; }
 
@@ -485,11 +485,11 @@ export default function AppOrcamentos() {
                     <button type="button" className="btn btn-outline btn-sm" onClick={addPeca}>+ Adicionar peça</button>
                   </div>
                   <div style={{background:'var(--gray-50)',borderRadius:'var(--r-sm)',overflow:'hidden',border:'1px solid var(--gray-200)'}}>
-                    <div style={{display:'grid',gridTemplateColumns:'1fr 70px 120px 30px',gap:0,padding:'6px 10px',background:'var(--gray-100)',fontSize:11,fontWeight:700,color:'var(--gray-500)',textTransform:'uppercase',letterSpacing:'.5px'}}>
-                      <span>Descrição</span><span style={{textAlign:'center'}}>Qtd</span><span style={{textAlign:'right'}}>Valor unit. (R$)</span><span/>
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 60px 100px auto 28px',gap:0,padding:'6px 10px',background:'var(--gray-100)',fontSize:11,fontWeight:700,color:'var(--gray-500)',textTransform:'uppercase',letterSpacing:'.5px'}}>
+                      <span>Descrição</span><span style={{textAlign:'center'}}>Qtd</span><span style={{textAlign:'right'}}>Valor</span><span></span><span/>
                     </div>
                     {form.pecas_itens.map((p)=>(
-                      <div key={p.id} style={{display:'grid',gridTemplateColumns:'1fr 70px 120px 30px',gap:4,padding:'6px 10px',borderTop:'1px solid var(--gray-200)'}}>
+                      <div key={p.id} style={{display:'grid',gridTemplateColumns:'1fr 60px 100px auto 28px',gap:4,padding:'6px 10px',borderTop:'1px solid var(--gray-200)',alignItems:'center'}}>
                         <input
                           value={p.nome}
                           onChange={e=>setPeca(p.id,'nome',e.target.value)}
@@ -507,11 +507,16 @@ export default function AppOrcamentos() {
                           type="number"
                           step="0.01"
                           min="0"
-                          value={p.valor_unit}
+                          value={p.cliente_fornece ? '0' : p.valor_unit}
                           onChange={e=>setPeca(p.id,'valor_unit',e.target.value)}
                           placeholder="0,00"
-                          style={{padding:'6px 8px',fontSize:12,textAlign:'right'}}
+                          style={{padding:'6px 8px',fontSize:12,textAlign:'right',opacity:p.cliente_fornece?0.4:1}}
+                          disabled={p.cliente_fornece}
                         />
+                        <label style={{display:'flex',alignItems:'center',gap:3,fontSize:10,color:'var(--gray-500)',whiteSpace:'nowrap',cursor:'pointer'}} title="Cliente fornece a peça (só mão de obra)">
+                          <input type="checkbox" checked={!!p.cliente_fornece} onChange={e=>setPeca(p.id,'cliente_fornece',e.target.checked)} style={{width:13,height:13}} />
+                          <span>Peça do cliente</span>
+                        </label>
                         <button
                           type="button"
                           onClick={()=>removePeca(p.id)}

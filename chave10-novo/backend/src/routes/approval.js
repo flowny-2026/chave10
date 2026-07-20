@@ -312,6 +312,7 @@ router.get('/public/:token', publicApprovalLimiter, async (req, res) => {
         v.placa, v.modelo, v.marca, v.ano, v.km,
         of.nome as oficina_nome, of.telefone as oficina_telefone, 
         of.email as oficina_email, of.endereco as oficina_endereco,
+        of.logo as oficina_logo,
         of.require_signature
        FROM orcamentos o
        LEFT JOIN clientes c ON c.id = o.cliente_id
@@ -375,7 +376,8 @@ router.get('/public/:token', publicApprovalLimiter, async (req, res) => {
           nome: budget.oficina_nome,
           telefone: budget.oficina_telefone,
           email: budget.oficina_email,
-          endereco: budget.oficina_endereco
+          endereco: budget.oficina_endereco,
+          logo: budget.oficina_logo || null
         },
         requireSignature: budget.require_signature || false
       },

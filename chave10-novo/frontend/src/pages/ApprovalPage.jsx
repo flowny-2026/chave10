@@ -73,7 +73,7 @@ export default function ApprovalPage() {
     try {
       const response = await fetchPublic(`/approval/public/${token}/approve`, {
         method: 'POST',
-        body: JSON.stringify({ signature })
+        body: JSON.stringify(signature ? { signature } : {})
       });
 
       setResult({
@@ -222,9 +222,14 @@ export default function ApprovalPage() {
     <div className="approval-page">
       <div className="approval-container">
         {/* Header */}
-        <div className="approval-header">
-          <h1>{budget.oficina.nome}</h1>
-          <div className="budget-number">
+        <div className="approval-header" style={{ background: 'linear-gradient(135deg, #1E3A5F 0%, #0f172a 100%)', padding: '28px 24px', borderRadius: '16px 16px 0 0', textAlign: 'center' }}>
+          {budget.oficina.logo ? (
+            <img src={budget.oficina.logo} alt={budget.oficina.nome} style={{ maxHeight: 60, maxWidth: 180, objectFit: 'contain', marginBottom: 10 }} />
+          ) : (
+            <h1 style={{ color: '#fff', fontSize: 20, fontWeight: 800, margin: '0 0 4px' }}>{budget.oficina.nome}</h1>
+          )}
+          {budget.oficina.logo && <div style={{ color: 'rgba(255,255,255,.8)', fontSize: 14, fontWeight: 600 }}>{budget.oficina.nome}</div>}
+          <div className="budget-number" style={{ color: '#F97316', fontSize: 15, fontWeight: 700, marginTop: 8 }}>
             Orçamento #{budget.numero}
           </div>
         </div>

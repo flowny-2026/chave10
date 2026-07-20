@@ -774,4 +774,31 @@ router.put('/config', naoFuncionario, validateLogoUpload, async (req,res) => {
   } catch(err){ log.error('app_put_config', err); res.status(500).json({ error: 'Erro interno' }); }
 });
 
+// ── NOTIFICAÇÕES ──────────────────────────────────────────────
+router.get('/notificacoes', async (req, res) => {
+  try {
+    const rows = await query(
+      `SELECT id, tipo, titulo, mensagem, link, lido, created_at
+       FROM notificacoes WHERE oficina_id=$1 ORDER BY created_at DESC LIMIT 50`,
+      [oid(req)]
+    );
+    const naoLidas = rows.filter(n => !n.lido).length;
+    res.json({ notificacoes: rows, naoLidas });
+  } catch (err) { res.status(500).json({ error: 'Erro interno' }); }
+});
+
+router.patch('/notificacoes/:id/lida', validateId, async (req, res) => {
+  try {
+    await run('UPDATE notificacoes SET lido=true WHERE id=$1 AND oficina_id=$2', [req.params.id, oid(req)]);
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: 'Erro interno' }); }
+});
+
+router.patch('/notificacoes/marcar-todas', async (req, res) => {
+  try {
+    await run('UPDATE notificacoes SET lido=true WHERE oficina_id=$1 AND lido=false', [oid(req)]);
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: 'Erro interno' }); }
+});
+
 module.exports = router;

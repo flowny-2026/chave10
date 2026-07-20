@@ -279,6 +279,23 @@ async function approveBudget(token, signatureData = null, ipAddress = null) {
       client.release();
     }
 
+    // Notifica a oficina (in-app + WhatsApp) — assíncrono, não bloqueia
+    try {
+      const { notificarAprovacao } = require('./notificationService');
+      const orcDados = await queryOne(
+        `SELECT o.id, o.numero, o.valor_mo, o.valor_pecas, o.desconto,
+                c.nome as cliente_nome, v.modelo as veiculo_modelo, v.placa
+         FROM orcamentos o
+         LEFT JOIN clientes c ON c.id = o.cliente_id
+         LEFT JOIN veiculos v ON v.id = o.veiculo_id
+         WHERE o.id = $1`,
+        [link.orcamento_id]
+      );
+      if (orcDados) await notificarAprovacao(link.oficina_id, orcDados);
+    } catch (notifErr) {
+      log.warn('notificacao_aprovacao_falhou', { erro: notifErr.message });
+    }
+
     return {
       success: true,
       message: 'Orçamento aprovado com sucesso!',
@@ -362,6 +379,21 @@ async function rejectBudget(token, reason = null, ipAddress = null) {
       throw txErr;
     } finally {
       client.release();
+    }
+
+    // Notifica a oficina (in-app + WhatsApp) — assíncrono, não bloqueia
+    try {
+      const { notificarRecusa } = require('./notificationService');
+      const orcDados = await queryOne(
+        `SELECT o.id, o.numero, c.nome as cliente_nome
+         FROM orcamentos o
+         LEFT JOIN clientes c ON c.id = o.cliente_id
+         WHERE o.id = $1`,
+        [link.orcamento_id]
+      );
+      if (orcDados) await notificarRecusa(link.oficina_id, orcDados, sanitizedReason);
+    } catch (notifErr) {
+      log.warn('notificacao_recusa_falhou', { erro: notifErr.message });
     }
 
     return {

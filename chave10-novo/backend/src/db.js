@@ -400,6 +400,21 @@ async function initDB() {
   await pool.query(`ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS interativo BOOLEAN DEFAULT false`).catch(() => {});
   await pool.query(`ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS observacao_problema TEXT`).catch(() => {});
   await pool.query(`ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS os_id INTEGER REFERENCES ordens_servico(id) ON DELETE SET NULL`).catch(() => {});
+
+  // ── Notificações in-app ─────────────────────────────────────
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS notificacoes (
+      id         SERIAL PRIMARY KEY,
+      oficina_id INTEGER NOT NULL REFERENCES oficinas(id) ON DELETE CASCADE,
+      tipo       TEXT NOT NULL,
+      titulo     TEXT NOT NULL,
+      mensagem   TEXT,
+      link       TEXT,
+      lido       BOOLEAN NOT NULL DEFAULT false,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `).catch(() => {});
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_notif_oficina ON notificacoes(oficina_id, lido, created_at DESC)`).catch(() => {});
   await pool.query(`ALTER TABLE oficinas ADD COLUMN IF NOT EXISTS logo TEXT;`).catch(() => {});
   await pool.query(`ALTER TABLE oficinas ADD COLUMN IF NOT EXISTS endereco TEXT;`).catch(() => {});
   await pool.query(`ALTER TABLE oficinas ADD COLUMN IF NOT EXISTS whatsapp TEXT;`).catch(() => {});
