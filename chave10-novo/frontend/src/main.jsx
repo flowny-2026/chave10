@@ -2,9 +2,13 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import './utils/storageMonitor'; // MONITOR DE STORAGE - DEVE SER PRIMEIRO
+import { initErrorMonitor } from './utils/errorMonitor'; // MONITOR DE ERROS GLOBAL
 import './index.css';
 import './styles/mobile.css';
 import App from './App';
+
+// Inicializa captura global de erros antes de qualquer componente
+initErrorMonitor();
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 

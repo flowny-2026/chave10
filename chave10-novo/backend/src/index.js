@@ -22,6 +22,17 @@ const {
   adminLimiter,
   loginLimiter,
 } = require('./middleware/rateLimits');
+const {
+  requestId,
+  responseMetrics,
+  getHealthStatus,
+  getMetricsSummary,
+  setupProcessHandlers,
+  recordError,
+} = require('./middleware/observability');
+
+// Captura exceções globais antes de qualquer coisa
+setupProcessHandlers();
 
 const app = express();
 
@@ -33,6 +44,12 @@ if (process.env.NODE_ENV === 'production') {
 } else {
   app.set('trust proxy', false);
 }
+
+// ── REQUEST ID + MÉTRICAS ─────────────────────────────────────
+// Gera ID único por requisição e mede tempo de resposta.
+// Deve ser o PRIMEIRO middleware para capturar a latência completa.
+app.use(requestId);
+app.use(responseMetrics);
 
 // ── TIMEOUT DE REQUISIÇÃO ─────────────────────────────────────
 // Mata requisições que demoram mais de 30s — protege contra slowloris e
@@ -273,9 +290,33 @@ app.use('/api/backup',   writeLimiter, require('./routes/backup'));
 app.use('/api/approval', writeLimiter, require('./routes/approval'));
 
 // ── HEALTH CHECK ──────────────────────────────────────────────
-// Rota pública — sem autenticação — usada por load balancers.
-// Retorna apenas {ok:true} sem expor versão ou detalhes da stack.
-app.get('/health', (_, res) => res.json({ ok: true }));
+// Rota pública — usada por load balancers e monitoramento.
+// Retorna status do sistema com detalhes de saúde.
+app.get('/health', async (_, res) => {
+  try {
+    const status = await getHealthStatus();
+    const httpCode = status.status === 'healthy' ? 200 : 503;
+    res.status(httpCode).json(status);
+  } catch {
+    res.status(503).json({ status: 'error', timestamp: new Date().toISOString() });
+  }
+});
+
+// ── MÉTRICAS DO SISTEMA (somente master_admin) ────────────────
+// Retorna métricas detalhadas de performance e erros recentes.
+app.get('/api/admin/metrics', (req, res, next) => {
+  // Valida auth inline (não usa o router do admin para evitar dependência circular)
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'Token não fornecido' });
+  try {
+    const jwt = require('jsonwebtoken');
+    const user = jwt.verify(token, process.env.JWT_SECRET);
+    if (user.perfil !== 'master_admin') return res.status(403).json({ error: 'Acesso restrito' });
+    res.json(getMetricsSummary());
+  } catch {
+    res.status(401).json({ error: 'Token inválido' });
+  }
+});
 
 // ── SEED DEMO (protegido por chave secreta) ───────────────────
 // Desabilitado em produção se SEED_KEY não estiver definida.

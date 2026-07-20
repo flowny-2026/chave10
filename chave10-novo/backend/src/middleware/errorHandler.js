@@ -59,6 +59,9 @@ function sanitizeForLog(err) {
 
 // eslint-disable-next-line no-unused-vars
 function errorHandler(err, req, res, next) {
+  // Registra nas métricas de observabilidade (import lazy para evitar circular)
+  try { require('./observability').recordError(err, req); } catch {}
+
   // ── 1. Payload muito grande (express.json / express.urlencoded) ──────────
   if (err.type === 'entity.too.large') {
     return res.status(413).json({ error: 'Payload muito grande. Limite: 50kb.' });
