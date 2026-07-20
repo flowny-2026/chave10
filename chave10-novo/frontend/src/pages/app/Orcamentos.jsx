@@ -136,6 +136,17 @@ export default function AppOrcamentos() {
   const [editing, setEditing]   = useState(null);
   const [viewing, setViewing]   = useState(null);
   const [toast, setToast]       = useState({ msg:'', type:'' });
+  const [pendingPhotos, setPendingPhotos] = useState([]);
+
+  function handlePendingPhotos(e) {
+    const files = e.target.files;
+    if (!files?.length) return;
+    const remaining = 15 - pendingPhotos.length;
+    const batch = Array.from(files).slice(0, Math.min(5, remaining));
+    const newPhotos = batch.map(file => ({ file, preview: URL.createObjectURL(file) }));
+    setPendingPhotos(prev => [...prev, ...newPhotos].slice(0, 15));
+    e.target.value = '';
+  }
 
   function showToast(msg, type='success') { setToast({msg,type}); setTimeout(()=>setToast({msg:'',type:''}),3000); }
 
@@ -152,7 +163,7 @@ export default function AppOrcamentos() {
 
   function openCreate() {
     setForm({ cliente_id:'', veiculo_id:'', descricao:'', servicos:'', pecas_itens:[novaPeca()], valor_mo:'', desconto:'', status:'pendente', validade:'', obs:'' });
-    setEditing(null); setModal('form');
+    setEditing(null); setPendingPhotos([]); setModal('form');
   }
 
   function openEdit(orc) {
@@ -190,6 +201,40 @@ export default function AppOrcamentos() {
       };
       if (editing) await api.app.orcamentos.update(editing, payload);
       else await api.app.orcamentos.create(payload);
+
+      // Upload de fotos — cria uma OS vinculada se necessário
+      if (pendingPhotos.length > 0) {
+        try {
+          // Cria uma OS automaticamente para hospedar as fotos (se não estiver editando)
+          const osPayload = {
+            descricao: form.descricao || 'Orçamento com fotos',
+            cliente_id: form.cliente_id || null,
+            veiculo_id: form.veiculo_id || null,
+            valor_mo: 0,
+          };
+          const osRes = await api.app.os.create(osPayload);
+          if (osRes?.id) {
+            const { compressImages } = await import('../../utils/imageCompressor');
+            const files = pendingPhotos.map(p => p.file).filter(Boolean);
+            if (files.length > 0) {
+              const compressed = await compressImages(files);
+              const validas = compressed.filter(c => !c.error);
+              if (validas.length > 0) {
+                await api.app.os.fotos.upload(osRes.id, validas.map(c => ({
+                  imagem: c.dataUrl,
+                  titulo: '',
+                  descricao: '',
+                  categoria: 'problema',
+                })));
+              }
+            }
+          }
+        } catch (fotoErr) {
+          console.warn('Fotos do orçamento não enviadas:', fotoErr);
+        }
+      }
+
+      setPendingPhotos([]);
       setModal(null); load(); showToast(editing?'Orçamento atualizado!':'Orçamento criado!');
     } catch (err) { showToast(err.error||'Erro ao salvar','error'); }
   }
@@ -453,6 +498,47 @@ export default function AppOrcamentos() {
                   </div>
                   <div className="form-group"><label>Validade</label><input type="date" value={form.validade} onChange={e=>setForm(f=>({...f,validade:e.target.value}))} /></div>
                   <div className="form-group full"><label>Observações</label><input value={form.obs} onChange={e=>setForm(f=>({...f,obs:e.target.value}))} placeholder="Observações adicionais..." /></div>
+                </div>
+
+                {/* Upload de fotos — serão vinculadas à OS do orçamento */}
+                <div style={{ marginTop: 16, marginBottom: 16, padding: '14px 16px', background: 'var(--gray-50)', borderRadius: 10, border: '1px solid var(--gray-200)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gray-700)' }}>
+                      📷 Fotos dos problemas {pendingPhotos.length > 0 && <span style={{ fontWeight: 400, color: 'var(--gray-400)' }}>({pendingPhotos.length} selecionada{pendingPhotos.length > 1 ? 's' : ''})</span>}
+                    </div>
+                    <label style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 5,
+                      padding: '5px 12px', borderRadius: 7, cursor: 'pointer',
+                      background: 'var(--accent)', color: '#fff', fontSize: 12, fontWeight: 600,
+                    }}>
+                      + Adicionar
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        multiple
+                        style={{ display: 'none' }}
+                        onChange={handlePendingPhotos}
+                      />
+                    </label>
+                  </div>
+                  {pendingPhotos.length === 0 ? (
+                    <div style={{ fontSize: 12, color: 'var(--gray-400)', textAlign: 'center', padding: '8px 0' }}>
+                      Tire fotos claras dos problemas para enviar ao cliente — aumenta a taxa de aprovação!
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {pendingPhotos.map((p, i) => (
+                        <div key={i} style={{ position: 'relative', width: 64, height: 64, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--gray-200)' }}>
+                          <img src={p.preview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <button type="button" onClick={() => setPendingPhotos(f => f.filter((_, j) => j !== i))} style={{
+                            position: 'absolute', top: 2, right: 2, width: 18, height: 18, borderRadius: '50%',
+                            background: 'rgba(220,38,38,.85)', color: '#fff', border: 'none', fontSize: 10, cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}>✕</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="form-actions">
