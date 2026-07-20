@@ -144,6 +144,21 @@ export default function AppOS() {
   const [viewing, setViewing]   = useState(null);
   const [toast, setToast]       = useState({ msg:'', type:'' });
   const [pagForm, setPagForm]   = useState({ os_id:null, forma:'', valor_total:0, parcelas:1, bandeira:'', taxa_maquininha:'', observacao:'' });
+  const [pendingPhotos, setPendingPhotos] = useState([]); // fotos selecionadas antes de salvar
+
+  // Handler para selecionar fotos no formulário (antes de salvar)
+  function handlePendingPhotos(e) {
+    const files = e.target.files;
+    if (!files?.length) return;
+    const remaining = 15 - pendingPhotos.length;
+    const batch = Array.from(files).slice(0, Math.min(5, remaining));
+    const newPhotos = batch.map(file => ({
+      file,
+      preview: URL.createObjectURL(file),
+    }));
+    setPendingPhotos(prev => [...prev, ...newPhotos].slice(0, 15));
+    e.target.value = '';
+  }
   
   // Offline mode
   const { isOnline, pendingCount } = useOfflineManager();
@@ -225,7 +240,7 @@ export default function AppOS() {
 
   function openCreate() {
     setForm({ cliente_id:'', veiculo_id:'', descricao:'', servicos:'', pecas_itens:[novaPeca()], valor_mo:'', data:new Date().toISOString().split('T')[0], status:'em_andamento', observacao:'' });
-    setEditing(null); setModal('form');
+    setEditing(null); setPendingPhotos([]); setModal('form');
   }
 
   function openEdit(os) {
@@ -258,11 +273,42 @@ export default function AppOS() {
       
       if (isOnline) {
         // Online: envia normalmente
-        if (editing) await api.app.os.update(editing, payload);
-        else await api.app.os.create(payload);
+        let osId = editing;
+        if (editing) {
+          await api.app.os.update(editing, payload);
+        } else {
+          const res = await api.app.os.create(payload);
+          osId = res.id;
+        }
+        
+        // Upload de fotos pendentes (se houver)
+        if (pendingPhotos.length > 0 && osId) {
+          try {
+            const { compressImages } = await import('../../utils/imageCompressor');
+            // pendingPhotos já tem .file (File) — precisa comprimir antes
+            const filesToCompress = pendingPhotos.map(p => p.file).filter(Boolean);
+            if (filesToCompress.length > 0) {
+              const compressed = await compressImages(filesToCompress);
+              const validas = compressed.filter(c => !c.error);
+              if (validas.length > 0) {
+                const fotosPayload = validas.map(c => ({
+                  imagem: c.dataUrl,
+                  titulo: '',
+                  descricao: '',
+                  categoria: 'problema',
+                }));
+                await api.app.os.fotos.upload(osId, fotosPayload);
+              }
+            }
+          } catch (fotoErr) {
+            console.warn('Fotos não enviadas:', fotoErr);
+            // Não falha a OS por causa das fotos
+          }
+        }
         
         // Remove rascunho após sucesso
         offlineManager.removeDraft('os', DRAFT_ID);
+        setPendingPhotos([]);
         
         setModal(null); 
         load(statusFiltro); 
@@ -663,6 +709,50 @@ export default function AppOS() {
                     </select>
                   </div>
                   <div className="form-group full"><label>Observações</label><input value={form.observacao} onChange={e=>setForm(f=>({...f,observacao:e.target.value}))} placeholder="Observações adicionais..." /></div>
+                </div>
+
+                {/* Upload de fotos — disponível na criação e edição */}
+                <div style={{ marginTop: 16, marginBottom: 16, padding: '14px 16px', background: 'var(--gray-50)', borderRadius: 10, border: '1px solid var(--gray-200)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gray-700)' }}>
+                      📷 Fotos {pendingPhotos.length > 0 && <span style={{ fontWeight: 400, color: 'var(--gray-400)' }}>({pendingPhotos.length} selecionada{pendingPhotos.length > 1 ? 's' : ''})</span>}
+                    </div>
+                    <label style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 5,
+                      padding: '5px 12px', borderRadius: 7, cursor: 'pointer',
+                      background: 'var(--accent)', color: '#fff', fontSize: 12, fontWeight: 600,
+                    }}>
+                      + Adicionar
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        multiple
+                        style={{ display: 'none' }}
+                        onChange={handlePendingPhotos}
+                      />
+                    </label>
+                  </div>
+                  {pendingPhotos.length === 0 ? (
+                    <div style={{ fontSize: 12, color: 'var(--gray-400)', textAlign: 'center', padding: '8px 0' }}>
+                      Tire fotos dos problemas encontrados para enviar ao cliente
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {pendingPhotos.map((p, i) => (
+                        <div key={i} style={{ position: 'relative', width: 64, height: 64, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--gray-200)' }}>
+                          <img src={p.preview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <button type="button" onClick={() => setPendingPhotos(f => f.filter((_, j) => j !== i))} style={{
+                            position: 'absolute', top: 2, right: 2, width: 18, height: 18, borderRadius: '50%',
+                            background: 'rgba(220,38,38,.85)', color: '#fff', border: 'none', fontSize: 10, cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}>✕</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {pendingPhotos.length >= 15 && (
+                    <div style={{ fontSize: 11, color: 'var(--danger)', marginTop: 6 }}>Limite de 15 fotos atingido</div>
+                  )}
                 </div>
 
                 <div className="form-actions">
