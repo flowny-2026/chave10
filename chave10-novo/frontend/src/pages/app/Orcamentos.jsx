@@ -205,7 +205,7 @@ export default function AppOrcamentos() {
       // Upload de fotos — cria uma OS vinculada se necessário
       if (pendingPhotos.length > 0) {
         try {
-          // Cria uma OS automaticamente para hospedar as fotos (se não estiver editando)
+          // Cria uma OS automaticamente para hospedar as fotos
           const osPayload = {
             descricao: form.descricao || 'Orçamento com fotos',
             cliente_id: form.cliente_id || null,
@@ -214,6 +214,18 @@ export default function AppOrcamentos() {
           };
           const osRes = await api.app.os.create(osPayload);
           if (osRes?.id) {
+            // Vincula a OS ao orçamento (atualiza o campo os_id)
+            if (!editing) {
+              // Busca o último orçamento criado para atualizar com o os_id
+              const listaAtual = await api.app.orcamentos.list();
+              const ultimoOrc = listaAtual?.[0];
+              if (ultimoOrc?.id) {
+                await api.app.orcamentos.update(ultimoOrc.id, { os_id: osRes.id, interativo: true });
+              }
+            } else {
+              await api.app.orcamentos.update(editing, { os_id: osRes.id, interativo: true });
+            }
+
             const { compressImages } = await import('../../utils/imageCompressor');
             const files = pendingPhotos.map(p => p.file).filter(Boolean);
             if (files.length > 0) {
@@ -269,6 +281,42 @@ export default function AppOrcamentos() {
     win.document.close();
     win.focus();
     setTimeout(() => win.print(), 600);
+  }
+
+  async function enviarLinkAprovacao(orc) {
+    const c = clientes.find(x => x.id === orc.cliente_id);
+    if (!c?.telefone) { showToast('Cliente sem telefone cadastrado', 'error'); return; }
+
+    try {
+      showToast('Gerando link de aprovação...', 'info');
+      // Gera o link via API de approval
+      const res = await api.post(`/approval/orcamentos/${orc.id}/link`, {
+        sendViaWhatsApp: false,
+        validityHours: 168, // 7 dias
+      });
+
+      if (res.link) {
+        // Monta mensagem do WhatsApp com o link
+        const oficina = (() => { try { return JSON.parse(localStorage.getItem('c10_oficina')) || {}; } catch { return {}; } })();
+        const pecas = orc.pecas_itens || [];
+        const totalPecas = pecas.reduce((s, p) => s + (parseFloat(p.valor_unit) || 0) * (parseFloat(p.qtd) || 1), 0);
+        const total = (parseFloat(orc.valor_mo) || 0) + totalPecas - (parseFloat(orc.desconto) || 0);
+
+        let msg = `*${orc.numero || 'Orçamento'} — ${oficina.nome || 'Oficina'}*\n\n`;
+        msg += `Olá ${c.nome}! 👋\n\n`;
+        msg += `Seu orçamento está pronto para análise.\n`;
+        msg += `*Valor total: ${fmt.currency(total)}*\n\n`;
+        msg += `📋 Veja os detalhes completos e aprove online:\n`;
+        msg += `${res.link}\n\n`;
+        msg += `Válido por 7 dias. Qualquer dúvida estou à disposição!`;
+
+        const tel = c.telefone.replace(/\D/g, '');
+        window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`, '_blank');
+        showToast('Link gerado! WhatsApp aberto.', 'success');
+      }
+    } catch (err) {
+      showToast(err.error || 'Erro ao gerar link de aprovação', 'error');
+    }
   }
 
   function enviarWhatsApp(orc) {
@@ -638,6 +686,7 @@ export default function AppOrcamentos() {
                   <button className="btn btn-outline" onClick={()=>setModal(null)}>Fechar</button>
                   <button className="btn btn-outline" onClick={()=>imprimir(viewing)}>🖨️ Imprimir</button>
                   <button className="btn btn-outline" onClick={()=>enviarWhatsApp(viewing)}>💬 WhatsApp</button>
+                  <button className="btn btn-outline" style={{background:'#25D366',color:'#fff',borderColor:'#25D366'}} onClick={()=>enviarLinkAprovacao(viewing)}>🔗 Link de Aprovação</button>
                   <button className="btn btn-primary" onClick={()=>openEdit(viewing)}>✏️ Editar</button>
                   {viewing.status==='pendente'&&<button className="btn btn-success" onClick={()=>setStatus(viewing.id,'aprovado')}>✅ Aprovar</button>}
                   {viewing.status==='pendente'&&<button className="btn btn-outline" style={{color:'var(--danger)',borderColor:'var(--danger)'}} onClick={()=>setStatus(viewing.id,'rejeitado')}>❌ Rejeitar</button>}

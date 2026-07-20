@@ -473,7 +473,7 @@ router.post('/orcamentos', validateOrcamento, checkClienteVeiculoOwnership, asyn
 // PUT /orcamentos/:id — checkOwns + valida cliente_id/veiculo_id do body
 router.put('/orcamentos/:id', validateId, checkOwns('orcamentos'), validateOrcamento, checkClienteVeiculoOwnership, async (req,res) => {
   try {
-    const { descricao, servicos, obs, status, validade, valor_mo, desconto, pecas_itens, cliente_id, veiculo_id } = req.body;
+    const { descricao, servicos, obs, status, validade, valor_mo, desconto, pecas_itens, cliente_id, veiculo_id, os_id, interativo } = req.body;
     const isFuncionario = req.user?.perfil === 'funcionario';
 
     let itens = null;
@@ -486,8 +486,15 @@ router.put('/orcamentos/:id', validateId, checkOwns('orcamentos'), validateOrcam
     const descontoFinal = isFuncionario ? null : (desconto !== undefined ? Math.max(0, parseFloat(desconto) || 0) : null);
     const pecasTexto    = itens ? itens.map(p => `${p.qtd||1}x ${String(p.nome).slice(0,100)} (R$ ${parseFloat(p.valor_unit||0).toFixed(2)})`).join('\n') : null;
 
+    // Valida os_id se informado (deve pertencer à oficina)
+    const osIdVal = os_id ? parseInt(os_id) : null;
+    if (osIdVal) {
+      const osCheck = await queryOne('SELECT id FROM ordens_servico WHERE id=$1 AND oficina_id=$2', [osIdVal, oid(req)]);
+      if (!osCheck) return res.status(404).json({ error: 'OS não encontrada' });
+    }
+
     const result = await run(
-      "UPDATE orcamentos SET descricao=COALESCE($1,descricao),servicos=COALESCE($2,servicos),pecas=COALESCE($3,pecas),pecas_itens=COALESCE($4,pecas_itens),valor_mo=COALESCE($5,valor_mo),valor_pecas=COALESCE($6,valor_pecas),desconto=COALESCE($7,desconto),status=COALESCE($8,status),validade=COALESCE($9,validade),obs=COALESCE($10,obs),cliente_id=COALESCE($11,cliente_id),veiculo_id=COALESCE($12,veiculo_id) WHERE id=$13 AND oficina_id=$14",
+      `UPDATE orcamentos SET descricao=COALESCE($1,descricao),servicos=COALESCE($2,servicos),pecas=COALESCE($3,pecas),pecas_itens=COALESCE($4,pecas_itens),valor_mo=COALESCE($5,valor_mo),valor_pecas=COALESCE($6,valor_pecas),desconto=COALESCE($7,desconto),status=COALESCE($8,status),validade=COALESCE($9,validade),obs=COALESCE($10,obs),cliente_id=COALESCE($11,cliente_id),veiculo_id=COALESCE($12,veiculo_id),os_id=COALESCE($13,os_id),interativo=COALESCE($14,interativo) WHERE id=$15 AND oficina_id=$16`,
       [
         descricao    || null,
         servicos     || null,
@@ -501,6 +508,8 @@ router.put('/orcamentos/:id', validateId, checkOwns('orcamentos'), validateOrcam
         obs          || null,
         cliente_id   !== undefined ? (cliente_id || null) : null,
         veiculo_id   !== undefined ? (veiculo_id || null) : null,
+        osIdVal,
+        interativo   !== undefined ? !!interativo : null,
         req.params.id,
         oid(req),
       ]
