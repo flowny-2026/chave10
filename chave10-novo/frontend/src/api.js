@@ -128,6 +128,12 @@ export const api = {
       remove:  (id)                  => del('/app/os/'+id),
       pagamento:(id, data)           => post('/app/os/'+id+'/pagamento', data),
       pagamentos:(id)                => get('/app/os/'+id+'/pagamentos'),
+      fotos: {
+        list:   (osId)              => get('/app/os/'+osId+'/fotos'),
+        get:    (osId, fotoId)      => get('/app/os/'+osId+'/fotos/'+fotoId),
+        upload: (osId, fotos)       => post('/app/os/'+osId+'/fotos', { fotos }),
+        remove: (osId, fotoId)      => del('/app/os/'+osId+'/fotos/'+fotoId),
+      },
     },
     orcamentos: {
       list:    ()                    => get('/app/orcamentos'),
