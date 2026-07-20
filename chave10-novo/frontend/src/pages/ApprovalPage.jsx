@@ -260,6 +260,51 @@ export default function ApprovalPage() {
           </div>
         )}
 
+        {/* Fotos dos problemas encontrados (orçamento interativo) */}
+        {budget.fotos && budget.fotos.length > 0 && (
+          <div className="items-section">
+            <h3>📷 Problemas Encontrados</h3>
+            <p style={{ fontSize: 13, color: '#6B7280', marginBottom: 12 }}>
+              Fotos reais do seu veículo mostrando os pontos que precisam de atenção.
+            </p>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+              gap: 10,
+            }}>
+              {budget.fotos.map((foto, idx) => (
+                <div key={idx} style={{
+                  borderRadius: 10, overflow: 'hidden',
+                  border: '1px solid #E5E7EB', background: '#fff',
+                }}>
+                  {foto.imagem_base64 && (
+                    <img
+                      src={foto.imagem_base64}
+                      alt={foto.titulo || `Foto ${idx + 1}`}
+                      style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block' }}
+                    />
+                  )}
+                  {(foto.titulo || foto.descricao) && (
+                    <div style={{ padding: '8px 10px' }}>
+                      {foto.titulo && <div style={{ fontSize: 12, fontWeight: 600, color: '#1F2937' }}>{foto.titulo}</div>}
+                      {foto.descricao && <div style={{ fontSize: 11, color: '#6B7280', marginTop: 2 }}>{foto.descricao}</div>}
+                    </div>
+                  )}
+                  {foto.categoria && foto.categoria !== 'outro' && (
+                    <div style={{
+                      padding: '4px 10px 6px', fontSize: 10, fontWeight: 700,
+                      color: foto.categoria === 'problema' ? '#dc2626' : '#2563eb',
+                      textTransform: 'uppercase',
+                    }}>
+                      {foto.categoria === 'problema' ? '⚠️ Problema' : foto.categoria === 'peca' ? '🔧 Peça' : foto.categoria}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Services */}
         {budget.servicos && budget.servicos.length > 0 && (
           <div className="items-section">

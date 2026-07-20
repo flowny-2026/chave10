@@ -307,7 +307,7 @@ router.get('/public/:token', publicApprovalLimiter, async (req, res) => {
     const budget = await queryOne(
       `SELECT 
         o.id, o.numero, o.descricao, o.servicos, o.pecas, o.pecas_itens,
-        o.valor_mo, o.valor_pecas, o.desconto, o.obs,
+        o.valor_mo, o.valor_pecas, o.desconto, o.obs, o.os_id,
         c.nome as cliente_nome, c.telefone as cliente_telefone, c.email as cliente_email,
         v.placa, v.modelo, v.marca, v.ano, v.km,
         of.nome as oficina_nome, of.telefone as oficina_telefone, 
@@ -346,7 +346,7 @@ router.get('/public/:token', publicApprovalLimiter, async (req, res) => {
 
     const total = (budget.valor_mo || 0) + (budget.valor_pecas || 0) - (budget.desconto || 0);
 
-    res.json({
+    const responseData = {
       valid: true,
       budget: {
         numero: budget.numero || `ORÇ-${budget.id}`,
@@ -370,6 +370,7 @@ router.get('/public/:token', publicApprovalLimiter, async (req, res) => {
         desconto: budget.desconto || 0,
         total,
         obs: budget.obs,
+        fotos: [],
         oficina: {
           nome: budget.oficina_nome,
           telefone: budget.oficina_telefone,
@@ -379,7 +380,21 @@ router.get('/public/:token', publicApprovalLimiter, async (req, res) => {
         requireSignature: budget.require_signature || false
       },
       expiresAt: link.expires_at
-    });
+    };
+
+    // Se o orçamento estiver vinculado a uma OS, busca as fotos
+    if (budget.os_id) {
+      try {
+        const fotos = await query(
+          `SELECT id, titulo, descricao, categoria, posicao, imagem_base64, mime_type
+           FROM os_fotos WHERE os_id=$1 ORDER BY posicao, id`,
+          [budget.os_id]
+        );
+        responseData.budget.fotos = fotos || [];
+      } catch { /* sem fotos */ }
+    }
+
+    res.json(responseData);
   } catch (error) {
     log.error('approval_get_public', error);
     res.status(500).json({ error: 'Erro ao buscar orçamento' });
