@@ -129,10 +129,10 @@ export const api = {
       pagamento:(id, data)           => post('/app/os/'+id+'/pagamento', data),
       pagamentos:(id)                => get('/app/os/'+id+'/pagamentos'),
       fotos: {
-        list:   (osId)              => get('/app/os/'+osId+'/fotos'),
-        get:    (osId, fotoId)      => get('/app/os/'+osId+'/fotos/'+fotoId),
-        upload: (osId, fotos)       => post('/app/os/'+osId+'/fotos', { fotos }),
-        remove: (osId, fotoId)      => del('/app/os/'+osId+'/fotos/'+fotoId),
+        list:   (osId)              => get('/app/os-fotos/'+osId+'/fotos'),
+        get:    (osId, fotoId)      => get('/app/os-fotos/'+osId+'/fotos/'+fotoId),
+        upload: (osId, fotos)       => post('/app/os-fotos/'+osId+'/fotos', { fotos }),
+        remove: (osId, fotoId)      => del('/app/os-fotos/'+osId+'/fotos/'+fotoId),
       },
     },
     orcamentos: {
