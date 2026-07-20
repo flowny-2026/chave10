@@ -35,7 +35,7 @@ const MAX_FOTO_BYTES       = 800 * 1024; // 800KB decodificado
 router.get('/:id/fotos', validateId, checkOwns('ordens_servico'), async (req, res) => {
   try {
     const fotos = await query(
-      `SELECT id, titulo, descricao, categoria, posicao, mime_type, tamanho_bytes, criado_em
+      `SELECT id, titulo, descricao, categoria, posicao, mime_type, tamanho_bytes, criado_em, imagem_base64
        FROM os_fotos WHERE os_id=$1 AND oficina_id=$2 ORDER BY posicao, id`,
       [req.params.id, req.user.oficina_id]
     );
