@@ -357,6 +357,49 @@ async function initDB() {
   await pool.query(`
     ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS pecas_itens TEXT;
   `).catch(() => {});
+
+  // ── Fotos de OS e Orçamento Interativo ────────────────────
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS os_fotos (
+      id           SERIAL PRIMARY KEY,
+      oficina_id   INTEGER NOT NULL REFERENCES oficinas(id) ON DELETE CASCADE,
+      os_id        INTEGER NOT NULL REFERENCES ordens_servico(id) ON DELETE CASCADE,
+      veiculo_id   INTEGER REFERENCES veiculos(id) ON DELETE SET NULL,
+      titulo       TEXT,
+      descricao    TEXT,
+      categoria    TEXT DEFAULT 'problema',
+      posicao      INTEGER DEFAULT 0,
+      imagem_base64 TEXT,
+      storage_url   TEXT,
+      mime_type     TEXT DEFAULT 'image/jpeg',
+      tamanho_bytes INTEGER,
+      criado_em    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      criado_por   INTEGER REFERENCES usuarios(id) ON DELETE SET NULL
+    )
+  `).catch(() => {});
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_os_fotos_os ON os_fotos(os_id)`).catch(() => {});
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_os_fotos_oficina ON os_fotos(oficina_id)`).catch(() => {});
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS orcamento_itens (
+      id           SERIAL PRIMARY KEY,
+      oficina_id   INTEGER NOT NULL REFERENCES oficinas(id) ON DELETE CASCADE,
+      orcamento_id INTEGER NOT NULL REFERENCES orcamentos(id) ON DELETE CASCADE,
+      tipo         TEXT DEFAULT 'peca' CHECK(tipo IN ('peca','servico','outro')),
+      nome         TEXT NOT NULL,
+      descricao    TEXT,
+      quantidade   REAL DEFAULT 1,
+      valor_unit   REAL DEFAULT 0,
+      foto_ids     JSONB DEFAULT '[]',
+      posicao      INTEGER DEFAULT 0,
+      criado_em    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `).catch(() => {});
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_orc_itens_orcamento ON orcamento_itens(orcamento_id)`).catch(() => {});
+
+  await pool.query(`ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS interativo BOOLEAN DEFAULT false`).catch(() => {});
+  await pool.query(`ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS observacao_problema TEXT`).catch(() => {});
+  await pool.query(`ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS os_id INTEGER REFERENCES ordens_servico(id) ON DELETE SET NULL`).catch(() => {});
   await pool.query(`ALTER TABLE oficinas ADD COLUMN IF NOT EXISTS logo TEXT;`).catch(() => {});
   await pool.query(`ALTER TABLE oficinas ADD COLUMN IF NOT EXISTS endereco TEXT;`).catch(() => {});
   await pool.query(`ALTER TABLE oficinas ADD COLUMN IF NOT EXISTS whatsapp TEXT;`).catch(() => {});
