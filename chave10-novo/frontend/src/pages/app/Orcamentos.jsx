@@ -200,7 +200,9 @@ export default function AppOrcamentos() {
         pecas_itens: pecasValidas,
       };
       if (editing) await api.app.orcamentos.update(editing, payload);
-      else await api.app.orcamentos.create(payload);
+      else {
+        var orcCriado = await api.app.orcamentos.create(payload);
+      }
 
       // Upload de fotos — cria uma OS vinculada se necessário
       if (pendingPhotos.length > 0) {
@@ -214,16 +216,10 @@ export default function AppOrcamentos() {
           };
           const osRes = await api.app.os.create(osPayload);
           if (osRes?.id) {
-            // Vincula a OS ao orçamento (atualiza o campo os_id)
-            if (!editing) {
-              // Busca o último orçamento criado para atualizar com o os_id
-              const listaAtual = await api.app.orcamentos.list();
-              const ultimoOrc = listaAtual?.[0];
-              if (ultimoOrc?.id) {
-                await api.app.orcamentos.update(ultimoOrc.id, { os_id: osRes.id, interativo: true });
-              }
-            } else {
-              await api.app.orcamentos.update(editing, { os_id: osRes.id, interativo: true });
+            // Vincula a OS ao orçamento usando o ID retornado pela criação
+            const orcId = editing || orcCriado?.id;
+            if (orcId) {
+              await api.app.orcamentos.update(orcId, { os_id: osRes.id, interativo: true });
             }
 
             const { compressImages } = await import('../../utils/imageCompressor');

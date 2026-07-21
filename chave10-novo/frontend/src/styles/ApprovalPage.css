@@ -1,10 +1,12 @@
 .approval-page {
   min-height: 100vh;
+  min-height: 100dvh;
   background: linear-gradient(145deg, #0f172a 0%, #1E3A5F 50%, #0f172a 100%);
-  padding: 20px;
+  background-attachment: fixed;
+  padding: 24px 16px;
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
   position: relative;
 }
 /* Efeito de brilho sutil do branding */

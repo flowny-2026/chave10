@@ -11,19 +11,11 @@ export function useOnboarding() {
   const [currentStep, setCurrentStep] = useState(0);
 
   useEffect(() => {
-    // Verifica se o usuário já completou o onboarding
+    // Tour NUNCA abre automaticamente — apenas pelo botão no menu lateral.
+    // O WelcomeModal fica desabilitado para não interromper o uso.
     const completed = localStorage.getItem('chave10_onboarding_completed');
-    const isComplete = completed === 'true';
-    
-    setIsOnboardingComplete(isComplete);
-    
-    // Se não completou, mostra o modal de boas-vindas após 500ms
-    if (!isComplete) {
-      const timer = setTimeout(() => {
-        setShowWelcome(true);
-      }, 500);
-      return () => clearTimeout(timer);
-    }
+    setIsOnboardingComplete(completed === 'true');
+    // Não define showWelcome = true — o tour só inicia manualmente
   }, []);
 
   const startTour = () => {
