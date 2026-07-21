@@ -426,6 +426,9 @@ export default function ApprovalPage() {
             {budget.oficina.telefone && <p>📞 {budget.oficina.telefone}</p>}
             {budget.oficina.endereco && <p>📍 {budget.oficina.endereco}</p>}
           </div>
+          <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid #e5e7eb', fontSize: 11, color: '#9ca3af' }}>
+            Powered by <strong style={{ color: '#1E3A5F' }}>Chave</strong> <strong style={{ color: '#F97316' }}>10</strong> — Sistema de gestão para oficinas
+          </div>
         </div>
       </div>
 

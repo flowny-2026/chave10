@@ -1,19 +1,45 @@
 .approval-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(145deg, #0f172a 0%, #1E3A5F 50%, #0f172a 100%);
   padding: 20px;
   display: flex;
   justify-content: center;
   align-items: center;
+  position: relative;
+}
+/* Efeito de brilho sutil do branding */
+.approval-page::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -30%;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(249,115,22,.08) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.approval-page::after {
+  content: '';
+  position: absolute;
+  bottom: -30%;
+  left: -20%;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(30,58,95,.3) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
 }
 
 .approval-container {
   max-width: 600px;
   width: 100%;
   background: white;
-  border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  border-radius: 20px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
   overflow: hidden;
+  position: relative;
+  z-index: 1;
 }
 
 /* Loading */
@@ -25,8 +51,8 @@
 .spinner {
   width: 50px;
   height: 50px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #667eea;
+  border: 4px solid #e5e7eb;
+  border-top: 4px solid #F97316;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin: 0 auto 20px;
@@ -78,7 +104,7 @@
 
 .oficina-contact h3 {
   font-size: 16px;
-  color: #667eea;
+  color: #F97316;
   margin-bottom: 15px;
 }
 
@@ -89,22 +115,23 @@
 
 /* Header */
 .approval-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1E3A5F 0%, #0f172a 100%);
   color: white;
   padding: 30px 20px;
   text-align: center;
 }
 
 .approval-header h1 {
-  font-size: 24px;
-  margin-bottom: 10px;
-  font-weight: 600;
+  font-size: 22px;
+  margin-bottom: 8px;
+  font-weight: 800;
+  color: #f8fafc;
 }
 
 .budget-number {
   font-size: 16px;
-  opacity: 0.9;
-  font-weight: 500;
+  color: #F97316;
+  font-weight: 700;
 }
 
 /* Info Section */
@@ -144,7 +171,7 @@
 
 .description-section h3 {
   font-size: 16px;
-  color: #667eea;
+  color: #1E3A5F;
   margin-bottom: 10px;
   font-weight: 600;
 }
@@ -234,7 +261,7 @@
 }
 
 .total-row.final span {
-  color: #667eea;
+  color: #F97316;
   font-weight: 700;
 }
 
@@ -284,14 +311,14 @@
 }
 
 .btn-approve {
-  background: linear-gradient(135deg, #27ae60, #229954);
+  background: linear-gradient(135deg, #F97316, #ea6c0a);
   color: white;
-  box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+  box-shadow: 0 4px 16px rgba(249, 115, 22, 0.35);
 }
 
 .btn-approve:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(39, 174, 96, 0.4);
+  box-shadow: 0 8px 24px rgba(249, 115, 22, 0.5);
 }
 
 .btn-reject {
@@ -339,7 +366,7 @@
 
 .reject-reason-section textarea:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: #F97316;
 }
 
 .btn-confirm-reject {
@@ -361,7 +388,7 @@
 
 .expiry-info {
   font-size: 13px;
-  color: #f39c12;
+  color: #F97316;
   margin-bottom: 15px;
   font-weight: 500;
 }
