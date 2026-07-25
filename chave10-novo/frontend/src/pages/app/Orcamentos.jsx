@@ -199,29 +199,20 @@ export default function AppOrcamentos() {
         desconto:   parseFloat(form.desconto)||0,
         pecas_itens: pecasValidas,
       };
-      if (editing) await api.app.orcamentos.update(editing, payload);
-      else {
-        var orcCriado = await api.app.orcamentos.create(payload);
-      }
 
-      // Upload de fotos — cria uma OS vinculada se necessário
+      // Se tem fotos pendentes, cria a OS primeiro para hospedar as imagens
+      let osIdCriado = null;
       if (pendingPhotos.length > 0) {
         try {
-          // Cria uma OS automaticamente para hospedar as fotos
-          const osPayload = {
+          const osRes = await api.app.os.create({
             descricao: form.descricao || 'Orçamento com fotos',
             cliente_id: form.cliente_id || null,
             veiculo_id: form.veiculo_id || null,
             valor_mo: 0,
-          };
-          const osRes = await api.app.os.create(osPayload);
+          });
           if (osRes?.id) {
-            // Vincula a OS ao orçamento usando o ID retornado pela criação
-            const orcId = editing || orcCriado?.id;
-            if (orcId) {
-              await api.app.orcamentos.update(orcId, { os_id: osRes.id, interativo: true });
-            }
-
+            osIdCriado = osRes.id;
+            // Comprime e envia as fotos
             const { compressImages } = await import('../../utils/imageCompressor');
             const files = pendingPhotos.map(p => p.file).filter(Boolean);
             if (files.length > 0) {
@@ -240,6 +231,18 @@ export default function AppOrcamentos() {
         } catch (fotoErr) {
           console.warn('Fotos do orçamento não enviadas:', fotoErr);
         }
+      }
+
+      // Inclui os_id no payload se a OS foi criada
+      if (osIdCriado) {
+        payload.os_id = osIdCriado;
+        payload.interativo = true;
+      }
+
+      if (editing) {
+        await api.app.orcamentos.update(editing, payload);
+      } else {
+        await api.app.orcamentos.create(payload);
       }
 
       setPendingPhotos([]);

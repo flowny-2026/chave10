@@ -448,7 +448,7 @@ router.get('/orcamentos', async (req,res) => {
 // POST /orcamentos — valida cliente_id e veiculo_id contra a oficina
 router.post('/orcamentos', validateOrcamento, checkClienteVeiculoOwnership, async (req,res) => {
   try {
-    const { cliente_id, veiculo_id, descricao, servicos, obs, status, validade, valor_mo, desconto, pecas_itens } = req.body;
+    const { cliente_id, veiculo_id, descricao, servicos, obs, status, validade, valor_mo, desconto, pecas_itens, os_id, interativo } = req.body;
     const isFuncionario = req.user?.perfil === 'funcionario';
 
     // Funcionários não podem definir valores financeiros
@@ -462,9 +462,16 @@ router.post('/orcamentos', validateOrcamento, checkClienteVeiculoOwnership, asyn
     const cnt = await queryOne("SELECT COUNT(*) n FROM orcamentos WHERE oficina_id=$1", [oid(req)]);
     const numero = 'ORC-' + String(+cnt.n + 1).padStart(4, '0');
 
+    // Valida os_id se informado
+    const osIdVal = os_id ? parseInt(os_id) : null;
+    if (osIdVal) {
+      const osCheck = await queryOne('SELECT id FROM ordens_servico WHERE id=$1 AND oficina_id=$2', [osIdVal, oid(req)]);
+      if (!osCheck) return res.status(404).json({ error: 'OS não encontrada' });
+    }
+
     const r = await queryOne(
-      "INSERT INTO orcamentos(oficina_id,cliente_id,veiculo_id,numero,descricao,servicos,pecas,pecas_itens,valor_mo,valor_pecas,desconto,status,validade,obs) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id",
-      [oid(req), cliente_id||null, veiculo_id||null, numero, descricao||null, servicos||null, pecasTexto||null, itens.length ? JSON.stringify(itens) : null, valorMO, valorPecas, descontoFinal, status||'pendente', validade||null, obs||null]
+      "INSERT INTO orcamentos(oficina_id,cliente_id,veiculo_id,numero,descricao,servicos,pecas,pecas_itens,valor_mo,valor_pecas,desconto,status,validade,obs,os_id,interativo) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING id",
+      [oid(req), cliente_id||null, veiculo_id||null, numero, descricao||null, servicos||null, pecasTexto||null, itens.length ? JSON.stringify(itens) : null, valorMO, valorPecas, descontoFinal, status||'pendente', validade||null, obs||null, osIdVal, !!interativo]
     );
     res.status(201).json({ id: r.id, numero });
   } catch(err) { res.status(500).json({ error: 'Erro interno' }); }
