@@ -302,12 +302,12 @@ function cacheMiddleware(ttlSeconds = 30) {
 // ── ROTAS ─────────────────────────────────────────────────────
 // loginLimiter aplicado em /api/auth — cobre /login, /register, /google e /google-register.
 // Cada rota sensível dentro do auth router tem seu limiter específico (ver routes/auth.js).
-app.use('/api/auth',     loginLimiter, require('./routes/auth'));
-app.use('/api/admin',    adminLimiter, require('./routes/admin'));
-app.use('/api/app',          writeLimiter, cacheMiddleware(15), require('./routes/app'));
+app.use('/api/auth',         loginLimiter, require('./routes/auth'));
+app.use('/api/admin',        adminLimiter, require('./routes/admin'));
 app.use('/api/app/os-fotos', writeLimiter, require('./routes/os-fotos'));
+app.use('/api/app',          writeLimiter, cacheMiddleware(15), require('./routes/app'));
 app.use('/api/backup',       writeLimiter, require('./routes/backup'));
-app.use('/api/approval', writeLimiter, require('./routes/approval'));
+app.use('/api/approval',     writeLimiter, require('./routes/approval'));
 
 // ── HEALTH CHECK ──────────────────────────────────────────────
 // Rota pública — usada por load balancers e monitoramento.
