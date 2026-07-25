@@ -26,7 +26,7 @@ router.use(authMiddleware, oficinaSelf);
 
 const MAX_FOTOS_POR_OS     = 15;
 const MAX_FOTOS_POR_UPLOAD = 5;
-const MAX_FOTO_BYTES       = 800 * 1024; // 800KB decodificado
+const MAX_FOTO_BYTES       = 2 * 1024 * 1024; // 2MB decodificado por foto
 
 /**
  * GET /api/app/os/:id/fotos
@@ -80,6 +80,8 @@ router.post('/:id/fotos', validateId, checkOwns('ordens_servico'), async (req, r
     const osId      = req.params.id;
     const oficinaId = req.user.oficina_id;
     const fotos     = req.body?.fotos;
+
+    console.log('[OS-FOTOS] Upload request:', { osId, oficinaId, fotosCount: fotos?.length, bodySize: JSON.stringify(req.body).length });
 
     if (!Array.isArray(fotos) || fotos.length === 0) {
       return res.status(400).json({ error: 'Envie ao menos uma foto' });

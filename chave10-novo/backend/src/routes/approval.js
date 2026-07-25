@@ -386,14 +386,18 @@ router.get('/public/:token', publicApprovalLimiter, async (req, res) => {
 
     // Se o orçamento estiver vinculado a uma OS, busca as fotos
     if (budget.os_id) {
+      console.log('[APPROVAL] Buscando fotos da OS:', budget.os_id);
       try {
         const fotos = await query(
           `SELECT id, titulo, descricao, categoria, posicao, imagem_base64, mime_type
            FROM os_fotos WHERE os_id=$1 ORDER BY posicao, id`,
           [budget.os_id]
         );
+        console.log('[APPROVAL] Fotos encontradas:', fotos?.length || 0);
         responseData.budget.fotos = fotos || [];
-      } catch { /* sem fotos */ }
+      } catch (e) { console.error('[APPROVAL] Erro ao buscar fotos:', e.message); }
+    } else {
+      console.log('[APPROVAL] Orcamento sem os_id:', { orcamento_id: budget.id, os_id: budget.os_id });
     }
 
     res.json(responseData);

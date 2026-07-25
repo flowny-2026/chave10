@@ -245,7 +245,7 @@ app.use(requireJsonContentType);
 // Limite global: 3MB para cobrir logos em base64 (2MB original * 1.37 de overhead base64).
 // A validação real de tamanho é feita pelo uploadValidator em cada rota específica.
 app.use(express.json({
-  limit: '3mb',
+  limit: '10mb',
   strict: true,   // rejeita qualquer coisa que não seja array ou objeto JSON
   type: 'application/json',
 }));
