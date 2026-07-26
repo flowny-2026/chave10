@@ -18,6 +18,9 @@ function Toast({ msg, type }) {
 export default function AppFinanceiro() {
   const hoje = new Date();
   const [mesIdx, setMesIdx] = useState(0); // 0 = mês atual
+  const [filtroCustom, setFiltroCustom] = useState(false);
+  const [dataInicio, setDataInicio] = useState('');
+  const [dataFim, setDataFim] = useState('');
   const [ordens, setOrdens]     = useState([]);
   const [despesas, setDespesas] = useState([]);
   const [parcelas, setParcelas] = useState([]);
@@ -29,11 +32,18 @@ export default function AppFinanceiro() {
 
   function showToast(msg, type='success') { setToast({msg,type}); setTimeout(()=>setToast({msg:'',type:''}),3000); }
 
-  // Calcula início/fim do mês selecionado
-  const mesDate = new Date(hoje.getFullYear(), hoje.getMonth()-mesIdx, 1);
-  const inicioMes = mesDate.toISOString().split('T')[0];
-  const fimMes = new Date(mesDate.getFullYear(), mesDate.getMonth()+1, 0).toISOString().split('T')[0];
-  const mesLabel = mesDate.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+  // Calcula início/fim do período selecionado
+  let inicioMes, fimMes, mesLabel;
+  if (filtroCustom && dataInicio && dataFim) {
+    inicioMes = dataInicio;
+    fimMes = dataFim;
+    mesLabel = `${dataInicio.split('-').reverse().join('/')} a ${dataFim.split('-').reverse().join('/')}`;
+  } else {
+    const mesDate = new Date(hoje.getFullYear(), hoje.getMonth()-mesIdx, 1);
+    inicioMes = mesDate.toISOString().split('T')[0];
+    fimMes = new Date(mesDate.getFullYear(), mesDate.getMonth()+1, 0).toISOString().split('T')[0];
+    mesLabel = mesDate.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+  }
 
   async function loadOrdens() {
     try {
@@ -107,8 +117,8 @@ export default function AppFinanceiro() {
   despesas.forEach(d=>{ if(!catMap[d.categoria]) catMap[d.categoria]=0; catMap[d.categoria]+=parseFloat(d.valor||0); });
   const maxCat = Math.max(...Object.values(catMap),1);
 
-  // Meses para select
-  const meses = Array.from({length:6},(_,i)=>{
+  // Meses para select — últimos 12 meses + opções de período
+  const meses = Array.from({length:12},(_,i)=>{
     const d = new Date(hoje.getFullYear(),hoje.getMonth()-i,1);
     const label = i === 0 
       ? `${d.toLocaleDateString('pt-BR',{month:'long',year:'numeric'})} (atual)`
@@ -120,10 +130,21 @@ export default function AppFinanceiro() {
     <div>
       <div className="page-header">
         <div><div className="page-title">Financeiro</div><div className="page-subtitle">{mesLabel}</div></div>
-        <div style={{display:'flex',gap:8,alignItems:'center'}}>
-          <select className="dash-select" value={mesIdx} onChange={e=>setMesIdx(Number(e.target.value))}>
+        <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+          <select className="dash-select" value={filtroCustom ? 'custom' : mesIdx} onChange={e=>{
+            if(e.target.value==='custom'){setFiltroCustom(true);setDataInicio(inicioMes);setDataFim(fimMes);}
+            else{setFiltroCustom(false);setMesIdx(Number(e.target.value));}
+          }}>
             {meses.map(m=><option key={m.idx} value={m.idx}>{m.label}</option>)}
+            <option value="custom">📅 Período personalizado</option>
           </select>
+          {filtroCustom && (
+            <div style={{display:'flex',gap:6,alignItems:'center'}}>
+              <input type="date" value={dataInicio} onChange={e=>setDataInicio(e.target.value)} style={{padding:'6px 8px',borderRadius:6,border:'1px solid var(--gray-300)',fontSize:12,background:'var(--gray-50)'}} />
+              <span style={{fontSize:12,color:'var(--gray-400)'}}>até</span>
+              <input type="date" value={dataFim} onChange={e=>setDataFim(e.target.value)} style={{padding:'6px 8px',borderRadius:6,border:'1px solid var(--gray-300)',fontSize:12,background:'var(--gray-50)'}} />
+            </div>
+          )}
           <button className="btn btn-primary btn-sm" onClick={()=>{setForm({...EMPTY_DESP,data:new Date().toISOString().split('T')[0]});setEditing(null);setModal(true);}}>+ Nova despesa</button>
         </div>
       </div>
