@@ -391,23 +391,14 @@
   .fin-card-label { color: rgba(255,255,255,.4) !important; }
 
   /* ── Notificações dark mode ── */
-  .card > div[style*="padding: 14px"] {
+  .notif-item {
     background: #1c2128 !important;
     border-bottom-color: rgba(255,255,255,.06) !important;
     border-left-color: rgba(255,255,255,.15) !important;
   }
-  .card > div[style*="padding: 14px"] div[style*="fontSize: 14"],
-  .card > div[style*="padding: 14px"] div[style*="fontSize:14"] {
-    color: #e6edf3 !important;
-  }
-  .card > div[style*="padding: 14px"] div[style*="fontSize: 13"],
-  .card > div[style*="padding: 14px"] div[style*="fontSize:13"] {
-    color: rgba(255,255,255,.6) !important;
-  }
-  .card > div[style*="padding: 14px"] div[style*="fontSize: 11"],
-  .card > div[style*="padding: 14px"] div[style*="fontSize:11"] {
-    color: rgba(255,255,255,.4) !important;
-  }
+  .notif-titulo { color: #e6edf3 !important; }
+  .notif-msg { color: rgba(255,255,255,.6) !important; }
+  .notif-time { color: rgba(255,255,255,.4) !important; }
 
   /* BOTTOM NAV */
   .mobile-bottom-nav {

@@ -807,9 +807,6 @@ export default function Layout({ area }) {
                     }}>{notiCount>9?'9+':notiCount}</span>
                   )}
                 </button>
-                <button className="topbar-btn" title="Lembretes" onClick={() => navigate('/app/lembretes')} style={{ position: 'relative' }}>
-                  {IC.lembretes}
-                </button>
                 <div className="topbar-divider" />
               </>
             )}

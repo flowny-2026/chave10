@@ -121,13 +121,14 @@ export default function Notificacoes() {
             return (
               <div
                 key={n.id}
+                className="notif-item"
                 style={{
                   display: 'flex',
                   alignItems: 'flex-start',
                   gap: 12,
                   padding: '14px 18px',
                   borderBottom: i < lista.length - 1 ? '1px solid var(--gray-100)' : 'none',
-                  background: n.lido ? '#fff' : cor.bg,
+                  background: n.lido ? 'var(--notif-bg-lida, #fff)' : cor.bg,
                   borderLeft: n.lido ? 'none' : `4px solid ${cor.border}`,
                   transition: 'background .15s',
                   cursor: n.lido ? 'default' : 'pointer',
@@ -147,16 +148,15 @@ export default function Notificacoes() {
 
                 {/* Conteúdo */}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{
+                  <div className="notif-titulo" style={{
                     fontSize: 14, fontWeight: n.lido ? 400 : 700,
-                    color: n.lido ? 'var(--gray-600)' : 'var(--gray-800)',
                     lineHeight: 1.3,
                   }}>
                     {n.titulo}
                   </div>
                   {n.mensagem && (
-                    <div style={{
-                      fontSize: 13, color: 'var(--gray-500)', marginTop: 3,
+                    <div className="notif-msg" style={{
+                      fontSize: 13, marginTop: 3,
                       lineHeight: 1.4,
                       overflow: 'hidden', textOverflow: 'ellipsis',
                       display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
@@ -164,7 +164,7 @@ export default function Notificacoes() {
                       {n.mensagem}
                     </div>
                   )}
-                  <div style={{ fontSize: 11, color: 'var(--gray-400)', marginTop: 5 }}>
+                  <div className="notif-time" style={{ fontSize: 11, marginTop: 5 }}>
                     {timeAgo(n.created_at)}
                   </div>
                 </div>
