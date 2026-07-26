@@ -701,13 +701,19 @@ export default function AppOrcamentos() {
                 </>
                 )}
 
-                {viewing.os_id && (
+                {viewing.os_id ? (
                   <FotoUploader
                     osId={viewing.os_id}
                     fotos={viewFotos}
                     onUpdate={() => api.app.os.fotos.list(viewing.os_id).then(data => setViewFotos(data||[])).catch(()=>{})}
                     disabled={viewing.status === 'aprovado' || viewing.status === 'rejeitado'}
                   />
+                ) : (
+                  <div style={{marginTop:16,padding:'16px',background:'var(--gray-50)',borderRadius:10,border:'2px dashed var(--gray-200)',textAlign:'center'}}>
+                    <div style={{fontSize:24,marginBottom:6}}>📷</div>
+                    <div style={{fontSize:12,color:'var(--gray-500)'}}>Nenhuma foto vinculada a este orçamento</div>
+                    <div style={{fontSize:11,color:'var(--gray-400)',marginTop:4}}>Ao criar o orçamento, adicione fotos para que apareçam aqui e no link de aprovação</div>
+                  </div>
                 )}
 
                 <div className="os-view-actions">
