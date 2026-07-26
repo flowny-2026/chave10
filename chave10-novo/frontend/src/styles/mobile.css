@@ -66,6 +66,18 @@
   .page-title { font-size: 18px !important; }
   .page-subtitle { font-size: 12px !important; }
 
+  /* SELECT do filtro — não ultrapassa a tela */
+  .dash-select {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .page-header > div[style] {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
   /* Botão único de criar: largura total */
   .page-header > .btn-primary {
     width: 100% !important;
