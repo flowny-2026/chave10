@@ -291,6 +291,7 @@ async function approveBudget(token, signatureData = null, ipAddress = null) {
          WHERE o.id = $1`,
         [link.orcamento_id]
       );
+      console.log('[APPROVAL] Notificando aprovação:', { oficina_id: link.oficina_id, orcamento_id: link.orcamento_id, orcDados: !!orcDados });
       if (orcDados) await notificarAprovacao(link.oficina_id, orcDados);
     } catch (notifErr) {
       log.warn('notificacao_aprovacao_falhou', { erro: notifErr.message });
@@ -392,6 +393,7 @@ async function rejectBudget(token, reason = null, ipAddress = null) {
          WHERE o.id = $1`,
         [link.orcamento_id]
       );
+      console.log('[APPROVAL] Notificando recusa:', { oficina_id: link.oficina_id, orcamento_id: link.orcamento_id, orcDados: !!orcDados });
       if (orcDados) await notificarRecusa(link.oficina_id, orcDados, sanitizedReason);
     } catch (notifErr) {
       log.warn('notificacao_recusa_falhou', { erro: notifErr.message });
