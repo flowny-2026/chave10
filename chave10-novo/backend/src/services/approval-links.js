@@ -228,7 +228,7 @@ async function approveBudget(token, signatureData = null, ipAddress = null) {
       // Update budget status
       const result = await client.query(
         `UPDATE orcamentos 
-         SET approval_status = 'approved', approved_at = NOW() 
+         SET approval_status = 'approved', approved_at = NOW(), status = 'aprovado' 
          WHERE id = $1 AND approval_status = 'pending'`,
         [link.orcamento_id]
       );
@@ -340,7 +340,8 @@ async function rejectBudget(token, reason = null, ipAddress = null) {
         `UPDATE orcamentos 
          SET approval_status = 'rejected', 
              rejected_at = NOW(), 
-             rejection_reason = $2 
+             rejection_reason = $2,
+             status = 'rejeitado' 
          WHERE id = $1 AND approval_status = 'pending'`,
         [link.orcamento_id, sanitizedReason]
       );
