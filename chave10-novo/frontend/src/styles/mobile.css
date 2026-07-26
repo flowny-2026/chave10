@@ -372,6 +372,25 @@
   .fin-card { background: #161b22 !important; border: 1px solid rgba(255,255,255,.07) !important; box-shadow: none !important; }
   .fin-card-label { color: rgba(255,255,255,.4) !important; }
 
+  /* ── Notificações dark mode ── */
+  .card > div[style*="padding: 14px"] {
+    background: #1c2128 !important;
+    border-bottom-color: rgba(255,255,255,.06) !important;
+    border-left-color: rgba(255,255,255,.15) !important;
+  }
+  .card > div[style*="padding: 14px"] div[style*="fontSize: 14"],
+  .card > div[style*="padding: 14px"] div[style*="fontSize:14"] {
+    color: #e6edf3 !important;
+  }
+  .card > div[style*="padding: 14px"] div[style*="fontSize: 13"],
+  .card > div[style*="padding: 14px"] div[style*="fontSize:13"] {
+    color: rgba(255,255,255,.6) !important;
+  }
+  .card > div[style*="padding: 14px"] div[style*="fontSize: 11"],
+  .card > div[style*="padding: 14px"] div[style*="fontSize:11"] {
+    color: rgba(255,255,255,.4) !important;
+  }
+
   /* BOTTOM NAV */
   .mobile-bottom-nav {
     display: flex !important;
@@ -623,10 +642,8 @@
   }
   label { color: rgba(255,255,255,.7) !important; }
 
-  /* ── KPICard — garante texto escuro no card branco ── */
-  .kpi-card { background: #fff !important; color: #111827 !important; }
-  .kpi-card div[style*="color: '#111827'"],
-  .kpi-card div[style*="color:'#111827'"] { color: #111827 !important; }
+  /* ── KPICard — dark mode ── */
+  .kpi-card { background: #161b22 !important; border-color: rgba(255,255,255,.1) !important; }
 
   /* ── Modal de visualização (OS/Orçamento) ── */
   .os-view-field {
@@ -746,16 +763,11 @@
     background: #161b22 !important;
     border-color: rgba(255,255,255,.1) !important;
   }
-  .kpi-card div[style*="fontSize: 22"],
-  .kpi-card div[style*="fontSize:22"],
-  .kpi-card div[style*="fontWeight: 800"],
-  .kpi-card div[style*="fontWeight:800"] {
+  .kpi-card div {
     color: #e6edf3 !important;
   }
-  .kpi-card div[style*="color: '#9ca3af'"],
-  .kpi-card div[style*="color:'#9ca3af'"],
-  .kpi-card div[style*="color: '#6b7280'"],
-  .kpi-card div[style*="color:'#6b7280'"] {
+  .kpi-card div[style*="fontSize: 11"],
+  .kpi-card div[style*="fontSize:11"] {
     color: rgba(255,255,255,.5) !important;
   }
 
