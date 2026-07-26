@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api';
+import FotoUploader from '../../components/FotoUploader';
 
 const fmt = {
   currency: v => 'R$ ' + parseFloat(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.'),
@@ -135,8 +136,18 @@ export default function AppOrcamentos() {
   const [form, setForm]         = useState({ cliente_id:'', veiculo_id:'', descricao:'', servicos:'', pecas_itens:[novaPeca()], valor_mo:'', desconto:'', status:'pendente', validade:'', obs:'' });
   const [editing, setEditing]   = useState(null);
   const [viewing, setViewing]   = useState(null);
+  const [viewFotos, setViewFotos] = useState([]);
   const [toast, setToast]       = useState({ msg:'', type:'' });
   const [pendingPhotos, setPendingPhotos] = useState([]);
+
+  function openView(orc) {
+    setViewing(orc);
+    setModal('ver');
+    setViewFotos([]);
+    if (orc.os_id) {
+      api.app.os.fotos.list(orc.os_id).then(data => setViewFotos(data||[])).catch(()=>setViewFotos([]));
+    }
+  }
 
   function handlePendingPhotos(e) {
     const files = e.target.files;
@@ -396,7 +407,7 @@ export default function AppOrcamentos() {
                         <td><span className={`badge ${STATUS_CLASS[orc.status]||'badge-gray'}`}>{STATUS_LABEL[orc.status]||orc.status}</span></td>
                         <td>
                           <div style={{display:'flex',gap:4}}>
-                            <button className="btn btn-outline btn-sm" onClick={()=>{setViewing(orc);setModal('ver');}}>👁️</button>
+                            <button className="btn btn-outline btn-sm" onClick={()=>openView(orc)}>👁️</button>
                             <button className="btn btn-outline btn-sm" onClick={()=>imprimir(orc)} title="Imprimir">🖨️</button>
                             <button className="btn btn-outline btn-sm" onClick={()=>enviarWhatsApp(orc)} title="WhatsApp">💬</button>
                             <button className="btn btn-outline btn-sm" onClick={()=>openEdit(orc)}>✏️</button>
@@ -417,7 +428,7 @@ export default function AppOrcamentos() {
               const totalPecas = (orc.pecas_itens||[]).reduce((s,p)=>s+(parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1),0);
               const total = (parseFloat(orc.valor_mo)||0)+totalPecas-(parseFloat(orc.desconto)||0);
               return (
-                <div key={orc.id} className="os-card-mobile" onClick={()=>{setViewing(orc);setModal('ver');}}>
+                <div key={orc.id} className="os-card-mobile" onClick={()=>openView(orc)}>
                   <div className="os-card-top">
                     <div className="os-card-num">{orc.numero||`#${orc.id}`}</div>
                     <span className={`badge ${STATUS_CLASS[orc.status]||'badge-gray'}`}>{STATUS_LABEL[orc.status]||orc.status}</span>
@@ -688,6 +699,15 @@ export default function AppOrcamentos() {
                   </div>
                 </div>
                 </>
+                )}
+
+                {viewing.os_id && (
+                  <FotoUploader
+                    osId={viewing.os_id}
+                    fotos={viewFotos}
+                    onUpdate={() => api.app.os.fotos.list(viewing.os_id).then(data => setViewFotos(data||[])).catch(()=>{})}
+                    disabled={viewing.status === 'aprovado' || viewing.status === 'rejeitado'}
+                  />
                 )}
 
                 <div className="os-view-actions">
