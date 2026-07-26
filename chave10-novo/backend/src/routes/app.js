@@ -808,4 +808,38 @@ router.patch('/notificacoes/marcar-todas', async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Erro interno' }); }
 });
 
+// ── EXPORTAR DADOS ────────────────────────────────────────────
+router.get('/exportar', async (req, res) => {
+  try {
+    const id = oid(req);
+    const [clientes, veiculos, os, orcamentos, despesas, estoque] = await Promise.all([
+      query('SELECT * FROM clientes WHERE oficina_id=$1 ORDER BY id', [id]),
+      query('SELECT * FROM veiculos WHERE oficina_id=$1 ORDER BY id', [id]),
+      query('SELECT id,oficina_id,cliente_id,veiculo_id,descricao,servicos,pecas,pecas_itens,valor_mo,valor_pecas,valor,status,observacao,data,numero,criado_em FROM ordens_servico WHERE oficina_id=$1 ORDER BY id', [id]),
+      query('SELECT id,oficina_id,cliente_id,veiculo_id,numero,descricao,servicos,pecas_itens,valor_mo,valor_pecas,desconto,status,validade,obs,criado_em FROM orcamentos WHERE oficina_id=$1 ORDER BY id', [id]),
+      query('SELECT * FROM despesas WHERE oficina_id=$1 ORDER BY id', [id]),
+      query('SELECT * FROM estoque WHERE oficina_id=$1 ORDER BY id', [id]),
+    ]);
+
+    const exportData = {
+      exportedAt: new Date().toISOString(),
+      oficina_id: id,
+      versao: '1.0',
+      dados: { clientes, veiculos, ordens_servico: os, orcamentos, despesas, estoque },
+      totais: {
+        clientes: clientes.length,
+        veiculos: veiculos.length,
+        ordens_servico: os.length,
+        orcamentos: orcamentos.length,
+        despesas: despesas.length,
+        estoque: estoque.length,
+      },
+    };
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename=chave10_backup_${new Date().toISOString().split('T')[0]}.json`);
+    res.json(exportData);
+  } catch (err) { res.status(500).json({ error: 'Erro ao exportar dados' }); }
+});
+
 module.exports = router;

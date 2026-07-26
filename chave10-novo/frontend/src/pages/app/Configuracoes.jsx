@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { maskDocumento, maskPhone } from '../../utils/validation';
 import ImportarClientes from '../../components/ImportarClientes';
+import ExportarDados from '../../components/ExportarDados';
 import CepInput from '../../components/CepInput';
 import { useOnboarding } from '../../hooks/useOnboarding';
 import { api } from '../../api';
@@ -170,6 +171,8 @@ export default function AppConfiguracoes() {
       </div>
 
       <ImportarClientes onImportado={() => {}} />
+
+      <ExportarDados />
 
       {/* Ajuda */}
       <div className="card" style={{ maxWidth: 720, marginTop: 24 }}>
