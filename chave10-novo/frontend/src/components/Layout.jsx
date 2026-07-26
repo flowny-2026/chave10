@@ -533,11 +533,27 @@ const SUPORTE_WA = 'https://wa.me/5516992383821?text=Olá,%20preciso%20de%20supo
 
 export default function Layout({ area }) {
   const [open, setOpen] = useState(false);
+  const [notiCount, setNotiCount] = useState(0);
   const navigate = useNavigate();
   const user = getUser();
   
   // Hook para manter a sessão ativa e verificar expiração
   useAuth();
+
+  // Polling de notificações a cada 30s
+  useEffect(() => {
+    if (area !== 'app') return;
+    let active = true;
+    async function checkNotis() {
+      try {
+        const res = await api.get('/app/notificacoes');
+        if (active) setNotiCount(res.naoLidas || 0);
+      } catch {}
+    }
+    checkNotis();
+    const interval = setInterval(checkNotis, 30000);
+    return () => { active = false; clearInterval(interval); };
+  }, [area]);
 
   // Tour guiado
   const { tourActive, currentStep, startTourDirect, nextStep, prevStep, endTour } = useOnboarding();
@@ -780,6 +796,17 @@ export default function Layout({ area }) {
                   </button>
                 </div>
                 <div className="topbar-divider" />
+                <button className="topbar-btn" title="Notificações" onClick={() => navigate('/app/notificacoes')} style={{ position: 'relative' }}>
+                  {IC.notificacoes}
+                  {notiCount > 0 && (
+                    <span style={{
+                      position:'absolute',top:2,right:2,width:16,height:16,borderRadius:'50%',
+                      background:'#dc2626',color:'#fff',fontSize:9,fontWeight:800,
+                      display:'flex',alignItems:'center',justifyContent:'center',
+                      border:'2px solid var(--gray-900,#161b22)',
+                    }}>{notiCount>9?'9+':notiCount}</span>
+                  )}
+                </button>
                 <button className="topbar-btn" title="Lembretes" onClick={() => navigate('/app/lembretes')} style={{ position: 'relative' }}>
                   {IC.lembretes}
                 </button>
