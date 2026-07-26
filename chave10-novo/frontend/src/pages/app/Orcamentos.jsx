@@ -573,20 +573,36 @@ export default function AppOrcamentos() {
                     <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gray-700)' }}>
                       📷 Fotos dos problemas {pendingPhotos.length > 0 && <span style={{ fontWeight: 400, color: 'var(--gray-400)' }}>({pendingPhotos.length} selecionada{pendingPhotos.length > 1 ? 's' : ''})</span>}
                     </div>
-                    <label style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 5,
-                      padding: '5px 12px', borderRadius: 7, cursor: 'pointer',
-                      background: 'var(--accent)', color: '#fff', fontSize: 12, fontWeight: 600,
-                    }}>
-                      + Adicionar
-                      <input
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        multiple
-                        style={{ display: 'none' }}
-                        onChange={handlePendingPhotos}
-                      />
-                    </label>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <label style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                        padding: '5px 10px', borderRadius: 7, cursor: 'pointer',
+                        background: 'var(--accent)', color: '#fff', fontSize: 12, fontWeight: 600,
+                      }}>
+                        📸 Câmera
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          capture="environment"
+                          style={{ display: 'none' }}
+                          onChange={handlePendingPhotos}
+                        />
+                      </label>
+                      <label style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                        padding: '5px 10px', borderRadius: 7, cursor: 'pointer',
+                        background: 'var(--brand)', color: '#fff', fontSize: 12, fontWeight: 600,
+                      }}>
+                        🖼️ Galeria
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          multiple
+                          style={{ display: 'none' }}
+                          onChange={handlePendingPhotos}
+                        />
+                      </label>
+                    </div>
                   </div>
                   {pendingPhotos.length === 0 ? (
                     <div style={{ fontSize: 12, color: 'var(--gray-400)', textAlign: 'center', padding: '8px 0' }}>

@@ -363,11 +363,29 @@
     box-shadow: none !important;
   }
   .activity-feed span { color: #e6edf3 !important; }
-  .activity-item { border-bottom-color: rgba(255,255,255,.06) !important; }
+  .activity-item {
+    border-bottom-color: rgba(255,255,255,.06) !important;
+    background: #161b22 !important;
+  }
   .activity-feed .activity-title,
   .activity-feed .activity-content .activity-title { color: #e6edf3 !important; }
   .activity-feed .activity-desc,
   .activity-feed .activity-content .activity-desc { color: rgba(255,255,255,.5) !important; }
+  .activity-icon { background: rgba(255,255,255,.08) !important; }
+
+  /* ── Mensagens: templates e lista clientes dark ── */
+  .card button[style*="background:#fff"],
+  .card button[style*="background: #fff"],
+  .card button[style*="background:'#fff'"] {
+    background: #1c2128 !important;
+    border-color: rgba(255,255,255,.1) !important;
+    color: rgba(255,255,255,.7) !important;
+  }
+  .card button[style*="brand-light"] {
+    background: rgba(30,58,95,.3) !important;
+    color: #60a5fa !important;
+    border-color: #1E3A5F !important;
+  }
 
   .fin-card { background: #161b22 !important; border: 1px solid rgba(255,255,255,.07) !important; box-shadow: none !important; }
   .fin-card-label { color: rgba(255,255,255,.4) !important; }

@@ -99,26 +99,41 @@ export default function FotoUploader({ osId, fotos = [], onUpdate, maxFotos = 15
           </span>
         </div>
         {!disabled && fotos.length < maxFotos && (
-          <label style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            padding: '6px 14px', borderRadius: 8,
-            background: 'var(--accent)', color: '#fff',
-            fontSize: 13, fontWeight: 600, cursor: 'pointer',
-          }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-            Adicionar fotos
-            <input
-              ref={inputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              multiple
-              style={{ display: 'none' }}
-              onChange={handleFiles}
-              disabled={uploading}
-            />
-          </label>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <label style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              padding: '6px 12px', borderRadius: 8,
+              background: 'var(--accent)', color: '#fff',
+              fontSize: 12, fontWeight: 600, cursor: 'pointer',
+            }}>
+              📸 Câmera
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                capture="environment"
+                style={{ display: 'none' }}
+                onChange={handleFiles}
+                disabled={uploading}
+              />
+            </label>
+            <label style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              padding: '6px 12px', borderRadius: 8,
+              background: 'var(--brand)', color: '#fff',
+              fontSize: 12, fontWeight: 600, cursor: 'pointer',
+            }}>
+              🖼️ Galeria
+              <input
+                ref={inputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                style={{ display: 'none' }}
+                onChange={handleFiles}
+                disabled={uploading}
+              />
+            </label>
+          </div>
         )}
       </div>
 
