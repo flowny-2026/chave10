@@ -308,6 +308,65 @@
   .dash-os-cliente { color: #e6edf3 !important; }
   .dash-os-veiculo { color: rgba(255,255,255,.4) !important; }
 
+  /* ── Dashboard V2: Cards com fundo branco → dark ── */
+  .modern-chart-card {
+    background: #161b22 !important;
+    border: 1px solid rgba(255,255,255,.08) !important;
+    box-shadow: none !important;
+  }
+  .modern-chart-card span,
+  .modern-chart-card div {
+    color: #e6edf3 !important;
+  }
+  .modern-chart-card div[style*="color:#9ca3af"],
+  .modern-chart-card div[style*="color: #9ca3af"],
+  .modern-chart-card span[style*="color:#9ca3af"],
+  .modern-chart-card span[style*="color: #9ca3af"] {
+    color: rgba(255,255,255,.5) !important;
+  }
+  .modern-chart-card div[style*="border"] {
+    border-color: rgba(255,255,255,.07) !important;
+  }
+
+  .painel-do-dia {
+    background: #161b22 !important;
+    border-color: rgba(255,255,255,.08) !important;
+    box-shadow: none !important;
+  }
+  .painel-do-dia-title { color: #e6edf3 !important; }
+  .painel-do-dia-title span { color: #e6edf3 !important; }
+  .painel-do-dia-header { border-bottom-color: rgba(255,255,255,.07) !important; }
+  .painel-do-dia div[style*="background: '#fff'"],
+  .painel-do-dia div[style*="background:'#fff'"] {
+    background: #1c2128 !important;
+  }
+  .painel-do-dia div[style*="#1f2937"],
+  .painel-do-dia div[style*="color:'#1f2937'"],
+  .painel-do-dia div[style*="color: '#1f2937'"] {
+    color: #e6edf3 !important;
+  }
+  .painel-do-dia div[style*="#6b7280"],
+  .painel-do-dia div[style*="color:'#6b7280'"],
+  .painel-do-dia div[style*="color: '#6b7280'"] {
+    color: rgba(255,255,255,.5) !important;
+  }
+  .painel-do-dia div[style*="#f9fafb"],
+  .painel-do-dia div[style*="background:'#f9fafb'"],
+  .painel-do-dia div[style*="background: '#f9fafb'"] {
+    background: #1c2128 !important;
+  }
+
+  .activity-feed {
+    background: #161b22 !important;
+    border: 1px solid rgba(255,255,255,.08) !important;
+    border-radius: 16px !important;
+    box-shadow: none !important;
+  }
+  .activity-feed span { color: #e6edf3 !important; }
+  .activity-item { border-bottom-color: rgba(255,255,255,.06) !important; }
+  .activity-title { color: #e6edf3 !important; }
+  .activity-desc { color: rgba(255,255,255,.5) !important; }
+
   .fin-card { background: #161b22 !important; border: 1px solid rgba(255,255,255,.07) !important; box-shadow: none !important; }
   .fin-card-label { color: rgba(255,255,255,.4) !important; }
 
@@ -608,6 +667,24 @@
   .meta-progress-premium .btn-ghost:hover {
     background: rgba(249,115,22,.2) !important;
     color: #fb923c !important;
+  }
+  .meta-progress-premium span,
+  .meta-progress-premium div {
+    color: inherit;
+  }
+  .meta-progress-premium div[style*="gray-500"],
+  .meta-progress-premium div[style*="color:var(--gray-500)"] {
+    color: rgba(255,255,255,.7) !important;
+  }
+  .meta-progress-premium div[style*="color:var(--brand)"],
+  .meta-progress-premium div[style*="color: var(--brand)"] {
+    color: #60a5fa !important;
+  }
+  .meta-progress-info {
+    color: rgba(255,255,255,.7) !important;
+  }
+  .meta-progress-hint {
+    color: #F97316 !important;
   }
 
   /* ── Dashboard V2 textos em cards dark ── */

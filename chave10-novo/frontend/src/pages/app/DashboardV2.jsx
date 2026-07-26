@@ -31,6 +31,8 @@ function saveMeta(v) { localStorage.setItem('c10_meta', v); }
 
 // Gráfico de barras com SVG — coordenadas absolutas, sem distorção
 function ModernChart({ data }) {
+  const [selected, setSelected] = useState(null);
+  
   if (!data?.length || data.every(d => (d.total||0) === 0))
     return <div style={{textAlign:'center',padding:'32px 0',color:'#9ca3af',fontSize:13}}>Sem dados de faturamento ainda</div>;
 
@@ -58,9 +60,13 @@ function ModernChart({ data }) {
             <stop offset="0%" stopColor="#F97316"/>
             <stop offset="100%" stopColor="#fed7aa"/>
           </linearGradient>
-          <linearGradient id="g-gray" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#94a3b8"/>
-            <stop offset="100%" stopColor="#e2e8f0"/>
+          <linearGradient id="g-blue" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#1E3A5F"/>
+            <stop offset="100%" stopColor="#3b82f6"/>
+          </linearGradient>
+          <linearGradient id="g-blue-active" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#2563eb"/>
+            <stop offset="100%" stopColor="#60a5fa"/>
           </linearGradient>
         </defs>
 
@@ -81,26 +87,32 @@ function ModernChart({ data }) {
           const x      = cx - barW / 2;
           const y      = baseY - h;
           const isLast = i === n - 1;
-          const fill   = isLast ? 'url(#g-orange)' : 'url(#g-gray)';
-          const tc     = isLast ? '#ea6c0a' : '#94a3b8';
+          const isSelected = selected === i;
+          const fill   = isLast ? 'url(#g-orange)' : isSelected ? 'url(#g-blue-active)' : 'url(#g-blue)';
+          const tc     = isLast ? '#ea6c0a' : isSelected ? '#2563eb' : '#1E3A5F';
 
           return (
-            <g key={i}>
+            <g key={i} onClick={()=>setSelected(isSelected?null:i)} style={{cursor:'pointer'}}>
+              {/* Hit area invisível para facilitar o toque */}
+              <rect x={i*colW} y={0} width={colW} height={SVG_H} fill="transparent"/>
+              
               {/* Barra */}
               {h > 0 && (
-                <rect x={x} y={y} width={barW} height={h} rx={3} fill={fill}/>
+                <rect x={x} y={y} width={barW} height={h} rx={3} fill={fill}
+                  style={{transition:'all .2s',opacity:selected!==null&&!isSelected&&!isLast?0.5:1}}
+                />
               )}
 
               {/* Valor acima */}
               {valor > 0 && (
-                <text x={cx} y={y - 4} textAnchor="middle" fontSize={9} fontWeight="600" fill={tc}>
+                <text x={cx} y={y - 4} textAnchor="middle" fontSize={isSelected?10:9} fontWeight={isSelected?'800':'600'} fill={tc}>
                   {fmt.currency(valor).replace('R$ ', '')}
                 </text>
               )}
 
               {/* Label mês */}
               <text x={cx} y={baseY + 14} textAnchor="middle" fontSize={9}
-                fontWeight={isLast ? '700' : '400'} fill={tc}>
+                fontWeight={isLast||isSelected ? '700' : '400'} fill={tc}>
                 {item.mes}
               </text>
             </g>
@@ -427,14 +439,14 @@ export default function DashboardV2() {
           </div>
           {meta>0 ? (
             <>
-              <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--gray-500)',marginBottom:6}}>
+              <div className="meta-progress-info" style={{display:'flex',justifyContent:'space-between',fontSize:12,marginBottom:6}}>
                 <span>{fmt.currency(fat)} faturado</span>
                 <span style={{fontWeight:700,color:pctMeta>=100?'var(--success)':'var(--accent)'}}>{pctMeta.toFixed(0)}%</span>
               </div>
               <div className="meta-progress-bar">
                 <div className="meta-progress-fill" style={{width:`${pctMeta}%`}}/>
               </div>
-              <div style={{marginTop:10,fontSize:12,color:'var(--brand)',fontWeight:600,textAlign:'center'}}>
+              <div className="meta-progress-hint" style={{marginTop:10,fontSize:12,fontWeight:600,textAlign:'center'}}>
                 {pctMeta>=100?'🎉 Meta atingida!':`Faturar ${fmt.currency(porDia)}/dia nos próximos ${diasRestantes} dias`}
               </div>
             </>
