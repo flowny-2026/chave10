@@ -556,10 +556,31 @@
   .kpi-card div[style*="color:'#111827'"] { color: #111827 !important; }
 
   /* ── Modal de visualização (OS/Orçamento) ── */
+  .os-view-field {
+    background: #1c2128 !important;
+    border: 1px solid rgba(255,255,255,.08) !important;
+  }
   .os-view-field .os-view-label { color: rgba(255,255,255,.5) !important; }
   .os-view-field .os-view-value { color: #e6edf3 !important; }
   .os-view-total-item { color: #e6edf3 !important; }
   .os-view-total-item span { color: #e6edf3 !important; }
+
+  /* ── Meta do mês — dark mode ── */
+  .meta-progress-premium {
+    background: #161b22 !important;
+    border-color: rgba(249,115,22,.3) !important;
+    box-shadow: 0 4px 16px rgba(0,0,0,.3) !important;
+  }
+  .meta-progress-premium .meta-title { color: #e6edf3 !important; }
+  .meta-progress-premium .btn-ghost {
+    color: #F97316 !important;
+    background: rgba(249,115,22,.1) !important;
+    border: 1px solid rgba(249,115,22,.3) !important;
+  }
+  .meta-progress-premium .btn-ghost:hover {
+    background: rgba(249,115,22,.2) !important;
+    color: #fb923c !important;
+  }
 
   /* ── Dashboard V2 textos em cards dark ── */
   .card span, .card p, .card div { color: inherit; }
