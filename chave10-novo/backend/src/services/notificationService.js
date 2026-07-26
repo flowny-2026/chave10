@@ -91,7 +91,7 @@ async function notificarAprovacao(oficina_id, orcamento) {
   const veiculo  = orcamento.veiculo_modelo ? `${orcamento.veiculo_modelo} — ${orcamento.placa || ''}` : '';
   const valor    = ((orcamento.valor_mo || 0) + (orcamento.valor_pecas || 0) - (orcamento.desconto || 0)).toFixed(2).replace('.', ',');
 
-  const titulo   = `✅ Orçamento ${numero} aprovado!`;
+  const titulo   = `Orçamento ${numero} aprovado!`;
   const mensagem = `${cliente} aprovou o orçamento ${numero}${veiculo ? ` (${veiculo})` : ''}. Valor: R$ ${valor}`;
 
   // In-app
@@ -121,7 +121,7 @@ async function notificarRecusa(oficina_id, orcamento, motivo = null) {
   const numero   = orcamento.numero || `ORC-${orcamento.id}`;
   const cliente  = orcamento.cliente_nome || 'Cliente';
 
-  const titulo   = `❌ Orçamento ${numero} recusado`;
+  const titulo   = `Orçamento ${numero} recusado`;
   const mensagem = `${cliente} recusou o orçamento ${numero}.${motivo ? ` Motivo: ${motivo}` : ''}`;
 
   // In-app
