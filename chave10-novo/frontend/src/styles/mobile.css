@@ -539,6 +539,48 @@
   .fin-card.despesa .fin-card-value { color: #f87171 !important; }
   .fin-card.lucro   .fin-card-value { color: #F97316 !important; }
 
+  /* ── Inputs e formulários no dark ── */
+  input, textarea, select {
+    background: #0d1117 !important;
+    color: #e6edf3 !important;
+    border-color: rgba(255,255,255,.15) !important;
+  }
+  input::placeholder, textarea::placeholder {
+    color: rgba(255,255,255,.35) !important;
+  }
+  label { color: rgba(255,255,255,.7) !important; }
+
+  /* ── KPICard — garante texto escuro no card branco ── */
+  .kpi-card { background: #fff !important; color: #111827 !important; }
+  .kpi-card div[style*="color: '#111827'"],
+  .kpi-card div[style*="color:'#111827'"] { color: #111827 !important; }
+
+  /* ── Modal de visualização (OS/Orçamento) ── */
+  .os-view-field .os-view-label { color: rgba(255,255,255,.5) !important; }
+  .os-view-field .os-view-value { color: #e6edf3 !important; }
+  .os-view-total-item { color: #e6edf3 !important; }
+  .os-view-total-item span { color: #e6edf3 !important; }
+
+  /* ── Dashboard V2 textos em cards dark ── */
+  .card span, .card p, .card div { color: inherit; }
+
+  /* ── Textos inline com style que ficam invisíveis no dark ── */
+  .main-content [style*="color: var(--gray-700)"],
+  .main-content [style*="color: var(--gray-800)"],
+  .main-content [style*="color: var(--gray-900)"],
+  .main-content [style*="color:#1a1a1a"],
+  .main-content [style*="color:#111827"],
+  .main-content [style*="color:#1F2937"],
+  .main-content [style*="color:#374151"] {
+    color: #e6edf3 !important;
+  }
+
+  /* ── Checkbox "Peça do cliente" visibilidade ── */
+  .form-grid label[style*="whiteSpace:'nowrap'"],
+  .form-grid label[style*="fontSize:10"] {
+    color: rgba(255,255,255,.7) !important;
+  }
+
   /* Textos inline com color var(--gray-*) que ficam invisíveis */
   /* Força herança correta */
   .main-content p,
