@@ -639,7 +639,7 @@ export default function AppOrcamentos() {
                 {[{t:'Descrição / Problema',v:viewing.descricao},{t:'Serviços',v:viewing.servicos},{t:'Observações',v:viewing.obs}].filter(s=>s.v).map(s=>(
                   <div key={s.t} style={{marginBottom:12}}>
                     <div className="os-view-label">{s.t}</div>
-                    <div style={{fontSize:13.5,color:'var(--gray-700)',background:'var(--gray-50)',padding:'10px 12px',borderRadius:'var(--r-sm)',whiteSpace:'pre-wrap',wordBreak:'break-word'}}>{s.v}</div>
+                    <div className="os-view-text-block">{s.v}</div>
                   </div>
                 ))}
 
@@ -650,13 +650,13 @@ export default function AppOrcamentos() {
                       {pecas.filter(p=>p.nome).map((p,i)=>(
                         <div key={i} className="os-view-peca-item">
                           <div style={{flex:1,minWidth:0}}>
-                            <div style={{fontSize:13,fontWeight:600,color:'var(--gray-800)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.nome}</div>
-                            <div style={{fontSize:12,color:'var(--gray-400)'}}>Qtd: {p.qtd||1}</div>
+                            <div className="os-view-peca-nome">{p.nome}</div>
+                            <div className="os-view-peca-qtd">Qtd: {p.qtd||1}</div>
                           </div>
                           {!isFuncionario&&(
                             <div style={{textAlign:'right',flexShrink:0}}>
-                              <div style={{fontSize:12,color:'var(--gray-400)'}}>{fmt.currency(p.valor_unit)} un.</div>
-                              <div style={{fontSize:13,fontWeight:700,color:'var(--gray-800)'}}>{fmt.currency((parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1))}</div>
+                              <div className="os-view-peca-qtd">{fmt.currency(p.valor_unit)} un.</div>
+                              <div className="os-view-peca-total">{fmt.currency((parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1))}</div>
                             </div>
                           )}
                         </div>

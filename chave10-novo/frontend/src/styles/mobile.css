@@ -562,8 +562,24 @@
   }
   .os-view-field .os-view-label { color: rgba(255,255,255,.5) !important; }
   .os-view-field .os-view-value { color: #e6edf3 !important; }
-  .os-view-total-item { color: #e6edf3 !important; }
+  .os-view-total-item { color: #e6edf3 !important; border-bottom-color: rgba(255,255,255,.07) !important; }
   .os-view-total-item span { color: #e6edf3 !important; }
+  .os-view-total-final { background: rgba(249,115,22,.1) !important; }
+  .os-view-total-final span { color: #F97316 !important; }
+  .os-view-totais { border-color: rgba(255,255,255,.1) !important; }
+  .os-view-peca-item {
+    background: #1c2128 !important;
+    border-color: rgba(255,255,255,.08) !important;
+  }
+  .os-view-peca-nome { color: #e6edf3 !important; }
+  .os-view-peca-qtd { color: rgba(255,255,255,.45) !important; }
+  .os-view-peca-total { color: #e6edf3 !important; }
+  .os-view-text-block {
+    background: #1c2128 !important;
+    color: #e6edf3 !important;
+    border: 1px solid rgba(255,255,255,.07) !important;
+  }
+  .os-view-label { color: rgba(255,255,255,.5) !important; }
 
   /* ── Meta do mês — dark mode ── */
   .meta-progress-premium {
@@ -626,8 +642,10 @@
   .main-content [style*="background: #F9FAFB"],
   .main-content [style*="background:#F3F4F6"],
   .main-content [style*="background: var(--gray-50)"],
+  .main-content [style*="background:var(--gray-50)"],
   .modal [style*="background:#F9FAFB"],
-  .modal [style*="background: var(--gray-50)"] {
+  .modal [style*="background: var(--gray-50)"],
+  .modal [style*="background:var(--gray-50)"] {
     background: rgba(255,255,255,.05) !important;
     color: #e6edf3 !important;
   }
