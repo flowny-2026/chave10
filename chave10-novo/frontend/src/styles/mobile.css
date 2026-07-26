@@ -568,18 +568,79 @@
   .main-content [style*="color: var(--gray-700)"],
   .main-content [style*="color: var(--gray-800)"],
   .main-content [style*="color: var(--gray-900)"],
+  .main-content [style*="color:'var(--gray-700)"],
+  .main-content [style*="color:'var(--gray-800)"],
+  .main-content [style*="color:'var(--gray-900)"],
   .main-content [style*="color:#1a1a1a"],
   .main-content [style*="color:#111827"],
   .main-content [style*="color:#1F2937"],
-  .main-content [style*="color:#374151"] {
+  .main-content [style*="color:#374151"],
+  .main-content [style*="color: #111827"],
+  .main-content [style*="color: #1F2937"],
+  .main-content [style*="color: #374151"],
+  .main-content [style*="color: #1a1a1a"],
+  .modal [style*="color:#111827"],
+  .modal [style*="color:#1F2937"],
+  .modal [style*="color:#374151"],
+  .modal [style*="color: #111827"],
+  .modal [style*="color: #1F2937"],
+  .modal [style*="color: #374151"],
+  .modal [style*="color: var(--gray-700)"],
+  .modal [style*="color: var(--gray-800)"],
+  .modal [style*="color: var(--gray-900)"] {
     color: #e6edf3 !important;
+  }
+
+  /* ── Textos de valor/números nos cards/modais ── */
+  .modal .os-view-field span,
+  .modal td,
+  .modal th,
+  .modal strong,
+  .modal b {
+    color: #e6edf3 !important;
+  }
+
+  /* ── Backgrounds claros com texto que fica invisível ── */
+  .main-content [style*="background:#F9FAFB"],
+  .main-content [style*="background: #F9FAFB"],
+  .main-content [style*="background:#F3F4F6"],
+  .main-content [style*="background: var(--gray-50)"],
+  .modal [style*="background:#F9FAFB"],
+  .modal [style*="background: var(--gray-50)"] {
+    background: rgba(255,255,255,.05) !important;
+    color: #e6edf3 !important;
+  }
+
+  /* ── KPICard — mantém fundo branco legível ── */
+  .kpi-card {
+    background: #161b22 !important;
+    border-color: rgba(255,255,255,.1) !important;
+  }
+  .kpi-card div[style*="fontSize: 22"],
+  .kpi-card div[style*="fontSize:22"],
+  .kpi-card div[style*="fontWeight: 800"],
+  .kpi-card div[style*="fontWeight:800"] {
+    color: #e6edf3 !important;
+  }
+  .kpi-card div[style*="color: '#9ca3af'"],
+  .kpi-card div[style*="color:'#9ca3af'"],
+  .kpi-card div[style*="color: '#6b7280'"],
+  .kpi-card div[style*="color:'#6b7280'"] {
+    color: rgba(255,255,255,.5) !important;
   }
 
   /* ── Checkbox "Peça do cliente" visibilidade ── */
   .form-grid label[style*="whiteSpace:'nowrap'"],
-  .form-grid label[style*="fontSize:10"] {
+  .form-grid label[style*="fontSize:10"],
+  label[style*="fontSize:10"],
+  label[style*="whiteSpace"] {
     color: rgba(255,255,255,.7) !important;
   }
+
+  /* ── Tabelas dentro de modais ── */
+  .modal table { border-color: rgba(255,255,255,.1) !important; }
+  .modal table td { border-color: rgba(255,255,255,.06) !important; }
+  .modal table th { background: rgba(255,255,255,.05) !important; color: rgba(255,255,255,.6) !important; }
 
   /* Textos inline com color var(--gray-*) que ficam invisíveis */
   /* Força herança correta */
