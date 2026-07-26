@@ -169,7 +169,14 @@ export default function ApprovalPage() {
                 <p>{error.message}</p>
               </>
             )}
-            {error.error !== 'expired' && error.error !== 'already_processed' && (
+            {error.error === 'invalidated' && (
+              <>
+                <div className="error-icon">🔗</div>
+                <h2>Link Expirado</h2>
+                <p>{error.message || 'Este link não é mais válido. Solicite um novo link à oficina.'}</p>
+              </>
+            )}
+            {error.error !== 'expired' && error.error !== 'already_processed' && error.error !== 'invalidated' && (
               <>
                 <div className="error-icon">⚠️</div>
                 <h2>Link Inválido</h2>

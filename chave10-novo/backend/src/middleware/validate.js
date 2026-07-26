@@ -647,6 +647,18 @@ function validateOrcamento(req, res, next) {
     }));
   }
 
+  // os_id (opcional) — ID da OS vinculada
+  let os_id;
+  if (req.body.os_id !== undefined) {
+    os_id = req.body.os_id ? (positiveInt(req.body.os_id) || null) : null;
+  }
+
+  // interativo (opcional) — flag booleano
+  let interativo;
+  if (req.body.interativo !== undefined) {
+    interativo = !!req.body.interativo;
+  }
+
   // Strip campos desconhecidos
   req.body = {
     ...(descricao   !== null     && { descricao }),
@@ -659,6 +671,8 @@ function validateOrcamento(req, res, next) {
     ...(pecas_itens !== undefined && { pecas_itens }),
     ...(cliente_id  !== undefined && { cliente_id }),
     ...(veiculo_id  !== undefined && { veiculo_id }),
+    ...(os_id       !== undefined && { os_id }),
+    ...(interativo  !== undefined && { interativo }),
   };
   next();
 }

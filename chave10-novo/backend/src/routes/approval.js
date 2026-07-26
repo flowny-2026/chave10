@@ -294,6 +294,33 @@ router.get('/public/:token', publicApprovalLimiter, async (req, res) => {
         });
       }
 
+      // Link invalidado (ex: orçamento já processado ou novo link gerado)
+      if (validation.error === 'invalidated') {
+        // Busca status atual do orçamento para dar mensagem melhor
+        const linkData = await queryOne(
+          `SELECT o.approval_status, o.approved_at, o.rejected_at
+           FROM approval_links al
+           JOIN orcamentos o ON o.id = al.orcamento_id
+           WHERE al.token = $1`,
+          [token]
+        );
+        if (linkData && (linkData.approval_status === 'approved' || linkData.approval_status === 'rejected')) {
+          return res.json({
+            valid: false,
+            error: 'already_processed',
+            message: linkData.approval_status === 'approved' ? 
+              'Este orçamento já foi aprovado' : 
+              'Este orçamento já foi recusado',
+            status: linkData.approval_status === 'approved' ? 'approved' : 'rejected'
+          });
+        }
+        return res.json({
+          valid: false,
+          error: 'invalidated',
+          message: 'Este link não é mais válido. Solicite um novo link à oficina.'
+        });
+      }
+
       return res.json({
         valid: false,
         error: validation.error,
