@@ -17,7 +17,7 @@ function Toast({ msg, type }) {
 
 export default function AppFinanceiro() {
   const hoje = new Date();
-  const [mesIdx, setMesIdx] = useState(0); // 0 = mês atual
+  const [periodoTipo, setPeriodoTipo] = useState('30'); // '7', '15', '30', 'custom'
   const [filtroCustom, setFiltroCustom] = useState(false);
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
@@ -39,10 +39,13 @@ export default function AppFinanceiro() {
     fimMes = dataFim;
     mesLabel = `${dataInicio.split('-').reverse().join('/')} a ${dataFim.split('-').reverse().join('/')}`;
   } else {
-    const mesDate = new Date(hoje.getFullYear(), hoje.getMonth()-mesIdx, 1);
-    inicioMes = mesDate.toISOString().split('T')[0];
-    fimMes = new Date(mesDate.getFullYear(), mesDate.getMonth()+1, 0).toISOString().split('T')[0];
-    mesLabel = mesDate.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+    const dias = parseInt(periodoTipo) || 30;
+    const fimDate = new Date();
+    const inicioDate = new Date();
+    inicioDate.setDate(fimDate.getDate() - dias + 1);
+    inicioMes = inicioDate.toISOString().split('T')[0];
+    fimMes = fimDate.toISOString().split('T')[0];
+    mesLabel = `Últimos ${dias} dias`;
   }
 
   async function loadOrdens() {
@@ -82,7 +85,7 @@ export default function AppFinanceiro() {
   }
 
   useEffect(()=>{ loadOrdens(); loadParcelas(); loadPagamentosOS(); },[]);
-  useEffect(()=>{ loadDespesas(); },[mesIdx]);
+  useEffect(()=>{ loadDespesas(); },[periodoTipo, filtroCustom, dataInicio, dataFim]);
 
   async function saveDespesa(e) {
     e.preventDefault();
@@ -117,26 +120,19 @@ export default function AppFinanceiro() {
   despesas.forEach(d=>{ if(!catMap[d.categoria]) catMap[d.categoria]=0; catMap[d.categoria]+=parseFloat(d.valor||0); });
   const maxCat = Math.max(...Object.values(catMap),1);
 
-  // Meses para select — últimos 12 meses + opções de período
-  const meses = Array.from({length:12},(_,i)=>{
-    const d = new Date(hoje.getFullYear(),hoje.getMonth()-i,1);
-    const label = i === 0 
-      ? `${d.toLocaleDateString('pt-BR',{month:'long',year:'numeric'})} (atual)`
-      : d.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
-    return { label, idx:i };
-  });
-
   return (
     <div>
       <div className="page-header">
         <div><div className="page-title">Financeiro</div><div className="page-subtitle">{mesLabel}</div></div>
         <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
-          <select className="dash-select" value={filtroCustom ? 'custom' : mesIdx} onChange={e=>{
+          <select className="dash-select" value={filtroCustom ? 'custom' : periodoTipo} onChange={e=>{
             if(e.target.value==='custom'){setFiltroCustom(true);setDataInicio(inicioMes);setDataFim(fimMes);}
-            else{setFiltroCustom(false);setMesIdx(Number(e.target.value));}
+            else{setFiltroCustom(false);setPeriodoTipo(e.target.value);}
           }}>
-            {meses.map(m=><option key={m.idx} value={m.idx}>{m.label}</option>)}
-            <option value="custom">📅 Período personalizado</option>
+            <option value="7">Últimos 7 dias</option>
+            <option value="15">Últimos 15 dias</option>
+            <option value="30">Últimos 30 dias</option>
+            <option value="custom">📅 Personalizado</option>
           </select>
           {filtroCustom && (
             <div style={{display:'flex',gap:6,alignItems:'center'}}>
