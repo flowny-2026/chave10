@@ -259,8 +259,8 @@ export default function Landing() {
               { q: 'Funciona para oficinas pequenas?', a: 'Com certeza. O Chave 10 foi feito para oficinas de todos os tamanhos, do mecânico solo à equipe com vários funcionários.' },
               { q: 'Tem suporte se eu precisar de ajuda?', a: 'Sim. Suporte humanizado via WhatsApp. Respondemos rápido e ajudamos você a configurar tudo.' },
             ].map((item, i) => (
-              <div key={i} className={`lp-faq-item ${faqOpen === i ? 'active' : ''} lp-reveal lp-reveal-delay-${i % 3}`}>
-                <button type="button" className="lp-faq-question" onClick={(e) => { e.preventDefault(); setFaqOpen(faqOpen === i ? null : i); }}>
+              <div key={i} className={`lp-faq-item ${faqOpen === i ? 'active' : ''}`}>
+                <button type="button" className="lp-faq-question" onClick={() => setFaqOpen(faqOpen === i ? null : i)}>
                   {item.q}
                   <span className="lp-faq-icon">+</span>
                 </button>
