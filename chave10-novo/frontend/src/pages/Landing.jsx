@@ -260,7 +260,7 @@ export default function Landing() {
               { q: 'Tem suporte se eu precisar de ajuda?', a: 'Sim. Suporte humanizado via WhatsApp. Respondemos rápido e ajudamos você a configurar tudo.' },
             ].map((item, i) => (
               <div key={i} className={`lp-faq-item ${faqOpen === i ? 'active' : ''} lp-reveal lp-reveal-delay-${i % 3}`}>
-                <button className="lp-faq-question" onClick={() => setFaqOpen(faqOpen === i ? null : i)}>
+                <button type="button" className="lp-faq-question" onClick={(e) => { e.preventDefault(); setFaqOpen(faqOpen === i ? null : i); }}>
                   {item.q}
                   <span className="lp-faq-icon">+</span>
                 </button>
@@ -284,7 +284,7 @@ export default function Landing() {
         <div className="lp-container">
           <div className="lp-footer-inner">
             <div className="lp-footer-brand">
-              <div className="lp-footer-logo">Chave <span>10</span></div>
+              <img src="/teste sem fundo 2.png" alt="Chave 10" style={{height:40,objectFit:'contain'}} />
               <span>A ferramenta que faltava na sua oficina</span>
             </div>
             <div className="lp-footer-links">
