@@ -22,7 +22,7 @@ export default function Landing() {
       {/* ── NAV ── */}
       <nav className="lp-nav">
         <div className="lp-nav-inner">
-          <div className="lp-logo">Chave <span className="lp-logo-accent">10</span></div>
+          <img src="/teste sem fundo 2.png" alt="Chave 10" className="lp-logo-img" />
           <div className="lp-nav-actions">
             <button className="lp-nav-login" onClick={() => navigate('/login')}>Entrar</button>
             <button className="lp-nav-cta" onClick={() => navigate('/cadastro')}>Teste grátis 7 dias</button>
@@ -54,20 +54,36 @@ export default function Landing() {
           <div className="lp-hero-mockup lp-reveal lp-reveal-delay-2">
             <div className="lp-mockup-laptop">
               <div className="lp-mockup-screen">
-                <div className="lp-mockup-card"></div>
-                <div className="lp-mockup-card"></div>
-                <div className="lp-mockup-card"></div>
-                <div className="lp-mockup-card"></div>
+                {/* Simula sidebar + dashboard */}
+                <div className="lp-mock-sidebar">
+                  <div className="lp-mock-sidebar-item active"></div>
+                  <div className="lp-mock-sidebar-item"></div>
+                  <div className="lp-mock-sidebar-item"></div>
+                  <div className="lp-mock-sidebar-item"></div>
+                </div>
+                <div className="lp-mock-main">
+                  <div className="lp-mock-topbar"></div>
+                  <div className="lp-mock-stats">
+                    <div className="lp-mock-stat"><div className="lp-mock-stat-val"></div><div className="lp-mock-stat-label"></div></div>
+                    <div className="lp-mock-stat"><div className="lp-mock-stat-val orange"></div><div className="lp-mock-stat-label"></div></div>
+                    <div className="lp-mock-stat"><div className="lp-mock-stat-val green"></div><div className="lp-mock-stat-label"></div></div>
+                  </div>
+                  <div className="lp-mock-chart">
+                    <div className="lp-mock-bar" style={{height:'40%'}}></div>
+                    <div className="lp-mock-bar" style={{height:'65%'}}></div>
+                    <div className="lp-mock-bar" style={{height:'45%'}}></div>
+                    <div className="lp-mock-bar" style={{height:'80%'}}></div>
+                    <div className="lp-mock-bar active" style={{height:'60%'}}></div>
+                  </div>
+                </div>
               </div>
             </div>
             <div className="lp-mockup-phone">
-              <div className="lp-mockup-phone-bar"></div>
-              <div className="lp-mockup-phone-line"></div>
-              <div className="lp-mockup-phone-line"></div>
-              <div className="lp-mockup-phone-bar"></div>
-              <div className="lp-mockup-phone-line"></div>
-              <div className="lp-mockup-phone-line"></div>
-              <div className="lp-mockup-phone-line"></div>
+              <div className="lp-mock-phone-header"></div>
+              <div className="lp-mock-phone-card"></div>
+              <div className="lp-mock-phone-card accent"></div>
+              <div className="lp-mock-phone-card"></div>
+              <div className="lp-mock-phone-btn"></div>
             </div>
           </div>
         </div>
@@ -125,14 +141,23 @@ export default function Landing() {
           <div className="lp-mobile-mockup lp-reveal lp-reveal-delay-2">
             <div className="lp-phone-frame">
               <div className="lp-phone-screen">
-                <div className="lp-phone-row lp-phone-row--accent"></div>
-                <div className="lp-phone-row"></div>
-                <div className="lp-phone-row"></div>
-                <div className="lp-phone-row lp-phone-row--accent"></div>
-                <div className="lp-phone-row"></div>
-                <div className="lp-phone-row"></div>
-                <div className="lp-phone-row"></div>
-                <div className="lp-phone-row lp-phone-row--accent"></div>
+                <div className="lp-ph-header">OS Recentes</div>
+                <div className="lp-ph-os-card">
+                  <div className="lp-ph-os-num">#0091</div>
+                  <div className="lp-ph-os-name"></div>
+                  <div className="lp-ph-os-badge"></div>
+                </div>
+                <div className="lp-ph-os-card">
+                  <div className="lp-ph-os-num">#0090</div>
+                  <div className="lp-ph-os-name"></div>
+                  <div className="lp-ph-os-badge done"></div>
+                </div>
+                <div className="lp-ph-os-card">
+                  <div className="lp-ph-os-num">#0089</div>
+                  <div className="lp-ph-os-name"></div>
+                  <div className="lp-ph-os-badge done"></div>
+                </div>
+                <div className="lp-ph-btn"></div>
               </div>
             </div>
           </div>
