@@ -16,6 +16,34 @@ import {
 } from '../utils/validation';
 import '../styles/login.css';
 
+function PasswordStrength({ senha }) {
+  let score = 0;
+  if (senha.length >= 6) score++;
+  if (senha.length >= 8) score++;
+  if (/[A-Z]/.test(senha)) score++;
+  if (/[0-9]/.test(senha)) score++;
+  if (/[^A-Za-z0-9]/.test(senha)) score++;
+
+  const levels = [
+    { label: 'Muito fraca', color: '#dc2626', width: '20%' },
+    { label: 'Fraca', color: '#f97316', width: '40%' },
+    { label: 'Média', color: '#eab308', width: '60%' },
+    { label: 'Forte', color: '#22c55e', width: '80%' },
+    { label: 'Muito forte', color: '#16a34a', width: '100%' },
+  ];
+
+  const level = levels[Math.min(score, 4)];
+
+  return (
+    <div style={{ marginTop: -10, marginBottom: 14 }}>
+      <div style={{ height: 4, background: '#e2e8f0', borderRadius: 4, overflow: 'hidden', marginBottom: 4 }}>
+        <div style={{ height: '100%', width: level.width, background: level.color, borderRadius: 4, transition: 'all 0.3s' }}></div>
+      </div>
+      <span style={{ fontSize: 11, fontWeight: 600, color: level.color }}>{level.label}</span>
+    </div>
+  );
+}
+
 export default function Cadastro() {
   const [searchParams] = useSearchParams();
   const [step, setStep] = useState(1);
@@ -127,6 +155,7 @@ export default function Cadastro() {
                 <FormInput label="Nome completo" name="nome" value={formPessoal.values.nome} error={formPessoal.errors.nome} touched={formPessoal.touched.nome} onChange={formPessoal.handleChange} onBlur={formPessoal.handleBlur} placeholder="Seu nome e sobrenome" required />
                 <FormInput label="E-mail" name="email" type="email" value={formPessoal.values.email} error={formPessoal.errors.email} touched={formPessoal.touched.email} onChange={formPessoal.handleChange} onBlur={formPessoal.handleBlur} placeholder="seu@email.com" required />
                 <FormInput label="Senha" name="senha" type="password" value={formPessoal.values.senha} error={formPessoal.errors.senha} touched={formPessoal.touched.senha} onChange={formPessoal.handleChange} onBlur={formPessoal.handleBlur} placeholder="Mínimo 6 caracteres" required />
+                {formPessoal.values.senha && <PasswordStrength senha={formPessoal.values.senha} />}
                 <FormInput label="Confirmar senha" name="confirmarSenha" type="password" value={formPessoal.values.confirmarSenha} error={formPessoal.errors.confirmarSenha} touched={formPessoal.touched.confirmarSenha} onChange={formPessoal.handleChange} onBlur={formPessoal.handleBlur} placeholder="Digite a senha novamente" required />
 
                 {erro && <div className="login-error">{erro}</div>}
