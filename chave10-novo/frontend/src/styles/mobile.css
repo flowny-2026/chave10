@@ -275,10 +275,10 @@
   tbody td { color: #c9d1d9 !important; border-bottom: 1px solid rgba(255,255,255,.05) !important; }
   tbody tr:hover td { background: rgba(255,255,255,.04) !important; }
 
-  input, select, textarea { background: #1c2128 !important; border-color: rgba(255,255,255,.1) !important; color: #e6edf3 !important; }
-  input:focus, select:focus, textarea:focus { border-color: #F97316 !important; box-shadow: 0 0 0 3px rgba(249,115,22,.15) !important; background: #1c2128 !important; }
-  input::placeholder { color: rgba(255,255,255,.25) !important; }
-  label { color: rgba(255,255,255,.6) !important; }
+  .app-shell input, .app-shell select, .app-shell textarea { background: #1c2128 !important; border-color: rgba(255,255,255,.1) !important; color: #e6edf3 !important; }
+  .app-shell input:focus, .app-shell select:focus, .app-shell textarea:focus { border-color: #F97316 !important; box-shadow: 0 0 0 3px rgba(249,115,22,.15) !important; background: #1c2128 !important; }
+  .app-shell input::placeholder { color: rgba(255,255,255,.25) !important; }
+  .app-shell label { color: rgba(255,255,255,.6) !important; }
 
   .badge-blue   { background: rgba(96,165,250,.18) !important; color: #60a5fa !important; }
   .badge-orange { background: rgba(249,115,22,.18) !important; color: #F97316 !important; }
@@ -640,16 +640,16 @@
   .fin-card.despesa .fin-card-value { color: #f87171 !important; }
   .fin-card.lucro   .fin-card-value { color: #F97316 !important; }
 
-  /* ── Inputs e formulários no dark ── */
-  input, textarea, select {
+  /* ── Inputs e formulários no dark (apenas dentro do app) ── */
+  .app-shell input, .app-shell textarea, .app-shell select {
     background: #0d1117 !important;
     color: #e6edf3 !important;
     border-color: rgba(255,255,255,.15) !important;
   }
-  input::placeholder, textarea::placeholder {
+  .app-shell input::placeholder, .app-shell textarea::placeholder {
     color: rgba(255,255,255,.35) !important;
   }
-  label { color: rgba(255,255,255,.7) !important; }
+  .app-shell label { color: rgba(255,255,255,.7) !important; }
 
   /* ── KPICard — dark mode ── */
   .kpi-card { background: #161b22 !important; border-color: rgba(255,255,255,.1) !important; }
