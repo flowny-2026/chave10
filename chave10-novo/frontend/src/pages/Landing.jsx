@@ -288,11 +288,11 @@ export default function Landing() {
               <span>A ferramenta que faltava na sua oficina</span>
             </div>
             <div className="lp-footer-links">
-              <a href="https://instagram.com" target="_blank" rel="noopener">Instagram</a>
+              <a href="https://instagram.com/chave10gestao" target="_blank" rel="noopener">Instagram</a>
               <a href="https://wa.me/5516992915540" target="_blank" rel="noopener">WhatsApp</a>
-              <a href="mailto:contato@chave10.com.br">Email</a>
-              <a href="#">Política de Privacidade</a>
-              <a href="#">Termos de Uso</a>
+              <a href="mailto:chave10sistema@gmail.com">Email</a>
+              <span className="lp-footer-link" onClick={() => navigate('/politica-privacidade')} style={{cursor:'pointer'}}>Política de Privacidade</span>
+              <span className="lp-footer-link" onClick={() => navigate('/termos-uso')} style={{cursor:'pointer'}}>Termos de Uso</span>
             </div>
           </div>
         </div>

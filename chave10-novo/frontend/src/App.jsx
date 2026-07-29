@@ -12,6 +12,8 @@ import EsqueciSenha from './pages/EsqueciSenha';
 import AdminLogin from './pages/AdminLogin';
 import Bloqueado from './pages/Bloqueado';
 import ApprovalPage from './pages/ApprovalPage';
+import PoliticaPrivacidade from './pages/PoliticaPrivacidade';
+import TermosUso from './pages/TermosUso';
 
 // Páginas do app — carregadas sob demanda (lazy)
 const AdminDashboard      = lazy(() => import('./pages/admin/Dashboard'));
@@ -131,10 +133,11 @@ export default function App() {
   return (
     <BrowserRouter>
       <SessionCleaner />
-      <PWAInstallBanner />
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={<Landing />} />
+          <Route path="/politica-privacidade" element={<PoliticaPrivacidade />} />
+          <Route path="/termos-uso" element={<TermosUso />} />
           <Route path="/app-redirect" element={<AppRedirect />} />
           <Route path="/login" element={<Login />} />
           <Route path="/cadastro" element={<Cadastro />} />
