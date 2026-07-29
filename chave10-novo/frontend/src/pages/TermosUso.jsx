@@ -1,8 +1,11 @@
 import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import '../styles/landing.css';
 
 export default function TermosUso() {
   const navigate = useNavigate();
+
+  useEffect(() => { window.scrollTo(0, 0); }, []);
 
   return (
     <div className="landing-page">
@@ -93,7 +96,7 @@ export default function TermosUso() {
             <p>Para dúvidas sobre estes termos:</p>
             <ul style={{paddingLeft:20,margin:'12px 0'}}>
               <li>E-mail: chave10sistema@gmail.com</li>
-              <li>WhatsApp: (16) 99291-5540</li>
+              <li>WhatsApp: (16) 99238-3821</li>
               <li>Instagram: @chave10gestao</li>
             </ul>
 
@@ -102,7 +105,7 @@ export default function TermosUso() {
           </div>
 
           <div style={{marginTop:48,paddingTop:24,borderTop:'1px solid #e2e8f0'}}>
-            <button className="lp-btn-primary" onClick={() => navigate('/')}>← Voltar para o início</button>
+            <button className="lp-btn-primary" onClick={() => { navigate('/'); window.scrollTo(0, 0); }}>← Voltar para o início</button>
           </div>
         </div>
       </section>

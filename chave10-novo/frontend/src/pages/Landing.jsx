@@ -6,6 +6,7 @@ export default function Landing() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     const observer = new IntersectionObserver(
       (entries) => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }),
       { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
@@ -43,7 +44,7 @@ export default function Landing() {
             </p>
             <div className="lp-hero-actions">
               <button className="lp-btn-primary" onClick={() => navigate('/cadastro')}>Teste grátis por 7 dias</button>
-              <a className="lp-btn-outline" href="https://wa.me/5516992915540" target="_blank" rel="noopener">Ver demonstração</a>
+              <a className="lp-btn-outline" href="https://wa.me/5516992383821" target="_blank" rel="noopener">Ver demonstração</a>
             </div>
             <div className="lp-hero-trust">
               <span>✓ Sem cartão de crédito</span>
@@ -289,7 +290,7 @@ export default function Landing() {
             </div>
             <div className="lp-footer-links">
               <a href="https://instagram.com/chave10gestao" target="_blank" rel="noopener">Instagram</a>
-              <a href="https://wa.me/5516992915540" target="_blank" rel="noopener">WhatsApp</a>
+              <a href="https://wa.me/5516992383821" target="_blank" rel="noopener">WhatsApp</a>
               <a href="mailto:chave10sistema@gmail.com">Email</a>
               <span className="lp-footer-link" onClick={() => navigate('/politica-privacidade')} style={{cursor:'pointer'}}>Política de Privacidade</span>
               <span className="lp-footer-link" onClick={() => navigate('/termos-uso')} style={{cursor:'pointer'}}>Termos de Uso</span>
