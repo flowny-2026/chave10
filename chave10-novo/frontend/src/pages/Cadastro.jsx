@@ -35,9 +35,9 @@ function PasswordStrength({ senha }) {
   const level = levels[Math.min(score, 4)];
 
   return (
-    <div style={{ marginTop: -10, marginBottom: 14 }}>
-      <div style={{ height: 4, background: '#e2e8f0', borderRadius: 4, overflow: 'hidden', marginBottom: 4 }}>
-        <div style={{ height: '100%', width: level.width, background: level.color, borderRadius: 4, transition: 'all 0.3s' }}></div>
+    <div style={{ marginTop: 4, marginBottom: 14 }}>
+      <div style={{ height: 6, background: '#e2e8f0', borderRadius: 6, overflow: 'hidden', marginBottom: 6 }}>
+        <div style={{ height: '100%', width: level.width, background: level.color, borderRadius: 6, transition: 'all 0.3s ease' }}></div>
       </div>
       <span style={{ fontSize: 11, fontWeight: 600, color: level.color }}>{level.label}</span>
     </div>
