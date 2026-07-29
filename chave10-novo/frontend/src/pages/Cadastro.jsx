@@ -160,9 +160,11 @@ export default function Cadastro() {
 
                 {erro && <div className="login-error">{erro}</div>}
 
+                <div style={{marginTop:20}}>
                 <button className="login-btn" type="submit" disabled={formPessoal.isSubmitting}>
                   {formPessoal.isSubmitting ? <span className="login-spinner"></span> : 'Criar conta grátis'}
                 </button>
+                </div>
               </form>
 
               <p className="login-signup">
