@@ -500,7 +500,7 @@ export default function AppOrcamentos() {
                   </div>
                   <div style={{background:'var(--gray-50)',borderRadius:'var(--r-sm)',overflow:'hidden',border:'1px solid var(--gray-200)'}}>
                     <div style={{display:'grid',gridTemplateColumns:'1fr 60px 100px auto 28px',gap:0,padding:'6px 10px',background:'var(--gray-100)',fontSize:11,fontWeight:700,color:'var(--gray-500)',textTransform:'uppercase',letterSpacing:'.5px'}}>
-                      <span>Descrição</span><span style={{textAlign:'center'}}>Qtd</span><span style={{textAlign:'right'}}>Valor</span><span></span><span/>
+                      <span>Descrição</span><span style={{textAlign:'center'}}>Qtd</span><span style={{textAlign:'right'}}>Valor Unit. (R$)</span><span></span><span/>
                     </div>
                     {form.pecas_itens.map((p)=>(
                       <div key={p.id} style={{display:'grid',gridTemplateColumns:'1fr 60px 100px auto 28px',gap:4,padding:'6px 10px',borderTop:'1px solid var(--gray-200)',alignItems:'center'}}>
@@ -516,6 +516,7 @@ export default function AppOrcamentos() {
                           value={p.qtd}
                           onChange={e=>setPeca(p.id,'qtd',e.target.value)}
                           style={{padding:'6px 8px',fontSize:12,textAlign:'center'}}
+                          placeholder="1"
                         />
                         <input
                           type="number"
@@ -523,7 +524,7 @@ export default function AppOrcamentos() {
                           min="0"
                           value={p.cliente_fornece ? '0' : p.valor_unit}
                           onChange={e=>setPeca(p.id,'valor_unit',e.target.value)}
-                          placeholder="0,00"
+                          placeholder="R$ 0,00"
                           style={{padding:'6px 8px',fontSize:12,textAlign:'right',opacity:p.cliente_fornece?0.4:1}}
                           disabled={p.cliente_fornece}
                         />

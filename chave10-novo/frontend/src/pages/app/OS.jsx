@@ -679,13 +679,13 @@ export default function AppOS() {
                   </div>
                   <div style={{background:'var(--gray-50)',borderRadius:'var(--r-sm)',overflow:'hidden',border:'1px solid var(--gray-200)'}}>
                     <div style={{display:'grid',gridTemplateColumns:'1fr 70px 110px 30px',gap:0,padding:'6px 10px',background:'var(--gray-100)',fontSize:11,fontWeight:700,color:'var(--gray-500)',textTransform:'uppercase',letterSpacing:'.5px'}}>
-                      <span>Descrição</span><span style={{textAlign:'center'}}>Qtd</span><span style={{textAlign:'right'}}>Valor unit.</span><span/>
+                      <span>Descrição</span><span style={{textAlign:'center'}}>Qtd</span><span style={{textAlign:'right'}}>Valor Unit. (R$)</span><span/>
                     </div>
                     {form.pecas_itens.map((p,i)=>(
                       <div key={p.id} style={{display:'grid',gridTemplateColumns:'1fr 70px 110px auto 30px',gap:4,padding:'6px 10px',borderTop:'1px solid var(--gray-200)',alignItems:'center'}}>
                         <input value={p.nome} onChange={e=>setPeca(p.id,'nome',e.target.value)} placeholder="Ex: Filtro de óleo Bosch" style={{padding:'6px 8px',fontSize:12}} />
-                        <input type="number" min="1" value={p.qtd} onChange={e=>setPeca(p.id,'qtd',e.target.value)} style={{padding:'6px 8px',fontSize:12,textAlign:'center'}} />
-                        <input type="number" step="0.01" min="0" value={p.cliente_fornece ? '0' : p.valor_unit} onChange={e=>setPeca(p.id,'valor_unit',e.target.value)} placeholder="0,00" style={{padding:'6px 8px',fontSize:12,textAlign:'right',opacity:p.cliente_fornece?0.4:1}} disabled={p.cliente_fornece} />
+                        <input type="number" min="1" value={p.qtd} onChange={e=>setPeca(p.id,'qtd',e.target.value)} style={{padding:'6px 8px',fontSize:12,textAlign:'center'}} placeholder="1" />
+                        <input type="number" step="0.01" min="0" value={p.cliente_fornece ? '0' : p.valor_unit} onChange={e=>setPeca(p.id,'valor_unit',e.target.value)} placeholder="R$ 0,00" style={{padding:'6px 8px',fontSize:12,textAlign:'right',opacity:p.cliente_fornece?0.4:1}} disabled={p.cliente_fornece} />
                         <label style={{display:'flex',alignItems:'center',gap:3,fontSize:10,color:'var(--gray-500)',whiteSpace:'nowrap',cursor:'pointer'}} title="Cliente fornece a peça">
                           <input type="checkbox" checked={!!p.cliente_fornece} onChange={e=>setPeca(p.id,'cliente_fornece',e.target.checked)} style={{width:14,height:14}} />
                           Peça do cliente
