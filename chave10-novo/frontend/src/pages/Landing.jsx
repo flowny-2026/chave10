@@ -124,24 +124,12 @@ export default function Landing() {
           </div>
           <div className="lp-mobile-mockup lp-reveal lp-reveal-delay-2">
             <div className="lp-phone-frame">
-              <div className="lp-phone-screen">
-                <div className="lp-ph-header">OS Recentes</div>
-                <div className="lp-ph-os-card">
-                  <div className="lp-ph-os-num">#0091</div>
-                  <div className="lp-ph-os-name"></div>
-                  <div className="lp-ph-os-badge"></div>
-                </div>
-                <div className="lp-ph-os-card">
-                  <div className="lp-ph-os-num">#0090</div>
-                  <div className="lp-ph-os-name"></div>
-                  <div className="lp-ph-os-badge done"></div>
-                </div>
-                <div className="lp-ph-os-card">
-                  <div className="lp-ph-os-num">#0089</div>
-                  <div className="lp-ph-os-name"></div>
-                  <div className="lp-ph-os-badge done"></div>
-                </div>
-                <div className="lp-ph-btn"></div>
+              <div className="lp-phone-screen" style={{padding:0,overflow:'hidden'}}>
+                <img
+                  src="/mockup celular.jpg"
+                  alt="Chave 10 no celular"
+                  style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:'top',display:'block'}}
+                />
               </div>
             </div>
           </div>
