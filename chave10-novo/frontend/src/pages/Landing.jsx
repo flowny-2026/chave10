@@ -53,38 +53,21 @@ export default function Landing() {
             </div>
           </div>
           <div className="lp-hero-mockup lp-reveal lp-reveal-delay-2">
+            {/* Laptop com screenshot real */}
             <div className="lp-mockup-laptop">
-              <div className="lp-mockup-screen">
-                {/* Simula sidebar + dashboard */}
-                <div className="lp-mock-sidebar">
-                  <div className="lp-mock-sidebar-item active"></div>
-                  <div className="lp-mock-sidebar-item"></div>
-                  <div className="lp-mock-sidebar-item"></div>
-                  <div className="lp-mock-sidebar-item"></div>
-                </div>
-                <div className="lp-mock-main">
-                  <div className="lp-mock-topbar"></div>
-                  <div className="lp-mock-stats">
-                    <div className="lp-mock-stat"><div className="lp-mock-stat-val"></div><div className="lp-mock-stat-label"></div></div>
-                    <div className="lp-mock-stat"><div className="lp-mock-stat-val orange"></div><div className="lp-mock-stat-label"></div></div>
-                    <div className="lp-mock-stat"><div className="lp-mock-stat-val green"></div><div className="lp-mock-stat-label"></div></div>
-                  </div>
-                  <div className="lp-mock-chart">
-                    <div className="lp-mock-bar" style={{height:'40%'}}></div>
-                    <div className="lp-mock-bar" style={{height:'65%'}}></div>
-                    <div className="lp-mock-bar" style={{height:'45%'}}></div>
-                    <div className="lp-mock-bar" style={{height:'80%'}}></div>
-                    <div className="lp-mock-bar active" style={{height:'60%'}}></div>
-                  </div>
-                </div>
-              </div>
+              <img
+                src="/mockup pc .jpg"
+                alt="Dashboard Chave 10"
+                style={{ width:'100%', height:'100%', objectFit:'cover', borderRadius:6, display:'block' }}
+              />
             </div>
-            <div className="lp-mockup-phone">
-              <div className="lp-mock-phone-header"></div>
-              <div className="lp-mock-phone-card"></div>
-              <div className="lp-mock-phone-card accent"></div>
-              <div className="lp-mock-phone-card"></div>
-              <div className="lp-mock-phone-btn"></div>
+            {/* Celular com screenshot real */}
+            <div className="lp-mockup-phone-real">
+              <img
+                src="/mockup celular.jpg"
+                alt="Chave 10 mobile"
+                style={{ width:'100%', height:'100%', objectFit:'cover', borderRadius:16, display:'block' }}
+              />
             </div>
           </div>
         </div>
