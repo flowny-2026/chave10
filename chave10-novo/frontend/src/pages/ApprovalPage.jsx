@@ -34,6 +34,7 @@ export default function ApprovalPage() {
   const [rejectReason, setRejectReason] = useState('');
   const [signature, setSignature] = useState(null);
   const [result, setResult] = useState(null);
+  const [lightboxFoto, setLightboxFoto] = useState(null);
 
   useEffect(() => {
     loadBudget();
@@ -277,7 +278,7 @@ export default function ApprovalPage() {
           <div className="items-section">
             <h3>📷 Problemas Encontrados</h3>
             <p style={{ fontSize: 13, color: '#6B7280', marginBottom: 12 }}>
-              Fotos reais do seu veículo mostrando os pontos que precisam de atenção.
+              Fotos reais do seu veículo mostrando os pontos que precisam de atenção. Toque para ampliar.
             </p>
             <div style={{
               display: 'grid',
@@ -288,13 +289,32 @@ export default function ApprovalPage() {
                 <div key={idx} style={{
                   borderRadius: 10, overflow: 'hidden',
                   border: '1px solid #E5E7EB', background: '#fff',
-                }}>
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                }}
+                  onClick={() => foto.imagem_base64 && setLightboxFoto(foto)}
+                  onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.03)'}
+                  onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                >
                   {foto.imagem_base64 && (
-                    <img
-                      src={foto.imagem_base64}
-                      alt={foto.titulo || `Foto ${idx + 1}`}
-                      style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block' }}
-                    />
+                    <div style={{ position: 'relative' }}>
+                      <img
+                        src={foto.imagem_base64}
+                        alt={foto.titulo || `Foto ${idx + 1}`}
+                        style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block' }}
+                      />
+                      <div style={{
+                        position: 'absolute', inset: 0,
+                        background: 'rgba(0,0,0,0)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        transition: 'background 0.2s',
+                      }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.2)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'rgba(0,0,0,0)'}
+                      >
+                        <span style={{ color: '#fff', fontSize: 22, opacity: 0.9 }}>🔍</span>
+                      </div>
+                    </div>
                   )}
                   {(foto.titulo || foto.descricao) && (
                     <div style={{ padding: '8px 10px' }}>
@@ -313,6 +333,44 @@ export default function ApprovalPage() {
                   )}
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Lightbox */}
+        {lightboxFoto && (
+          <div
+            onClick={() => setLightboxFoto(null)}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 9999,
+              background: 'rgba(0,0,0,0.92)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: 16,
+            }}
+          >
+            <button
+              onClick={() => setLightboxFoto(null)}
+              style={{
+                position: 'absolute', top: 16, right: 16,
+                background: 'rgba(255,255,255,0.15)', border: 'none',
+                color: '#fff', width: 40, height: 40, borderRadius: '50%',
+                fontSize: 20, cursor: 'pointer', display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+              }}
+            >✕</button>
+            <div onClick={e => e.stopPropagation()} style={{ maxWidth: '95vw', maxHeight: '90vh', textAlign: 'center' }}>
+              <img
+                src={lightboxFoto.imagem_base64}
+                alt={lightboxFoto.titulo || 'Foto'}
+                style={{ maxWidth: '95vw', maxHeight: '80vh', objectFit: 'contain', borderRadius: 12, display: 'block' }}
+              />
+              {(lightboxFoto.titulo || lightboxFoto.descricao) && (
+                <div style={{ marginTop: 12, color: '#fff' }}>
+                  {lightboxFoto.titulo && <div style={{ fontSize: 15, fontWeight: 700 }}>{lightboxFoto.titulo}</div>}
+                  {lightboxFoto.descricao && <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 4 }}>{lightboxFoto.descricao}</div>}
+                </div>
+              )}
+              <div style={{ marginTop: 16, fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>Toque fora para fechar</div>
             </div>
           </div>
         )}
