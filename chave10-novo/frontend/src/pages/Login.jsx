@@ -53,7 +53,7 @@ export default function Login() {
     setTimeout(() => {
       if (usuario.perfil === 'master_admin') navigate('/admin/dashboard');
       else navigate('/app/dashboard');
-    }, 1500);
+    }, 300);
   }
 
   async function handleLogin(e) {

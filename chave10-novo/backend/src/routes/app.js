@@ -45,43 +45,50 @@ router.get('/dashboard', async (req,res) => {
       totalClientes:+totCli.n
     };
 
-    // ── Painel do Dia ──────────────────────────────────────────
-    // OS prontas aguardando entrega (finalizadas hoje ou antes, sem data de entrega registrada)
-    const osProntas = await query(
-      "SELECT os.id, os.data, c.nome as cliente_nome, c.telefone as cliente_telefone, v.modelo as veiculo_modelo, v.placa FROM ordens_servico os LEFT JOIN clientes c ON c.id=os.cliente_id LEFT JOIN veiculos v ON v.id=os.veiculo_id WHERE os.oficina_id=$1 AND os.status='finalizado' AND os.data>=$2 ORDER BY os.data ASC LIMIT 10",
-      [id, new Date(Date.now()-7*86400000).toISOString().split('T')[0]]
-    );
-
-    // Orçamentos aguardando resposta
-    const orcamentosAguardando = await query(
-      "SELECT id, created_at, cliente_nome, total FROM orcamentos WHERE oficina_id=$1 AND status='pendente' ORDER BY created_at DESC LIMIT 10",
-      [id]
-    ).catch(()=>[]);
-
-    // Agenda de hoje
-    const agendaHoje = await query(
-      "SELECT a.*, c.nome as cliente_nome, c.telefone as cliente_telefone, v.modelo as veiculo_modelo, v.placa FROM agenda a LEFT JOIN clientes c ON c.id=a.cliente_id LEFT JOIN veiculos v ON v.id=a.veiculo_id WHERE a.oficina_id=$1 AND a.data=$2 ORDER BY a.hora ASC",
-      [id, hoje]
-    ).catch(()=>[]);
-
-    // Agenda de amanhã
+    // ── Painel do Dia — todas as queries em paralelo ──────────
     const amanha = new Date(); amanha.setDate(amanha.getDate()+1);
-    const agendaAmanha = await query(
-      "SELECT a.*, c.nome as cliente_nome FROM agenda a LEFT JOIN clientes c ON c.id=a.cliente_id WHERE a.oficina_id=$1 AND a.data=$2 ORDER BY a.hora ASC",
-      [id, amanha.toISOString().split('T')[0]]
-    ).catch(()=>[]);
+    const amanhaStr = amanha.toISOString().split('T')[0];
+    const seteDiasAtras = new Date(Date.now()-7*86400000).toISOString().split('T')[0];
+    const tresDiasAtras = new Date(Date.now()-3*86400000).toISOString().split('T')[0];
 
-    // OS atrasadas (em andamento criadas há mais de 3 dias)
-    const osAtrasadas = await query(
-      "SELECT os.id, os.data, c.nome as cliente_nome, v.modelo as veiculo_modelo, v.placa FROM ordens_servico os LEFT JOIN clientes c ON c.id=os.cliente_id LEFT JOIN veiculos v ON v.id=os.veiculo_id WHERE os.oficina_id=$1 AND os.status='em_andamento' AND os.data<=$2 ORDER BY os.data ASC LIMIT 5",
-      [id, new Date(Date.now()-3*86400000).toISOString().split('T')[0]]
-    ).catch(()=>[]);
-
-    // Despesas vencidas não pagas
-    const despesasVencidas = isFuncionario ? [] : await query(
-      "SELECT id, descricao, valor, vencimento FROM despesas WHERE oficina_id=$1 AND pago=0 AND vencimento<$2 ORDER BY vencimento ASC LIMIT 5",
-      [id, hoje]
-    ).catch(()=>[]);
+    const [
+      osProntas,
+      orcamentosAguardando,
+      agendaHoje,
+      agendaAmanha,
+      osAtrasadas,
+      despesasVencidas,
+      recentes,
+    ] = await Promise.all([
+      query(
+        "SELECT os.id, os.data, c.nome as cliente_nome, c.telefone as cliente_telefone, v.modelo as veiculo_modelo, v.placa FROM ordens_servico os LEFT JOIN clientes c ON c.id=os.cliente_id LEFT JOIN veiculos v ON v.id=os.veiculo_id WHERE os.oficina_id=$1 AND os.status='finalizado' AND os.data>=$2 ORDER BY os.data ASC LIMIT 10",
+        [id, seteDiasAtras]
+      ),
+      query(
+        "SELECT id, created_at, cliente_nome, total FROM orcamentos WHERE oficina_id=$1 AND status='pendente' ORDER BY created_at DESC LIMIT 10",
+        [id]
+      ).catch(()=>[]),
+      query(
+        "SELECT a.*, c.nome as cliente_nome, c.telefone as cliente_telefone, v.modelo as veiculo_modelo, v.placa FROM agenda a LEFT JOIN clientes c ON c.id=a.cliente_id LEFT JOIN veiculos v ON v.id=a.veiculo_id WHERE a.oficina_id=$1 AND a.data=$2 ORDER BY a.hora ASC",
+        [id, hoje]
+      ).catch(()=>[]),
+      query(
+        "SELECT a.*, c.nome as cliente_nome FROM agenda a LEFT JOIN clientes c ON c.id=a.cliente_id WHERE a.oficina_id=$1 AND a.data=$2 ORDER BY a.hora ASC",
+        [id, amanhaStr]
+      ).catch(()=>[]),
+      query(
+        "SELECT os.id, os.data, c.nome as cliente_nome, v.modelo as veiculo_modelo, v.placa FROM ordens_servico os LEFT JOIN clientes c ON c.id=os.cliente_id LEFT JOIN veiculos v ON v.id=os.veiculo_id WHERE os.oficina_id=$1 AND os.status='em_andamento' AND os.data<=$2 ORDER BY os.data ASC LIMIT 5",
+        [id, tresDiasAtras]
+      ).catch(()=>[]),
+      isFuncionario ? Promise.resolve([]) : query(
+        "SELECT id, descricao, valor, vencimento FROM despesas WHERE oficina_id=$1 AND pago=0 AND vencimento<$2 ORDER BY vencimento ASC LIMIT 5",
+        [id, hoje]
+      ).catch(()=>[]),
+      query(
+        "SELECT os.*,c.nome as cliente_nome,v.modelo as veiculo_modelo,v.placa FROM ordens_servico os LEFT JOIN clientes c ON c.id=os.cliente_id LEFT JOIN veiculos v ON v.id=os.veiculo_id WHERE os.oficina_id=$1 ORDER BY os.id DESC LIMIT 5",
+        [id]
+      ),
+    ]);
 
     // Faturamento hoje (nenhuma OS finalizada hoje)
     const semFaturamentoHoje = !isFuncionario && +fatMes.hoje === 0;
@@ -97,19 +104,30 @@ router.get('/dashboard', async (req,res) => {
     };
     // ──────────────────────────────────────────────────────────
 
-    const recentes=await query("SELECT os.*,c.nome as cliente_nome,v.modelo as veiculo_modelo,v.placa FROM ordens_servico os LEFT JOIN clientes c ON c.id=os.cliente_id LEFT JOIN veiculos v ON v.id=os.veiculo_id WHERE os.oficina_id=$1 ORDER BY os.id DESC LIMIT 5",[id]);
     const recentesFiltradas = isFuncionario
       ? recentes.map(({valor, valor_mo, valor_pecas, ...rest}) => rest)
       : recentes;
 
+    // ── Faturamento mensal — 6 meses em paralelo ──────────────
     let faturamentoMensal = [];
     if (!isFuncionario) {
-      for(let i=5;i>=0;i--){
-        const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-i);
-        const ano=d.getFullYear(),mes=String(d.getMonth()+1).padStart(2,'0');
-        const r=await queryOne("SELECT COALESCE(SUM(valor),0) total FROM ordens_servico WHERE oficina_id=$1 AND status='finalizado' AND data>=$2 AND data<=$3",[id,`${ano}-${mes}-01`,`${ano}-${mes}-31`]);
-        faturamentoMensal.push({mes:`${mes}/${String(ano).slice(2)}`,total:+r.total});
-      }
+      const meses = Array.from({length:6}, (_,i) => {
+        const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - (5 - i));
+        const ano = d.getFullYear(), mes = String(d.getMonth()+1).padStart(2,'0');
+        return { ano, mes };
+      });
+      const resultsMes = await Promise.all(
+        meses.map(({ano, mes}) =>
+          queryOne(
+            "SELECT COALESCE(SUM(valor),0) total FROM ordens_servico WHERE oficina_id=$1 AND status='finalizado' AND data>=$2 AND data<=$3",
+            [id, `${ano}-${mes}-01`, `${ano}-${mes}-31`]
+          )
+        )
+      );
+      faturamentoMensal = meses.map(({ano, mes}, i) => ({
+        mes: `${mes}/${String(ano).slice(2)}`,
+        total: +resultsMes[i].total,
+      }));
     }
 
     res.json({stats, recentes:recentesFiltradas, faturamentoMensal, painelDoDia});

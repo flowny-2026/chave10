@@ -28,7 +28,7 @@ router.post('/login', validateLogin, async (req, res) => {
     // Hash fake garante tempo de resposta constante mesmo para emails inexistentes (timing-safe)
     const hashFake = '$2a$12$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012345';
     const hashAlvo = usuario?.senha_hash || hashFake;
-    const senhaOk  = bcrypt.compareSync(senha, hashAlvo);
+    const senhaOk  = await bcrypt.compare(senha, hashAlvo);
 
     if (!usuario || !senhaOk) {
       log.loginFail({ email, ip });
