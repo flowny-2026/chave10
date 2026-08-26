@@ -687,7 +687,7 @@ router.delete('/agenda/:id', validateId, checkOwns('agenda'), async (req,res) =>
 router.get('/config', naoFuncionario, async (req,res) => {
   try {
     const of = await queryOne(
-      "SELECT nome, responsavel, telefone, email, endereco, logo, observacoes, whatsapp FROM oficinas WHERE id=$1",
+      "SELECT nome, responsavel, telefone, email, endereco, logo, observacoes, whatsapp, segmento FROM oficinas WHERE id=$1",
       [oid(req)]
     );
     if (!of) return res.status(404).json({ error: 'Oficina não encontrada' });
@@ -700,6 +700,7 @@ router.get('/config', naoFuncionario, async (req,res) => {
       endereco:    of.endereco    || '',
       logo:        of.logo        || null,
       documento:   of.observacoes || '',
+      segmento:    of.segmento    || 'oficina_mecanica',
     });
   } catch(err){ log.error('app_get_config', err); res.status(500).json({ error: 'Erro interno' }); }
 });
@@ -718,6 +719,7 @@ router.put('/config', naoFuncionario, validateLogoUpload, async (req,res) => {
     const whatsapp    = req.body.whatsapp    ? String(req.body.whatsapp).replace(/[^\d\s\-\+\(\)]/g, '').slice(0, 30) || null : null;
     const endereco    = req.body.endereco    ? String(req.body.endereco).replace(/<[^>]*>/g, '').trim().slice(0, 300) || null : null;
     const documento   = req.body.documento   ? String(req.body.documento).replace(/<[^>]*>/g, '').trim().slice(0, 500) || null : null;
+    const segmento    = ['oficina_mecanica','compressores'].includes(req.body.segmento) ? req.body.segmento : null;
 
     // Valida email se fornecido
     let emailVal = null;
@@ -754,8 +756,9 @@ router.put('/config', naoFuncionario, validateLogoUpload, async (req,res) => {
         email       = COALESCE($5, email),
         endereco    = $6,
         logo        = COALESCE($7, logo),
-        observacoes = $8
-       WHERE id = $9`,
+        observacoes = $8,
+        segmento    = COALESCE($9, segmento)
+       WHERE id = $10`,
       [
         nome,
         responsavel || null,
@@ -763,8 +766,9 @@ router.put('/config', naoFuncionario, validateLogoUpload, async (req,res) => {
         whatsapp    || null,
         emailVal    || null,
         endereco    || null,
-        logo !== undefined ? (logo || null) : null,  // garante que nunca seja undefined no driver pg
+        logo !== undefined ? (logo || null) : null,
         documento   || null,
+        segmento    || null,
         oid(req),
       ]
     );

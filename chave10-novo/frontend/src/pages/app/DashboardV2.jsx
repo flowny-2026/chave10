@@ -6,6 +6,7 @@ import OnboardingTour from '../../components/OnboardingTour';
 import KPICard from '../../components/KPICard';
 import { useOnboarding } from '../../hooks/useOnboarding';
 import '../../styles/dashboardPremium.css';
+import { useSegmento } from '../../hooks/useSegmento';
 
 const fmt = {
   currency: v => 'R$ ' + parseFloat(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.'),
@@ -183,6 +184,7 @@ function PainelItem({ emoji, color, label, count, items, renderItem, onAction, a
 }
 
 export default function DashboardV2() {
+  const t = useSegmento();
   const [data, setData]           = useState(null);
   const [loading, setLoading]     = useState(true);
   const [meta, setMetaState]      = useState(loadMeta);
@@ -291,7 +293,7 @@ export default function DashboardV2() {
           <div style={{padding:'8px 12px 12px',display:'flex',flexDirection:'column',gap:6}}>
             <PainelItem
               emoji="🟢" color="#16a34a"
-              label="Veículos prontos para entrega"
+            label={`${t.veiculos} prontos para entrega`}
               count={osProntas.length}
               items={osProntas}
               onAction={() => navigate('/app/os')}
@@ -517,7 +519,7 @@ export default function DashboardV2() {
         {!isFuncionario && fat > 0 && (
           <div className="modern-chart-card">
             <div style={{marginBottom:12}}>
-              <span style={{fontSize:14,fontWeight:700,color:'var(--gray-800)'}}>🔩 MO vs Peças</span>
+              <span style={{fontSize:14,fontWeight:700,color:'var(--gray-800)'}}>🔩 MO vs {t.pecas}</span>
             </div>
             <div style={{marginBottom:12,textAlign:'center'}}>
               <div style={{fontSize:22,fontWeight:800,color:'var(--gray-900)',fontFamily:'Poppins'}}>{fmt.currency(fat)}</div>
@@ -534,7 +536,7 @@ export default function DashboardV2() {
             </div>
             <div>
               <div style={{display:'flex',justifyContent:'space-between',fontSize:12,marginBottom:4}}>
-                <span style={{color:'var(--info)',fontWeight:600}}>● Peças</span>
+                <span style={{color:'var(--info)',fontWeight:600}}>● {t.pecas}</span>
                 <span style={{fontWeight:700,color:'var(--info)'}}>{fmt.currency(fatPecas)}</span>
               </div>
               <div style={{height:8,background:'var(--gray-100)',borderRadius:99,overflow:'hidden'}}>

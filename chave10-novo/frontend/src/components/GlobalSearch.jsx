@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
+import { useSegmento } from '../hooks/useSegmento';
 
 const STATUS_LABEL = { em_andamento: 'Em andamento', finalizado: 'Finalizado' };
 const STATUS_CLASS = { em_andamento: 'badge-orange', finalizado: 'badge-green' };
@@ -14,6 +15,7 @@ function match(str, q) {
 }
 
 export default function GlobalSearch() {
+  const t = useSegmento();
   const [query, setQuery]       = useState('');
   const [open, setOpen]         = useState(false);
   const [loading, setLoading]   = useState(false);
@@ -234,7 +236,7 @@ export default function GlobalSearch() {
               {[
                 { label: 'Ordens de Serviço', icon: '🔧', path: '/app/os' },
                 { label: 'Clientes',          icon: '👤', path: '/app/clientes' },
-                { label: 'Veículos',          icon: '🚗', path: '/app/veiculos' },
+                { label: t.veiculos,          icon: '🚗', path: '/app/veiculos' },
               ].map(item => (
                 <button key={item.path} onClick={() => goTo(item.path)} style={rowStyle}>
                   <span style={{ fontSize: 16 }}>{item.icon}</span>
@@ -315,7 +317,7 @@ export default function GlobalSearch() {
 
               {/* Veículos */}
               {results.veiculos.length > 0 && (
-                <Section label="Veículos">
+                <Section label={t.veiculos}>
                   {results.veiculos.map((v, idx) => {
                     const globalIndex = results.os.length + results.clientes.length + idx;
                     const isSelected = selectedIndex === globalIndex;

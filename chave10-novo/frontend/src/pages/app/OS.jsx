@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../../api';
 import { offlineManager, OPERATION_TYPES, useOfflineManager } from '../../utils/offlineManager';
 import FotoUploader from '../../components/FotoUploader';
+import { useSegmento, getTermosSegmento } from '../../hooks/useSegmento';
 
 const fmt = {
   currency: v => 'R$ ' + parseFloat(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.'),
@@ -24,8 +25,8 @@ function Toast({ msg, type }) {
   return <div className={`toast show ${type}`} style={{position:'fixed',bottom:24,right:24,zIndex:300}}>{msg}</div>;
 }
 
-// Gera HTML para impressão/PDF
-function gerarHTMLOS(os, clientes, veiculos, oficina) {
+// Gera HTML para impressão/PDF — recebe `t` para termos do segmento
+function gerarHTMLOS(os, clientes, veiculos, oficina, t) {
   const c = clientes.find(x=>x.id===os.cliente_id);
   const v = veiculos.find(x=>x.id===os.veiculo_id);
   const pecas = os.pecas_itens || [];
@@ -87,12 +88,12 @@ function gerarHTMLOS(os, clientes, veiculos, oficina) {
   </div>
 
   <div class="section">
-    <div class="section-title">Veículo</div>
+    <div class="section-title">${t.veiculo}</div>
     <div class="grid-2">
-      <div class="field"><label>Veículo</label><span>${v?`${v.marca} ${v.modelo}`:'—'}</span></div>
-      <div class="field"><label>Placa</label><span>${v?.placa||'—'}</span></div>
-      <div class="field"><label>Ano</label><span>${v?.ano||'—'}</span></div>
-      <div class="field"><label>KM</label><span>${v?.km?parseInt(v.km).toLocaleString('pt-BR')+' km':'—'}</span></div>
+      <div class="field"><label>${t.veiculo}</label><span>${v?`${v.marca} ${v.modelo}`:'—'}</span></div>
+      <div class="field"><label>${t.placa}</label><span>${v?.placa||'—'}</span></div>
+      <div class="field"><label>${t.ano}</label><span>${v?.ano||'—'}</span></div>
+      <div class="field"><label>${t.kmAbrev}</label><span>${v?.km?parseInt(v.km).toLocaleString('pt-BR')+` ${t.kmUnit}`:'—'}</span></div>
     </div>
   </div>
 
@@ -104,20 +105,20 @@ function gerarHTMLOS(os, clientes, veiculos, oficina) {
   ${os.servicos?`<div class="section"><div class="section-title">Serviços realizados</div><p style="background:#F9FAFB;padding:10px 12px;border-radius:6px">${os.servicos}</p></div>`:''}
 
   <div class="section">
-    <div class="section-title">Peças utilizadas</div>
+    <div class="section-title">${t.pecas} utilizadas</div>
     ${pecas.length ? `
     <table>
       <thead><tr><th>Descrição</th><th style="text-align:center">Qtd</th><th style="text-align:right">Valor unit.</th><th style="text-align:right">Subtotal</th></tr></thead>
       <tbody>
         ${pecas.map(p=>`<tr><td>${p.nome||'—'}</td><td style="text-align:center">${p.qtd||1}</td><td style="text-align:right">${fmt.currency(p.valor_unit)}</td><td style="text-align:right">${fmt.currency((parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1))}</td></tr>`).join('')}
       </tbody>
-    </table>` : '<p style="color:#9CA3AF;font-size:12px">Nenhuma peça registrada</p>'}
+    </table>` : `<p style="color:#9CA3AF;font-size:12px">Nenhuma ${t.peca.toLowerCase()} registrada</p>`}
   </div>
 
   <div class="section">
     <div class="section-title">Valores</div>
     <div class="total-row"><span>Mão de obra</span><span>${fmt.currency(os.valor_mo)}</span></div>
-    <div class="total-row"><span>Total peças</span><span>${fmt.currency(totalPecas)}</span></div>
+    <div class="total-row"><span>Total ${t.pecas.toLowerCase()}</span><span>${fmt.currency(totalPecas)}</span></div>
     <div class="total-final"><span style="font-size:15px;font-weight:700">TOTAL</span><span class="val">${fmt.currency(total)}</span></div>
   </div>
 
@@ -131,6 +132,7 @@ function gerarHTMLOS(os, clientes, veiculos, oficina) {
 }
 
 export default function AppOS() {
+  const t = useSegmento();
   const isFuncionario = (() => { try { return JSON.parse(localStorage.getItem('c10_user'))?.perfil === 'funcionario'; } catch { return false; } })();
   const [searchParams] = useSearchParams();
   const [osList, setOsList]     = useState([]);
@@ -408,7 +410,7 @@ export default function AppOS() {
         localStorage.setItem('c10_oficina', JSON.stringify(oficina));
       }
     } catch { /* usa o cache local */ }
-    const html = gerarHTMLOS(os, clientes, veiculos, oficina);
+    const html = gerarHTMLOS(os, clientes, veiculos, oficina, t);
     const win = window.open('', '_blank');
     win.document.write(html);
     win.document.close();
@@ -417,6 +419,7 @@ export default function AppOS() {
   }
 
   function enviarWhatsApp(os) {
+    const tw = getTermosSegmento();
     const c = clientes.find(x=>x.id===os.cliente_id);
     if (!c?.telefone) { showToast('Cliente sem telefone','error'); return; }
     const pecas = os.pecas_itens || [];
@@ -426,15 +429,15 @@ export default function AppOS() {
     const oficina = (() => { try { return JSON.parse(localStorage.getItem('c10_oficina'))||{}; } catch { return {}; } })();
     let msg = `*OS #${String(os.id).padStart(4,'0')} — ${oficina.nome||'Chave 10'}*\n`;
     msg += `Data: ${fmt.date(os.data)}\n`;
-    msg += `Veículo: ${v?`${v.marca} ${v.modelo} — ${v.placa}`:'—'}\n\n`;
+    msg += `${tw.veiculo}: ${v?`${v.marca} ${v.modelo} — ${v.placa}`:'—'}\n\n`;
     msg += `*Problema:* ${os.descricao}\n`;
     if (os.servicos) msg += `*Serviços:* ${os.servicos}\n`;
     if (pecas.length) {
-      msg += `\n*Peças utilizadas:*\n`;
+      msg += `\n*${tw.pecas} utilizadas:*\n`;
       pecas.filter(p=>p.nome).forEach(p=>{ msg += `• ${p.qtd}x ${p.nome} — ${fmt.currency((parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1))}\n`; });
     }
     msg += `\n*Mão de obra:* ${fmt.currency(os.valor_mo)}`;
-    msg += `\n*Total peças:* ${fmt.currency(totalPecas)}`;
+    msg += `\n*Total ${tw.pecas.toLowerCase()}:* ${fmt.currency(totalPecas)}`;
     msg += `\n*TOTAL: ${fmt.currency(total)}*`;
     const tel = c.telefone.replace(/\D/g,'');
     window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`, '_blank');
@@ -477,7 +480,7 @@ export default function AppOS() {
       <div className="search-bar">
         <div className="search-input-wrap">
           <svg className="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" placeholder="Buscar por cliente, veículo ou nº OS..." value={search} onChange={e=>setSearch(e.target.value)} />
+          <input type="text" placeholder={`Buscar por cliente, ${t.veiculo.toLowerCase()} ou nº OS...`} value={search} onChange={e=>setSearch(e.target.value)} />
         </div>
         <select className="dash-select" value={statusFiltro} onChange={e=>{setStatusFiltro(e.target.value);load(e.target.value);}}>
           <option value="">Todos</option>
@@ -492,7 +495,7 @@ export default function AppOS() {
           <div className="os-table-desktop">
             <div className="table-wrapper">
               <table>
-                <thead><tr><th>OS</th><th>Data</th><th>Cliente</th><th>Veículo</th><th>Problema</th>{!isFuncionario&&<th>Total</th>}<th>Status</th><th>Ações</th></tr></thead>
+                <thead><tr><th>OS</th><th>Data</th><th>Cliente</th><th>{t.veiculo}</th><th>Problema</th>{!isFuncionario&&<th>Total</th>}<th>Status</th><th>Ações</th></tr></thead>
                 <tbody>
                   {listaFiltrada.map(os => {
                     const total = parseFloat(os.valor_mo||0)+parseFloat(os.valor_pecas||0)||parseFloat(os.valor||0);
@@ -660,7 +663,7 @@ export default function AppOS() {
                     </select>
                   </div>
                   <div className="form-group">
-                    <label>Veículo</label>
+                    <label>{t.veiculo}</label>
                     <select value={form.veiculo_id} onChange={e=>setForm(f=>({...f,veiculo_id:e.target.value}))}>
                       <option value="">Selecionar...</option>
                       {veiculosFiltrados.map(v=><option key={v.id} value={v.id}>{v.marca} {v.modelo} — {v.placa}</option>)}
@@ -674,8 +677,8 @@ export default function AppOS() {
                 {!isFuncionario && (
                 <div style={{marginTop:16,marginBottom:16}}>
                   <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
-                    <label style={{fontWeight:700,fontSize:13,color:'var(--gray-700)'}}>🔩 Peças utilizadas</label>
-                    <button type="button" className="btn btn-outline btn-sm" onClick={addPeca}>+ Adicionar peça</button>
+                    <label style={{fontWeight:700,fontSize:13,color:'var(--gray-700)'}}>{t.pecaLabel}</label>
+                    <button type="button" className="btn btn-outline btn-sm" onClick={addPeca}>+ Adicionar {t.peca.toLowerCase()}</button>
                   </div>
                   <div style={{background:'var(--gray-50)',borderRadius:'var(--r-sm)',overflow:'hidden',border:'1px solid var(--gray-200)'}}>
                     {form.pecas_itens.map((p,i)=>(
@@ -694,7 +697,7 @@ export default function AppOS() {
                           </div>
                           <label style={{display:'flex',alignItems:'center',gap:3,fontSize:11,color:'var(--gray-500)',cursor:'pointer',whiteSpace:'nowrap'}}>
                             <input type="checkbox" checked={!!p.cliente_fornece} onChange={e=>setPeca(p.id,'cliente_fornece',e.target.checked)} style={{width:14,height:14}} />
-                            Peça do cliente
+                            {t.peca} do cliente
                           </label>
                           <button type="button" onClick={()=>removePeca(p.id)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--danger)',fontSize:18}} disabled={form.pecas_itens.length===1}>×</button>
                         </div>
@@ -707,7 +710,7 @@ export default function AppOS() {
                       </div>
                     ))}
                     <div style={{display:'flex',justifyContent:'flex-end',padding:'8px 10px',fontSize:12,fontWeight:600,color:'var(--gray-600)'}}>
-                      Total peças: <strong style={{marginLeft:8,color:'var(--gray-900)'}}>{fmt.currency(form.pecas_itens.reduce((s,p)=>s+(parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1),0))}</strong>
+                      Total {t.pecas.toLowerCase()}: <strong style={{marginLeft:8,color:'var(--gray-900)'}}>{fmt.currency(form.pecas_itens.reduce((s,p)=>s+(parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1),0))}</strong>
                     </div>
                   </div>
                 </div>
@@ -800,7 +803,7 @@ export default function AppOS() {
               </div>
               <div className="modal-body">
                 <div className="os-view-fields">
-                  {[{l:'Cliente',v:viewing.cliente_nome||'—'},{l:'Veículo',v:(viewing.veiculo_marca?viewing.veiculo_marca+' ':'')+( viewing.veiculo_modelo||'—')},{l:'Placa',v:viewing.placa||'—'},{l:'Data',v:fmt.date(viewing.data)},{l:'Status',v:<span className={`badge ${STATUS_CLASS[viewing.status]||'badge-gray'}`}>{STATUS_LABEL[viewing.status]||viewing.status}</span>}].map(item=>(
+                  {[{l:'Cliente',v:viewing.cliente_nome||'—'},{l:t.veiculo,v:(viewing.veiculo_marca?viewing.veiculo_marca+' ':'')+( viewing.veiculo_modelo||'—')},{l:t.placa,v:viewing.placa||'—'},{l:'Data',v:fmt.date(viewing.data)},{l:'Status',v:<span className={`badge ${STATUS_CLASS[viewing.status]||'badge-gray'}`}>{STATUS_LABEL[viewing.status]||viewing.status}</span>}].map(item=>(
                     <div key={item.l} className="os-view-field">
                       <div className="os-view-label">{item.l}</div>
                       <div className="os-view-value">{item.v}</div>
@@ -817,7 +820,7 @@ export default function AppOS() {
 
                 {/* Peças — cards no mobile em vez de tabela */}
                 <div style={{marginBottom:12}}>
-                  <div className="os-view-label">Peças utilizadas</div>
+                  <div className="os-view-label">{t.pecas} utilizadas</div>
                   {pecas.filter(p=>p.nome).length ? (
                     <div className="os-view-pecas">
                       {pecas.filter(p=>p.nome).map((p,i)=>(
@@ -846,7 +849,7 @@ export default function AppOS() {
                     <span>{fmt.currency(viewing.valor_mo)}</span>
                   </div>
                   <div className="os-view-total-item">
-                    <span>Total peças</span>
+                    <span>Total {t.pecas.toLowerCase()}</span>
                     <span>{fmt.currency(totalPecas)}</span>
                   </div>
                   <div className="os-view-total-final">

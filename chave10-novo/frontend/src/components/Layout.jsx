@@ -7,6 +7,7 @@ import OnboardingTour from './OnboardingTour';
 import { api } from '../api';
 import { useAuth } from '../hooks/useAuth';
 import { useOnboarding } from '../hooks/useOnboarding';
+import { useSegmento } from '../hooks/useSegmento';
 
 // SVG Icons
 const IC = {
@@ -34,16 +35,6 @@ const adminNav = [
   { to: '/admin/audit-logs',      label: 'Logs de Auditoria',  icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg> },
   { to: '/admin/security-alerts', label: 'Alertas de Segurança', icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> },
   { to: '/admin/trocar-senha',    label: 'Trocar Senha',       icon: IC.configuracoes },
-];
-
-const appNavPrincipal = [
-  { to: '/app/dashboard',    label: 'Dashboard',         icon: IC.dashboard },
-  { to: '/app/clientes',     label: 'Clientes',          icon: IC.clientes },
-  { to: '/app/veiculos',     label: 'Veículos',          icon: IC.veiculos },
-  { to: '/app/os',           label: 'Ordens de Serviço', icon: IC.os },
-  { to: '/app/orcamentos',   label: 'Orçamentos',        icon: IC.orcamentos },
-  { to: '/app/agenda',       label: 'Agenda',            icon: IC.agenda, badge: 'Novo' },
-  { to: '/app/mensagens',    label: 'Mensagens',         icon: IC.mensagens },
 ];
 
 const appNavGestao = [
@@ -532,6 +523,17 @@ function UserDropdown({ user, onLogout }) {
 const SUPORTE_WA = 'https://wa.me/5516992383821?text=Olá,%20preciso%20de%20suporte%20com%20o%20Chave%2010.';
 
 export default function Layout({ area }) {
+  const t = useSegmento();
+  const appNavPrincipal = [
+    { to: '/app/dashboard',    label: 'Dashboard',         icon: IC.dashboard },
+    { to: '/app/clientes',     label: 'Clientes',          icon: IC.clientes },
+    { to: '/app/veiculos',     label: t.veiculos,          icon: IC.veiculos },
+    { to: '/app/os',           label: 'Ordens de Serviço', icon: IC.os },
+    { to: '/app/orcamentos',   label: 'Orçamentos',        icon: IC.orcamentos },
+    { to: '/app/agenda',       label: 'Agenda',            icon: IC.agenda, badge: 'Novo' },
+    { to: '/app/mensagens',    label: 'Mensagens',         icon: IC.mensagens },
+  ];
+
   const [open, setOpen] = useState(false);
   const [notiCount, setNotiCount] = useState(0);
   const navigate = useNavigate();

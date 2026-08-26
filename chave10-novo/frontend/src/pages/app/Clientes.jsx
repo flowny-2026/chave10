@@ -5,6 +5,7 @@ import Pagination from '../../components/Pagination';
 import { maskPhone } from '../../utils/validation';
 import CepInput from '../../components/CepInput';
 import KPICard from '../../components/KPICard';
+import { useSegmento } from '../../hooks/useSegmento';
 
 const EMPTY = { nome: '', telefone: '', email: '', obs: '', endereco: '' };
 
@@ -14,6 +15,7 @@ function Toast({ msg, type }) {
 }
 
 export default function AppClientes() {
+  const t = useSegmento();
   const [allClientes, setAllClientes] = useState([]);
   const [search, setSearch] = useState('');
   const [modal, setModal] = useState(false);
@@ -156,7 +158,7 @@ export default function AppClientes() {
             <div className="table-wrapper">
               <table>
                 <thead>
-                  <tr><th>Nome</th><th>Telefone</th><th>Email</th><th>Veículos</th><th>Ações</th></tr>
+                  <tr><th>Nome</th><th>Telefone</th><th>Email</th><th>{t.veiculos}</th><th>Ações</th></tr>
                 </thead>
                 <tbody>
                   {clientes.map(c => (
@@ -164,7 +166,7 @@ export default function AppClientes() {
                       <td><strong>{c.nome}</strong></td>
                       <td>{c.telefone || '—'}</td>
                       <td>{c.email || '—'}</td>
-                      <td><span className="badge badge-blue">{c.total_veiculos || 0} veículo(s)</span></td>
+                      <td><span className="badge badge-blue">{c.total_veiculos || 0} {t.veiculo.toLowerCase()}(s)</span></td>
                       <td>
                         <div style={{ display: 'flex', gap: 6 }}>
                           <button className="btn btn-outline btn-sm" onClick={() => openEdit(c)}>✏️ Editar</button>

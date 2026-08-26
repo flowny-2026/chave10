@@ -5,8 +5,9 @@ import ExportarDados from '../../components/ExportarDados';
 import CepInput from '../../components/CepInput';
 import { useOnboarding } from '../../hooks/useOnboarding';
 import { api } from '../../api';
+import { SEGMENTOS } from '../../config/segmentos';
 
-const EMPTY = { nome: '', responsavel: '', documento: '', email: '', endereco: '', telefone: '', whatsapp: '', logo: null };
+const EMPTY = { nome: '', responsavel: '', documento: '', email: '', endereco: '', telefone: '', whatsapp: '', logo: null, segmento: 'oficina_mecanica' };
 
 function F({ label, type = 'text', placeholder, value, onChange, half }) {
   return (
@@ -60,7 +61,10 @@ export default function AppConfiguracoes() {
         try {
           const u = JSON.parse(localStorage.getItem('c10_user') || '{}');
           u.nome = of.responsavel.trim();
+          // Sincroniza o segmento para que useSegmento reflita imediatamente
+          if (of.segmento) u.segmento = of.segmento;
           localStorage.setItem('c10_user', JSON.stringify(u));
+          sessionStorage.setItem('c10_user', JSON.stringify(u));
         } catch {}
       }
     } catch (err) {
@@ -159,6 +163,21 @@ export default function AppConfiguracoes() {
             <div className="form-group">
               <label>WhatsApp</label>
               <input value={of.whatsapp || ''} onChange={e => setOf(o => ({ ...o, whatsapp: maskPhone(e.target.value) }))} placeholder="(11) 99999-0000" />
+            </div>
+
+            <div className="form-group full">
+              <label>Segmento do negócio</label>
+              <select
+                value={of.segmento || 'oficina_mecanica'}
+                onChange={e => setOf(o => ({ ...o, segmento: e.target.value }))}
+              >
+                {Object.entries(SEGMENTOS).map(([key, seg]) => (
+                  <option key={key} value={key}>{seg.emoji} {seg.label}</option>
+                ))}
+              </select>
+              <small style={{ fontSize: 12, color: 'var(--gray-400)', marginTop: 4, display: 'block' }}>
+                Define a nomenclatura usada no sistema (Veículo/Equipamento, Placa/Nº Série, KM/Horímetro, etc.)
+              </small>
             </div>
           </div>
 

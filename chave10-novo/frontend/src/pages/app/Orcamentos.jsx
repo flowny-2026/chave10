@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api';
 import FotoUploader from '../../components/FotoUploader';
+import { useSegmento, getTermosSegmento } from '../../hooks/useSegmento';
 
 const fmt = {
   currency: v => 'R$ ' + parseFloat(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.'),
@@ -24,7 +25,7 @@ function Toast({ msg, type }) {
   return <div className={`toast show ${type}`} style={{position:'fixed',bottom:24,right:24,zIndex:300}}>{msg}</div>;
 }
 
-function gerarHTMLOrcamento(orc, clientes, veiculos, oficina) {
+function gerarHTMLOrcamento(orc, clientes, veiculos, oficina, t) {
   const c = clientes.find(x=>x.id===orc.cliente_id);
   const v = veiculos.find(x=>x.id===orc.veiculo_id);
   const pecas = orc.pecas_itens || [];
@@ -87,31 +88,31 @@ function gerarHTMLOrcamento(orc, clientes, veiculos, oficina) {
     <div class="field"><label>Endereço</label><span>${c.endereco||'—'}</span></div>
   </div></div>`:''}
 
-  ${v?`<div class="section"><div class="section-title">Veículo</div><div class="grid-2">
-    <div class="field"><label>Veículo</label><span>${(v.marca||'')+' '+(v.modelo||'')}</span></div>
-    <div class="field"><label>Placa</label><span>${v.placa||'—'}</span></div>
-    <div class="field"><label>Ano</label><span>${v.ano||'—'}</span></div>
-    ${v.km?`<div class="field"><label>KM</label><span>${v.km}</span></div>`:''}
+  ${v?`<div class="section"><div class="section-title">${t.veiculo}</div><div class="grid-2">
+    <div class="field"><label>${t.veiculo}</label><span>${(v.marca||'')+' '+(v.modelo||'')}</span></div>
+    <div class="field"><label>${t.placa}</label><span>${v.placa||'—'}</span></div>
+    <div class="field"><label>${t.ano}</label><span>${v.ano||'—'}</span></div>
+    ${v.km?`<div class="field"><label>${t.kmAbrev}</label><span>${v.km} ${t.kmUnit}</span></div>`:''}
   </div></div>`:''}
 
   ${orc.descricao?`<div class="section"><div class="section-title">Descrição / Problema</div><p style="background:#F9FAFB;padding:10px 12px;border-radius:6px">${orc.descricao}</p></div>`:''}
   ${orc.servicos?`<div class="section"><div class="section-title">Serviços</div><p style="background:#F9FAFB;padding:10px 12px;border-radius:6px">${orc.servicos}</p></div>`:''}
 
   <div class="section">
-    <div class="section-title">Peças</div>
+    <div class="section-title">${t.pecas}</div>
     ${pecas.length ? `
     <table>
       <thead><tr><th>Descrição</th><th style="text-align:center">Qtd</th><th style="text-align:right">Valor unit.</th><th style="text-align:right">Subtotal</th></tr></thead>
       <tbody>
         ${pecas.map(p=>`<tr><td>${p.nome||'—'}</td><td style="text-align:center">${p.qtd||1}</td><td style="text-align:right">${fmt.currency(p.valor_unit)}</td><td style="text-align:right">${fmt.currency((parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1))}</td></tr>`).join('')}
       </tbody>
-    </table>` : '<p style="color:#9CA3AF;font-size:12px">Nenhuma peça</p>'}
+    </table>` : `<p style="color:#9CA3AF;font-size:12px">Nenhuma ${t.peca.toLowerCase()}</p>`}
   </div>
 
   <div class="section">
     <div class="section-title">Valores</div>
     <div class="total-row"><span>Mão de obra</span><span>${fmt.currency(orc.valor_mo)}</span></div>
-    <div class="total-row"><span>Total peças</span><span>${fmt.currency(totalPecas)}</span></div>
+    <div class="total-row"><span>Total ${t.pecas.toLowerCase()}</span><span>${fmt.currency(totalPecas)}</span></div>
     ${(parseFloat(orc.desconto)||0)>0?`<div class="total-row" style="color:#dc2626"><span>Desconto</span><span>- ${fmt.currency(orc.desconto)}</span></div>`:''}
     <div class="total-final"><span style="font-size:15px;font-weight:700">TOTAL</span><span class="val">${fmt.currency(total)}</span></div>
   </div>
@@ -126,6 +127,7 @@ function gerarHTMLOrcamento(orc, clientes, veiculos, oficina) {
 }
 
 export default function AppOrcamentos() {
+  const t = useSegmento();
   const isFuncionario = (() => { try { return JSON.parse(localStorage.getItem('c10_user'))?.perfil === 'funcionario'; } catch { return false; } })();
   const [lista, setLista]       = useState([]);
   const [clientes, setClientes] = useState([]);
@@ -285,7 +287,7 @@ export default function AppOrcamentos() {
         localStorage.setItem('c10_oficina', JSON.stringify(oficina));
       }
     } catch { /* usa o cache local se a API falhar */ }
-    const html = gerarHTMLOrcamento(orc, clientes, veiculos, oficina);
+    const html = gerarHTMLOrcamento(orc, clientes, veiculos, oficina, t);
     const win = window.open('', '_blank');
     win.document.write(html);
     win.document.close();
@@ -330,6 +332,7 @@ export default function AppOrcamentos() {
   }
 
   function enviarWhatsApp(orc) {
+    const tw = getTermosSegmento();
     const c = clientes.find(x=>x.id===orc.cliente_id);
     if (!c?.telefone) { showToast('Cliente sem telefone','error'); return; }
     const pecas = orc.pecas_itens || [];
@@ -340,15 +343,15 @@ export default function AppOrcamentos() {
     const oficina = (() => { try { return JSON.parse(localStorage.getItem('c10_oficina'))||{}; } catch { return {}; } })();
     let msg = `*${orc.numero||'Orçamento'} — ${oficina.nome||'Chave 10'}*\n`;
     if (orc.validade) msg += `Válido até: ${fmt.date(orc.validade)}\n`;
-    if (v) msg += `Veículo: ${v.marca} ${v.modelo} — ${v.placa}\n`;
+    if (v) msg += `${tw.veiculo}: ${v.marca} ${v.modelo} — ${v.placa}\n`;
     if (orc.descricao) msg += `\n*Descrição:* ${orc.descricao}\n`;
     if (orc.servicos) msg += `*Serviços:* ${orc.servicos}\n`;
     if (pecas.length) {
-      msg += `\n*Peças:*\n`;
+      msg += `\n*${tw.pecas}:*\n`;
       pecas.filter(p=>p.nome).forEach(p=>{ msg += `• ${p.qtd||1}x ${p.nome} — ${fmt.currency((parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1))}\n`; });
     }
     msg += `\n*Mão de obra:* ${fmt.currency(orc.valor_mo)}`;
-    msg += `\n*Total peças:* ${fmt.currency(totalPecas)}`;
+    msg += `\n*Total ${tw.pecas.toLowerCase()}:* ${fmt.currency(totalPecas)}`;
     if ((parseFloat(orc.desconto)||0)>0) msg += `\n*Desconto:* - ${fmt.currency(orc.desconto)}`;
     msg += `\n*TOTAL: ${fmt.currency(total)}*`;
     const tel = c.telefone.replace(/\D/g,'');
@@ -391,7 +394,7 @@ export default function AppOrcamentos() {
           <div className="os-table-desktop">
             <div className="table-wrapper">
               <table>
-                <thead><tr><th>Nº</th><th>Cliente</th><th>Veículo</th><th>Descrição</th>{!isFuncionario&&<th>Total</th>}<th>Validade</th><th>Status</th><th>Ações</th></tr></thead>
+                <thead><tr><th>Nº</th><th>Cliente</th><th>{t.veiculo}</th><th>Descrição</th>{!isFuncionario&&<th>Total</th>}<th>Validade</th><th>Status</th><th>Ações</th></tr></thead>
                 <tbody>
                   {listaFiltrada.map(orc => {
                     const totalPecas = (orc.pecas_itens||[]).reduce((s,p)=>s+(parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1),0);
@@ -481,7 +484,7 @@ export default function AppOrcamentos() {
                     </select>
                   </div>
                   <div className="form-group">
-                    <label>Veículo</label>
+                    <label>{t.veiculo}</label>
                     <select value={form.veiculo_id} onChange={e=>setForm(f=>({...f,veiculo_id:e.target.value}))}>
                       <option value="">Selecionar...</option>
                       {veiculosFiltrados.map(v=><option key={v.id} value={v.id}>{v.marca} {v.modelo} — {v.placa}</option>)}
@@ -495,8 +498,8 @@ export default function AppOrcamentos() {
                 {!isFuncionario && (
                 <div style={{marginTop:16,marginBottom:16}}>
                   <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
-                    <label style={{fontWeight:700,fontSize:13,color:'var(--gray-700)'}}>🔩 Peças</label>
-                    <button type="button" className="btn btn-outline btn-sm" onClick={addPeca}>+ Adicionar peça</button>
+                    <label style={{fontWeight:700,fontSize:13,color:'var(--gray-700)'}}>{t.pecaLabel}</label>
+                    <button type="button" className="btn btn-outline btn-sm" onClick={addPeca}>+ Adicionar {t.peca.toLowerCase()}</button>
                   </div>
                   <div style={{background:'var(--gray-50)',borderRadius:'var(--r-sm)',overflow:'hidden',border:'1px solid var(--gray-200)'}}>
                     {form.pecas_itens.map((p)=>(
@@ -515,7 +518,7 @@ export default function AppOrcamentos() {
                           </div>
                           <label style={{display:'flex',alignItems:'center',gap:3,fontSize:11,color:'var(--gray-500)',cursor:'pointer',whiteSpace:'nowrap'}}>
                             <input type="checkbox" checked={!!p.cliente_fornece} onChange={e=>setPeca(p.id,'cliente_fornece',e.target.checked)} style={{width:14,height:14}} />
-                            Peça do cliente
+                            {t.peca} do cliente
                           </label>
                           <button type="button" onClick={()=>removePeca(p.id)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--danger)',fontSize:18}} disabled={form.pecas_itens.length===1}>×</button>
                         </div>
@@ -527,7 +530,7 @@ export default function AppOrcamentos() {
                       </div>
                     ))}
                     <div style={{display:'flex',justifyContent:'flex-end',padding:'8px 10px',fontSize:12,fontWeight:600,color:'var(--gray-600)'}}>
-                      Total peças: <strong style={{marginLeft:8,color:'var(--gray-900)'}}>{fmt.currency(form.pecas_itens.reduce((s,p)=>s+(parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1),0))}</strong>
+                      Total {t.pecas.toLowerCase()}: <strong style={{marginLeft:8,color:'var(--gray-900)'}}>{fmt.currency(form.pecas_itens.reduce((s,p)=>s+(parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1),0))}</strong>
                     </div>
                   </div>
                 </div>
@@ -638,8 +641,8 @@ export default function AppOrcamentos() {
                 <div className="os-view-fields">
                   {[
                     {l:'Cliente',v:viewing.cliente_nome||'—'},
-                    {l:'Veículo',v:viewing.veiculo_modelo||'—'},
-                    {l:'Placa',v:viewing.placa||'—'},
+                    {l:t.veiculo,v:viewing.veiculo_modelo||'—'},
+                    {l:t.placa,v:viewing.placa||'—'},
                     {l:'Validade',v:fmt.date(viewing.validade)},
                     {l:'Status',v:<span className={`badge ${STATUS_CLASS[viewing.status]||'badge-gray'}`}>{STATUS_LABEL[viewing.status]||viewing.status}</span>},
                   ].map(item=>(
@@ -658,7 +661,7 @@ export default function AppOrcamentos() {
                 ))}
 
                 <div style={{marginBottom:12}}>
-                  <div className="os-view-label">Peças</div>
+                  <div className="os-view-label">{t.pecas}</div>
                   {pecas.filter(p=>p.nome).length ? (
                     <div className="os-view-pecas">
                       {pecas.filter(p=>p.nome).map((p,i)=>(
@@ -687,7 +690,7 @@ export default function AppOrcamentos() {
                     <span>{fmt.currency(viewing.valor_mo)}</span>
                   </div>
                   <div className="os-view-total-item">
-                    <span>Total peças</span>
+                    <span>Total {t.pecas.toLowerCase()}</span>
                     <span>{fmt.currency(totalPecas)}</span>
                   </div>
                   {(parseFloat(viewing.desconto)||0)>0 && (

@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../api';
+import { useSegmento } from '../../hooks/useSegmento';
 
 const fmt = {
   currency: v => 'R$ ' + parseFloat(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.'),
@@ -31,6 +32,7 @@ const STATUS_CLASS = { em_andamento:'badge-orange', finalizado:'badge-green' };
 const STATUS_LABEL = { em_andamento:'Em andamento', finalizado:'Finalizado' };
 
 export default function AppDashboard() {
+  const t = useSegmento();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [meta, setMeta] = useState(() => { try { return parseFloat(localStorage.getItem('c10_meta'))||0; } catch { return 0; } });
@@ -164,9 +166,8 @@ export default function AppDashboard() {
                 <div style={{display:'flex',alignItems:'center',gap:5}}>
                   <div style={{width:7,height:7,borderRadius:'50%',background:'#60a5fa',flexShrink:0}}/>
                   <span style={{fontSize:11,color:'rgba(255,255,255,.7)'}}>
-                    Peças: <strong style={{color:'#fff'}}>{fmt.currency(fatPecas)}</strong>
-                  </span>
-                </div>
+                    {t.pecas}: <strong style={{color:'#fff'}}>{fmt.currency(fatPecas)}</strong>
+                  </span>                </div>
               </div>
             )}
 
@@ -234,7 +235,7 @@ export default function AppDashboard() {
                   <div style={{height:'100%',width:`${pctMO}%`,background:'var(--accent)',borderRadius:99}}/>
                 </div>
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                  <span style={{fontSize:11,color:'var(--gray-400)'}}>🔩 Peças</span>
+                  <span style={{fontSize:11,color:'var(--gray-400)'}}>🔩 {t.pecas}</span>
                   <span style={{fontSize:11,fontWeight:700,color:'var(--info)'}}>{fmt.currency(fatPecas)}</span>
                 </div>
                 <div style={{height:4,background:'var(--gray-100)',borderRadius:99,overflow:'hidden'}}>
