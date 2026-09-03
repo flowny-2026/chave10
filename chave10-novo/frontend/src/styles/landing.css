@@ -70,8 +70,8 @@
 
 .lp-logo {
   font-family: 'Poppins', sans-serif;
-  font-weight: 700;
-  font-size: 1.4rem;
+  font-weight: var(--fw-bold);
+  font-size: var(--font-xl);
   color: var(--lp-white);
   display: flex;
   align-items: center;
@@ -87,8 +87,8 @@
   color: var(--lp-white);
   padding: 10px 22px;
   border-radius: 8px;
-  font-weight: 600;
-  font-size: 0.875rem;
+  font-weight: var(--fw-semibold);
+  font-size: var(--font-sm);
   transition: var(--lp-transition);
 }
 
@@ -108,8 +108,8 @@
   color: rgba(255,255,255,0.7);
   padding: 10px 16px;
   border: none;
-  font-weight: 600;
-  font-size: 0.875rem;
+  font-weight: var(--fw-semibold);
+  font-size: var(--font-sm);
   cursor: pointer;
   transition: var(--lp-transition);
 }
@@ -187,8 +187,8 @@
   color: var(--lp-white);
   padding: 16px 32px;
   border-radius: 10px;
-  font-weight: 700;
-  font-size: 1rem;
+  font-weight: var(--fw-bold);
+  font-size: var(--font-lg);
   transition: var(--lp-transition);
   box-shadow: 0 4px 24px rgba(249,115,22,0.3);
 }
@@ -207,8 +207,8 @@
   color: var(--lp-white);
   padding: 16px 32px;
   border-radius: 10px;
-  font-weight: 600;
-  font-size: 1rem;
+  font-weight: var(--fw-semibold);
+  font-size: var(--font-lg);
   border: 2px solid rgba(255,255,255,0.3);
   transition: var(--lp-transition);
 }
@@ -222,7 +222,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 20px;
-  font-size: 0.85rem;
+  font-size: var(--font-sm);
   color: rgba(255,255,255,0.55);
 }
 
@@ -300,8 +300,8 @@
 }
 
 .lp-section-label {
-  font-size: 0.8rem;
-  font-weight: 700;
+  font-size: var(--font-xs);
+  font-weight: var(--fw-bold);
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--lp-orange);
@@ -368,22 +368,22 @@
 }
 
 .lp-pain-card h3 {
-  font-size: 1rem;
-  font-weight: 700;
+  font-size: var(--font-base);
+  font-weight: var(--fw-bold);
   color: var(--lp-navy);
   margin-bottom: 6px;
 }
 
 .lp-pain-card p {
-  font-size: 0.875rem;
+  font-size: var(--font-sm);
   color: var(--lp-gray-600);
 }
 
 .lp-pain-resolve {
   text-align: center;
   margin-top: 56px;
-  font-size: 1.3rem;
-  font-weight: 700;
+  font-size: var(--font-xl);
+  font-weight: var(--fw-bold);
   color: var(--lp-navy);
   font-family: 'Poppins', sans-serif;
 }
@@ -474,7 +474,7 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  font-size: 1rem;
+  font-size: var(--font-base);
   color: var(--lp-gray-800);
 }
 
@@ -603,14 +603,14 @@
 }
 
 .lp-timeline-step h4 {
-  font-size: 0.95rem;
-  font-weight: 700;
+  font-size: var(--font-base);
+  font-weight: var(--fw-bold);
   color: var(--lp-navy);
   margin-bottom: 6px;
 }
 
 .lp-timeline-step p {
-  font-size: 0.82rem;
+  font-size: var(--font-xs);
   color: var(--lp-gray-600);
 }
 
@@ -650,8 +650,8 @@
 }
 
 .lp-compare-col h3 {
-  font-size: 1.1rem;
-  font-weight: 700;
+  font-size: var(--font-lg);
+  font-weight: var(--fw-bold);
   margin-bottom: 24px;
   display: flex;
   align-items: center;
@@ -668,11 +668,11 @@
 }
 
 .lp-compare-list li {
-  font-size: 0.9rem;
+  font-size: var(--font-sm);
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  line-height: 1.5;
+  line-height: var(--lh-base);
 }
 
 .lp-compare-list li::before {
@@ -723,14 +723,14 @@
   color: var(--lp-white);
   padding: 6px 20px;
   border-radius: 20px;
-  font-size: 0.78rem;
-  font-weight: 700;
+  font-size: var(--font-xs);
+  font-weight: var(--fw-bold);
   white-space: nowrap;
 }
 
 .lp-pricing-name {
-  font-size: 1.4rem;
-  font-weight: 700;
+  font-size: var(--font-xl);
+  font-weight: var(--fw-bold);
   color: var(--lp-navy);
   margin-bottom: 8px;
   margin-top: 12px;
@@ -738,20 +738,20 @@
 
 .lp-pricing-price {
   font-family: 'Poppins', sans-serif;
-  font-size: 3.2rem;
-  font-weight: 800;
+  font-size: 3rem;
+  font-weight: var(--fw-bold);
   color: var(--lp-navy);
   margin-bottom: 4px;
 }
 
 .lp-pricing-price span {
-  font-size: 1rem;
-  font-weight: 500;
+  font-size: var(--font-base);
+  font-weight: var(--fw-medium);
   color: var(--lp-gray-600);
 }
 
 .lp-pricing-old {
-  font-size: 0.9rem;
+  font-size: var(--font-sm);
   color: var(--lp-gray-400);
   text-decoration: line-through;
   margin-bottom: 24px;
@@ -768,7 +768,7 @@
 }
 
 .lp-pricing-features li {
-  font-size: 0.9rem;
+  font-size: var(--font-sm);
   color: var(--lp-gray-800);
   display: flex;
   align-items: center;
@@ -778,7 +778,7 @@
 .lp-pricing-features li::before {
   content: '✓';
   color: var(--lp-orange);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
 }
 
 /* ===== FAQ ===== */
@@ -808,8 +808,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: var(--font-base);
+  font-weight: var(--fw-semibold);
   color: var(--lp-navy);
   text-align: left;
   transition: var(--lp-transition);
@@ -839,9 +839,9 @@
 
 .lp-faq-answer p {
   padding: 0 0 20px;
-  font-size: 0.9rem;
+  font-size: var(--font-sm);
   color: var(--lp-gray-600);
-  line-height: 1.7;
+  line-height: var(--lh-relaxed);
 }
 
 .lp-faq-item.active .lp-faq-answer {
@@ -870,11 +870,12 @@
 }
 
 .lp-final-cta h2 {
-  font-size: clamp(2rem, 5vw, 3.2rem);
-  font-weight: 800;
+  font-size: clamp(1.8rem, 5vw, 2.8rem);
+  font-weight: var(--fw-bold);
   color: var(--lp-white);
   margin-bottom: 24px;
   position: relative;
+  line-height: var(--lh-snug);
 }
 
 .lp-final-cta .lp-btn-primary {
@@ -886,7 +887,7 @@
   background: #0f1b2d;
   padding: 40px 0;
   color: rgba(255,255,255,0.5);
-  font-size: 0.85rem;
+  font-size: var(--font-sm);
 }
 
 .lp-footer-inner {
@@ -905,8 +906,8 @@
 
 .lp-footer-logo {
   font-family: 'Poppins', sans-serif;
-  font-weight: 700;
-  font-size: 1.2rem;
+  font-weight: var(--fw-bold);
+  font-size: var(--font-lg);
   color: rgba(255,255,255,0.7);
 }
 
@@ -923,7 +924,7 @@
 .lp-footer-links a {
   color: rgba(255,255,255,0.5);
   transition: var(--lp-transition);
-  font-size: 0.85rem;
+  font-size: var(--font-sm);
 }
 
 .lp-footer-links a:hover {
@@ -1201,7 +1202,7 @@
   }
 
   .lp-benefit-line {
-    font-size: 1.3rem !important;
+    font-size: var(--font-xl) !important;
     text-align: left !important;
   }
 

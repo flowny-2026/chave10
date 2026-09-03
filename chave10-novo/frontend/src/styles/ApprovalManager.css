@@ -13,8 +13,8 @@
 }
 
 .approval-header h3 {
-  font-size: 18px;
-  font-weight: 600;
+  font-size: var(--font-xl);
+  font-weight: var(--fw-semibold);
   color: #1f2937;
   margin: 0;
 }
@@ -22,7 +22,7 @@
 .btn-close {
   background: none;
   border: none;
-  font-size: 24px;
+  font-size: 22px;
   color: #9ca3af;
   cursor: pointer;
   padding: 0;
@@ -46,9 +46,9 @@
 
 .approval-desc {
   color: #6b7280;
-  font-size: 14px;
+  font-size: var(--font-sm);
   margin-bottom: 20px;
-  line-height: 1.6;
+  line-height: var(--lh-relaxed);
 }
 
 .approval-actions {
@@ -69,8 +69,8 @@
 }
 
 .stats-section h4 {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: var(--font-md);
+  font-weight: var(--fw-semibold);
   color: #374151;
   margin-bottom: 16px;
 }
@@ -84,8 +84,8 @@
 }
 
 .stat-label {
-  font-size: 12px;
-  font-weight: 500;
+  font-size: var(--font-xs);
+  font-weight: var(--fw-medium);
   color: #6b7280;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -103,7 +103,7 @@
   background: white;
   border: 1px solid #d1d5db;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: var(--font-xs);
   color: #374151;
   font-family: 'Courier New', monospace;
 }
@@ -123,8 +123,8 @@
 }
 
 .stat-value {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--font-base);
+  font-weight: var(--fw-semibold);
   color: #1f2937;
   margin-top: 4px;
 }
@@ -137,7 +137,7 @@
 
 .empty-stats p {
   margin-bottom: 16px;
-  font-size: 14px;
+  font-size: var(--font-base);
 }
 
 /* Status Display */
@@ -152,12 +152,12 @@
 }
 
 .status-date {
-  font-size: 13px;
+  font-size: var(--font-sm);
   color: #6b7280;
 }
 
 .rejection-reason {
-  font-size: 13px;
+  font-size: var(--font-sm);
   color: #374151;
   background: white;
   padding: 10px;
@@ -167,7 +167,7 @@
 
 .rejection-reason strong {
   color: #6b7280;
-  font-size: 12px;
+  font-size: var(--font-xs);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   display: block;
@@ -194,7 +194,7 @@
 }
 
 .signature-date {
-  font-size: 12px;
+  font-size: var(--font-xs);
   color: #6b7280;
   margin-top: 12px;
 }
@@ -214,8 +214,8 @@
 }
 
 .audit-action {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--font-base);
+  font-weight: var(--fw-semibold);
   color: #374151;
   margin-bottom: 6px;
 }
@@ -224,7 +224,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  font-size: 12px;
+  font-size: var(--font-xs);
   color: #6b7280;
 }
 
@@ -256,6 +256,6 @@
   }
 
   .approval-actions .btn {
-    font-size: 15px;
+    font-size: var(--font-md);
   }
 }

@@ -63,8 +63,8 @@
     gap: 10px !important;
     margin-bottom: 14px !important;
   }
-  .page-title { font-size: 18px !important; }
-  .page-subtitle { font-size: 12px !important; }
+  .page-title { font-size: var(--font-xl) !important; }
+  .page-subtitle { font-size: var(--font-xs) !important; }
 
   /* SELECT do filtro — não ultrapassa a tela */
   .dash-select {
@@ -83,7 +83,7 @@
     width: 100% !important;
     justify-content: center !important;
     min-height: 46px !important;
-    font-size: 15px !important;
+    font-size: var(--font-md) !important;
   }
   /* Grupo de botões no page-header */
   .page-actions {
@@ -99,12 +99,12 @@
 
   /* BOTÕES */
   .btn { min-height: 40px !important; }
-  .btn-sm { min-height: 34px !important; font-size: 12px !important; }
+  .btn-sm { min-height: 34px !important; font-size: var(--font-xs) !important; }
 
   /* CARDS */
   .card { padding: 14px 12px !important; border-radius: 12px !important; }
   .card-header { margin-bottom: 12px !important; }
-  .card-title { font-size: 13px !important; }
+  .card-title { font-size: var(--font-sm) !important; }
 
   /* STAT CARDS: 2 colunas */
   .stats-grid {
@@ -118,8 +118,8 @@
     border-radius: 12px !important;
   }
   .stat-icon { width: 36px !important; height: 36px !important; border-radius: 8px !important; }
-  .stat-value { font-size: 17px !important; }
-  .stat-label { font-size: 11px !important; }
+  .stat-value { font-size: var(--font-xl) !important; }
+  .stat-label { font-size: var(--font-xs) !important; }
 
   /* DASHBOARD: 1 coluna */
   .dash-grid-2,
@@ -140,7 +140,7 @@
   .dash-os-num {
     min-width: 52px !important;
     max-width: 52px !important;
-    font-size: 11px !important;
+    font-size: var(--font-xs) !important;
     flex-shrink: 0 !important;
   }
   .dash-os-info {
@@ -149,7 +149,7 @@
     overflow: hidden !important;
   }
   .dash-os-cliente {
-    font-size: 13px !important;
+    font-size: var(--font-sm) !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
@@ -157,7 +157,7 @@
     word-break: normal !important;
   }
   .dash-os-veiculo {
-    font-size: 11px !important;
+    font-size: var(--font-xs) !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
@@ -190,7 +190,7 @@
 
   /* INPUTS: 16px evita zoom iOS */
   input, select, textarea {
-    font-size: 16px !important;
+    font-size: var(--font-lg) !important;
     min-height: 44px !important;
   }
   textarea { min-height: 80px !important; }
@@ -238,7 +238,7 @@
 
   /* FINANCEIRO */
   .fin-card { padding: 14px 14px !important; }
-  .fin-card-value { font-size: 20px !important; }
+  .fin-card-value { font-size: var(--font-metric) !important; }
 
   /* ── DARK THEME ── */
   body { background: #0d1117 !important; }
@@ -429,7 +429,7 @@
     background: #F97316; border-radius: 0 0 4px 4px;
   }
   .mbn-icon { width: 36px; height: 28px; display: flex; align-items: center; justify-content: center; }
-  .mbn-label { font-size: 10px; font-weight: 600; letter-spacing: .2px; line-height: 1; }
+  .mbn-label { font-size: var(--font-xs); font-weight: var(--fw-semibold); letter-spacing: .2px; line-height: 1; }
 
   /* SIDEBAR OVERLAY */
   .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 199; }
@@ -447,9 +447,9 @@
   .topbar { padding: 0 10px !important; }
   .stats-grid { gap: 8px !important; }
   .stat-card { padding: 10px 8px !important; }
-  .stat-value { font-size: 15px !important; }
+  .stat-value { font-size: var(--font-xl) !important; }
   .stat-icon { width: 32px !important; height: 32px !important; }
-  .page-title { font-size: 16px !important; }
+  .page-title { font-size: var(--font-lg) !important; }
   .card { padding: 12px 10px !important; }
   .modal { max-height: 95vh !important; }
 }
@@ -521,7 +521,7 @@
     width: 100% !important;
     justify-content: center !important;
     min-height: 46px !important;
-    font-size: 15px !important;
+    font-size: var(--font-md) !important;
   }
 
   /* Grupo de botões dentro de div no page-header */
@@ -535,7 +535,7 @@
     flex: 1 !important;
     justify-content: center !important;
     min-height: 46px !important;
-    font-size: 15px !important;
+    font-size: var(--font-md) !important;
   }
   .page-header > div:last-child:not([class]) .btn-outline,
   .page-header > div:last-child:not([class]) .btn-ghost {
@@ -547,7 +547,7 @@
     width: 100% !important;
     justify-content: center !important;
     min-height: 46px !important;
-    font-size: 15px !important;
+    font-size: var(--font-md) !important;
     order: -1 !important;
   }
 }
@@ -570,7 +570,7 @@
     background: rgba(255,255,255,.08) !important;
     border-color: rgba(255,255,255,.12) !important;
     color: #e6edf3 !important;
-    font-size: 14px !important;
+    font-size: var(--font-base) !important;
     min-height: 36px !important;
     padding: 7px 10px 7px 32px !important;
   }

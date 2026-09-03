@@ -63,8 +63,8 @@
   color: #fff;
   padding: 8px 20px;
   border-radius: 8px;
-  font-weight: 600;
-  font-size: 0.875rem;
+  font-weight: var(--fw-semibold);
+  font-size: var(--font-sm);
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -99,15 +99,16 @@
 
 .login-title {
   font-family: 'Poppins', sans-serif;
-  font-size: 1.6rem;
-  font-weight: 800;
+  font-size: var(--font-2xl);
+  font-weight: var(--fw-bold);
   color: #1E3A5F;
   margin: 0 0 6px;
   letter-spacing: -0.02em;
+  line-height: var(--lh-snug);
 }
 
 .login-sub {
-  font-size: 0.9rem;
+  font-size: var(--font-sm);
   color: #64748b;
   margin: 0 0 28px;
 }
@@ -131,7 +132,7 @@
 }
 
 .login-divider p {
-  font-size: 0.8rem;
+  font-size: var(--font-xs);
   color: #94a3b8;
   white-space: nowrap;
   margin: 0;
@@ -144,8 +145,8 @@
 
 .login-field label {
   display: block;
-  font-size: 0.82rem;
-  font-weight: 600;
+  font-size: var(--font-sm);
+  font-weight: var(--fw-semibold);
   color: #334155;
   margin-bottom: 6px;
 }
@@ -164,8 +165,8 @@
 .login-forgot {
   background: none;
   border: none;
-  font-size: 0.78rem;
-  font-weight: 600;
+  font-size: var(--font-xs);
+  font-weight: var(--fw-semibold);
   color: #F97316;
   cursor: pointer;
   padding: 0;
@@ -180,12 +181,13 @@
   padding: 13px 16px;
   border: 1.5px solid #e2e8f0;
   border-radius: 10px;
-  font-size: 0.95rem;
+  font-size: var(--font-base);
   color: #1e293b;
   background: #fff;
   transition: border-color 0.2s, box-shadow 0.2s;
   outline: none;
   font-family: inherit;
+  line-height: var(--lh-base);
 }
 
 .login-field input::placeholder {
@@ -229,9 +231,9 @@
   border: 1px solid #fecaca;
   border-radius: 8px;
   padding: 10px 14px;
-  font-size: 0.85rem;
+  font-size: var(--font-sm);
   color: #dc2626;
-  font-weight: 500;
+  font-weight: var(--fw-medium);
   margin-bottom: 18px;
 }
 
@@ -243,8 +245,8 @@
   color: #fff;
   border: none;
   border-radius: 10px;
-  font-size: 1rem;
-  font-weight: 700;
+  font-size: var(--font-md);
+  font-weight: var(--fw-bold);
   cursor: pointer;
   transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
   box-shadow: 0 4px 16px rgba(249,115,22,0.3);
@@ -283,7 +285,7 @@
 .login-signup {
   margin-top: 22px;
   text-align: center;
-  font-size: 0.875rem;
+  font-size: var(--font-sm);
   color: #64748b;
 }
 
@@ -313,9 +315,9 @@
 }
 
 .login-trust span {
-  font-size: 0.8rem;
+  font-size: var(--font-xs);
   color: rgba(255,255,255,0.5);
-  font-weight: 500;
+  font-weight: var(--fw-medium);
 }
 
 /* Loader */
@@ -354,7 +356,7 @@
 }
 
 .login-loader-status {
-  font-size: 0.82rem;
+  font-size: var(--font-xs);
   color: rgba(255,255,255,0.4);
   margin: 0;
 }
@@ -384,11 +386,11 @@
   }
 
   .login-title {
-    font-size: 1.4rem;
+    font-size: var(--font-xl);
   }
 
   .login-field input {
-    font-size: 16px;
+    font-size: var(--font-lg); /* evita zoom no iOS */
   }
 
   .login-trust {

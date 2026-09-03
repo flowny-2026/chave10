@@ -83,7 +83,7 @@
 .result-state h2 {
   color: #333;
   margin-bottom: 10px;
-  font-size: 24px;
+  font-size: var(--font-2xl);
 }
 
 .error-state p,
@@ -93,7 +93,7 @@
 }
 
 .result-subtitle {
-  font-size: 14px;
+  font-size: var(--font-sm);
   color: #888;
 }
 
@@ -106,7 +106,7 @@
 }
 
 .oficina-contact h3 {
-  font-size: 16px;
+  font-size: var(--font-lg);
   color: #F97316;
   margin-bottom: 15px;
 }
@@ -125,16 +125,17 @@
 }
 
 .approval-header h1 {
-  font-size: 22px;
+  font-size: var(--font-2xl);
   margin-bottom: 8px;
-  font-weight: 800;
+  font-weight: var(--fw-bold);
   color: #f8fafc;
+  line-height: var(--lh-snug);
 }
 
 .budget-number {
-  font-size: 16px;
+  font-size: var(--font-lg);
   color: #F97316;
-  font-weight: 700;
+  font-weight: var(--fw-bold);
 }
 
 /* Info Section */
@@ -155,14 +156,14 @@
 }
 
 .info-row .label {
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   color: #666;
-  font-size: 14px;
+  font-size: var(--font-sm);
 }
 
 .info-row .value {
   color: #333;
-  font-size: 15px;
+  font-size: var(--font-base);
   text-align: right;
 }
 
@@ -173,10 +174,10 @@
 }
 
 .description-section h3 {
-  font-size: 16px;
+  font-size: var(--font-lg);
   color: #1E3A5F;
   margin-bottom: 10px;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 .description-section p {
@@ -191,10 +192,10 @@
 }
 
 .items-section h3 {
-  font-size: 18px;
+  font-size: var(--font-xl);
   color: #333;
   margin-bottom: 15px;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 .items-list {
@@ -213,14 +214,14 @@
 .item-name {
   flex: 1;
   color: #555;
-  font-size: 14px;
-  line-height: 1.4;
+  font-size: var(--font-base);
+  line-height: var(--lh-base);
 }
 
 .item-price {
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   color: #333;
-  font-size: 15px;
+  font-size: var(--font-base);
   white-space: nowrap;
 }
 
@@ -236,7 +237,7 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 10px;
-  font-size: 15px;
+  font-size: var(--font-base);
 }
 
 .total-row:last-child {
@@ -248,7 +249,7 @@
 }
 
 .total-row span:last-child {
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   color: #333;
 }
 
@@ -260,12 +261,12 @@
   margin-top: 15px;
   padding-top: 15px;
   border-top: 2px solid #ddd;
-  font-size: 20px;
+  font-size: var(--font-xl);
 }
 
 .total-row.final span {
   color: #F97316;
-  font-weight: 700;
+  font-weight: var(--fw-bold);
 }
 
 /* Observations */
@@ -276,16 +277,16 @@
 }
 
 .obs-section h4 {
-  font-size: 14px;
+  font-size: var(--font-sm);
   color: #d68910;
   margin-bottom: 8px;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 .obs-section p {
   color: #555;
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: var(--font-sm);
+  line-height: var(--lh-relaxed);
 }
 
 /* Action Buttons */
@@ -303,8 +304,8 @@
   padding: 16px;
   border: none;
   border-radius: 12px;
-  font-size: 16px;
-  font-weight: 600;
+  font-size: var(--font-lg);
+  font-weight: var(--fw-semibold);
   cursor: pointer;
   transition: all 0.3s ease;
   display: flex;
@@ -350,10 +351,10 @@
 
 .reject-reason-section label {
   display: block;
-  font-size: 14px;
+  font-size: var(--font-sm);
   color: #666;
   margin-bottom: 8px;
-  font-weight: 500;
+  font-weight: var(--fw-medium);
 }
 
 .reject-reason-section textarea {
@@ -361,10 +362,11 @@
   padding: 12px;
   border: 2px solid #ddd;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: var(--font-base);
   font-family: inherit;
   resize: vertical;
   margin-bottom: 12px;
+  line-height: var(--lh-relaxed);
 }
 
 .reject-reason-section textarea:focus {
@@ -390,10 +392,10 @@
 }
 
 .expiry-info {
-  font-size: 13px;
+  font-size: var(--font-sm);
   color: #F97316;
   margin-bottom: 15px;
-  font-weight: 500;
+  font-weight: var(--fw-medium);
 }
 
 .oficina-info {
@@ -404,12 +406,12 @@
 
 .oficina-info p {
   margin: 5px 0;
-  font-size: 14px;
+  font-size: var(--font-sm);
   color: #555;
 }
 
 .oficina-info p:first-child {
-  font-size: 16px;
+  font-size: var(--font-lg);
   color: #333;
   margin-bottom: 10px;
 }
@@ -435,19 +437,19 @@
   }
 
   .approval-header h1 {
-    font-size: 20px;
+    font-size: var(--font-xl);
   }
 
   .budget-number {
-    font-size: 14px;
+    font-size: var(--font-sm);
   }
 
   .items-section h3 {
-    font-size: 16px;
+    font-size: var(--font-lg);
   }
 
   .total-row.final {
-    font-size: 18px;
+    font-size: var(--font-lg);
   }
 
   .action-buttons {
