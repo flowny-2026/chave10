@@ -309,6 +309,10 @@ app.use('/api/app',          writeLimiter, cacheMiddleware(15), require('./route
 app.use('/api/backup',       writeLimiter, require('./routes/backup'));
 app.use('/api/approval',     writeLimiter, require('./routes/approval'));
 
+// ── PING — keep-alive para monitoramento externo ─────────────
+// Sempre retorna 200. Usado pelo UptimeRobot para manter o servidor acordado.
+app.get('/ping', (_, res) => res.status(200).json({ ok: true }));
+
 // ── HEALTH CHECK ──────────────────────────────────────────────
 // Rota pública — usada por load balancers e monitoramento.
 // Retorna status do sistema com detalhes de saúde.
