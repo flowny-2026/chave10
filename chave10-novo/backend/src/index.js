@@ -311,7 +311,9 @@ app.use('/api/approval',     writeLimiter, require('./routes/approval'));
 
 // ── PING — keep-alive para monitoramento externo ─────────────
 // Sempre retorna 200. Usado pelo UptimeRobot para manter o servidor acordado.
+// Suporta GET e HEAD (UptimeRobot usa HEAD por padrão).
 app.get('/ping', (_, res) => res.status(200).json({ ok: true }));
+app.head('/ping', (_, res) => res.status(200).end());
 
 // ── HEALTH CHECK ──────────────────────────────────────────────
 // Rota pública — usada por load balancers e monitoramento.
