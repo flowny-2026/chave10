@@ -370,8 +370,8 @@ export default function AppOrcamentos() {
   return (
     <div>
       <div className="page-header">
-        <div><div className="page-title">Orçamentos</div><div className="page-subtitle">{listaFiltrada.length} orçamento(s)</div></div>
-        <button className="btn btn-primary" onClick={openCreate}>+ Novo Orçamento</button>
+        <div><div className="page-title">{t.orcamentos}</div><div className="page-subtitle">{listaFiltrada.length} orçamento(s)</div></div>
+        <button className="btn btn-primary" onClick={openCreate}>+ {t.novoOrcamento}</button>
       </div>
 
       <div className="search-bar">
@@ -470,7 +470,7 @@ export default function AppOrcamentos() {
         <div className="modal-overlay open">
           <div className="modal" style={{maxWidth:700}}>
             <div className="modal-header">
-              <h2>{editing?'Editar Orçamento':'Novo Orçamento'}</h2>
+              <h2>{editing ? t.editOrcamento : t.novoOrcamento}</h2>
               <button className="modal-close" onClick={()=>setModal(null)}>✕</button>
             </div>
             <div className="modal-body">

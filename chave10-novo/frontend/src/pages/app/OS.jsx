@@ -474,8 +474,8 @@ export default function AppOS() {
   return (
     <div>
       <div className="page-header">
-        <div><div className="page-title">Ordens de Serviço</div><div className="page-subtitle">{listaFiltrada.length} ordem(ns)</div></div>
-        <button className="btn btn-primary" onClick={openCreate}>+ Nova OS</button>
+        <div><div className="page-title">{t.oss}</div><div className="page-subtitle">{listaFiltrada.length} ordem(ns)</div></div>
+        <button className="btn btn-primary" onClick={openCreate}>+ {t.novaOs}</button>
       </div>
       <div className="search-bar">
         <div className="search-input-wrap">

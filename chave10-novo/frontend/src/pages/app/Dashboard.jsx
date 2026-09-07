@@ -196,7 +196,7 @@ export default function AppDashboard() {
           <div className="dashboard-hero-actions" style={{display:'flex',flexDirection:'column',gap:10,alignItems:'flex-end'}}>
             <button className="btn btn-primary dashboard-btn-nova-os" onClick={()=>navigate('/app/os')} style={{fontSize:14,padding:'12px 18px',boxShadow:'0 4px 16px rgba(249,115,22,.4)',whiteSpace:'nowrap'}}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-              <span className="dashboard-btn-label">Nova OS</span>
+              <span className="dashboard-btn-label">{t.novaOs}</span>
             </button>
             <div className="dashboard-hero-stats" style={{display:'flex',gap:8}}>
               {[{label:'OS abertas',val:stats.emAndamento||0,color:(stats.emAndamento||0)>0?'#fbbf24':'#fff'},{label:'Clientes',val:stats.totalClientes||0,color:'#fff'}].map(item=>(

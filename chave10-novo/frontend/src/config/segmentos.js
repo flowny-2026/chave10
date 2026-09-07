@@ -37,6 +37,11 @@ export const SEGMENTOS = {
     os:         'Ordem de Serviço',
     oss:        'Ordens de Serviço',
     novaOs:     'Nova OS',
+    // Orçamentos
+    orcamento:  'Orçamento',
+    orcamentos: 'Orçamentos',
+    novoOrcamento: 'Novo Orçamento',
+    editOrcamento: 'Editar Orçamento',
     // Categoria do item
     marca:      'Marca',
     modelo:     'Modelo',
@@ -68,6 +73,11 @@ export const SEGMENTOS = {
     os:         'Ordem de Serviço',
     oss:        'Ordens de Serviço',
     novaOs:     'Nova OS',
+    // Orçamentos
+    orcamento:  'Orçamento',
+    orcamentos: 'Orçamentos',
+    novoOrcamento: 'Novo Orçamento',
+    editOrcamento: 'Editar Orçamento',
     // Outros
     marca:      'Fabricante',
     modelo:     'Modelo',
