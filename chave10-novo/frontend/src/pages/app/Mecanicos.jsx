@@ -1,4 +1,4 @@
-çççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççpimport { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { api } from '../../api';
 
 const fmt = {
