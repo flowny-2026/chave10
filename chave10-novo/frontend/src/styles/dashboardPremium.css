@@ -804,7 +804,9 @@
 .painel-row-name {
   font-size: var(--font-sm);
   font-weight: var(--fw-semibold);
-  color: var(--gray-800);
+  /* Cor fixa escura — o card do painel tem fundo branco fixo,
+     então não deve seguir a variável de tema (que pode ser clara no dark mode) */
+  color: #1f2937;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -812,7 +814,7 @@
 
 .painel-row-sub {
   font-size: var(--font-xs);
-  color: var(--gray-400);
+  color: #6b7280;
 }
 
 .painel-row-badge {
