@@ -787,6 +787,12 @@
   border-top: 1px solid var(--gray-100);
 }
 
+.painel-item-empty {
+  font-size: var(--font-xs);
+  color: #6b7280;
+  padding: 8px 0;
+}
+
 .painel-row {
   display: flex;
   align-items: center;

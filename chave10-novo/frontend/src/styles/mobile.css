@@ -360,6 +360,27 @@
   .painel-do-dia .painel-row-name { color: #e6edf3 !important; }
   .painel-do-dia .painel-row-sub  { color: rgba(255,255,255,.5) !important; }
 
+  /* Itens do painel (.painel-item*) — dark mode.
+     Estas classes substituem os antigos estilos inline; cada nível precisa
+     de fundo escuro e texto claro para ter contraste sobre o painel escuro. */
+  .painel-item {
+    border-color: rgba(255,255,255,.08) !important;
+  }
+  .painel-item-header {
+    background: #1c2128 !important;
+    border-bottom-color: rgba(255,255,255,.06) !important;
+  }
+  .painel-item-header:hover {
+    background: #232a33 !important;
+  }
+  .painel-item-label { color: #e6edf3 !important; }
+  .painel-item-count { color: rgba(255,255,255,.5) !important; }
+  .painel-item-body {
+    background: #161b22 !important;
+    border-top-color: rgba(255,255,255,.06) !important;
+  }
+  .painel-item-empty { color: rgba(255,255,255,.4) !important; }
+
   .activity-feed {
     background: #161b22 !important;
     border: 1px solid rgba(255,255,255,.08) !important;
