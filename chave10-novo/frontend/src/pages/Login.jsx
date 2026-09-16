@@ -104,8 +104,8 @@ export default function Login() {
 
           {googleClientId && (
             <>
-              <div className="login-google">
-                <GoogleLogin onSuccess={handleGoogleSuccess} onError={() => setErro('Falha ao conectar com o Google')} width="100%" text="signin_with" shape="rectangular" logo_alignment="left" locale="pt-BR" />
+              <div className="login-google" style={{ display: 'flex', justifyContent: 'center' }}>
+                <GoogleLogin onSuccess={handleGoogleSuccess} onError={() => setErro('Falha ao conectar com o Google')} width="360" text="signin_with" shape="rectangular" logo_alignment="left" locale="pt-BR" />
               </div>
               <div className="login-divider">
                 <span></span>

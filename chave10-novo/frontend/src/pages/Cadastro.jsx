@@ -140,8 +140,8 @@ export default function Cadastro() {
 
               {googleClientId && (
                 <>
-                  <div className="login-google">
-                    <GoogleLogin onSuccess={handleGoogleSuccess} onError={() => setErro('Falha ao conectar com o Google')} width="100%" text="signup_with" shape="rectangular" logo_alignment="left" locale="pt-BR" />
+                  <div className="login-google" style={{ display: 'flex', justifyContent: 'center' }}>
+                    <GoogleLogin onSuccess={handleGoogleSuccess} onError={() => setErro('Falha ao conectar com o Google')} width="360" text="signup_with" shape="rectangular" logo_alignment="left" locale="pt-BR" />
                   </div>
                   <div className="login-divider">
                     <span></span>
