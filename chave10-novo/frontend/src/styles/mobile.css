@@ -387,6 +387,18 @@
     border-color: #1E3A5F !important;
   }
 
+  /* Botões de template de mensagem — dark mode via classe (robusto) */
+  .msg-template-btn {
+    background: #1c2128 !important;
+    border-color: rgba(255,255,255,.1) !important;
+    color: rgba(255,255,255,.75) !important;
+  }
+  .msg-template-btn--active {
+    background: rgba(30,58,95,.4) !important;
+    border-color: #60a5fa !important;
+    color: #60a5fa !important;
+  }
+
   .fin-card { background: #161b22 !important; border: 1px solid rgba(255,255,255,.07) !important; box-shadow: none !important; }
   .fin-card-label { color: rgba(255,255,255,.4) !important; }
 

@@ -3132,3 +3132,22 @@ tbody tr:hover td { background: rgba(249,115,22,.04); }
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* ══════════════════════════════════════════
+   MENSAGENS — BOTÕES DE TEMPLATE
+══════════════════════════════════════════ */
+.msg-template-btn {
+  background: #fff;
+  border: 1.5px solid var(--gray-200);
+  color: var(--gray-700);
+}
+.msg-template-btn:hover {
+  border-color: var(--gray-300);
+  background: var(--gray-50);
+}
+.msg-template-btn--active {
+  background: var(--brand-light);
+  border-color: var(--brand);
+  color: var(--brand);
+  font-weight: var(--fw-semibold);
+}

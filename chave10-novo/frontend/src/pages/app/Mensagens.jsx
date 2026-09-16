@@ -133,7 +133,8 @@ export default function AppMensagens() {
             <div style={{display:'flex',flexDirection:'column',gap:6}}>
               {TEMPLATES.map(t=>(
                 <button key={t.id} onClick={()=>setTemplateSel(t.id)}
-                  style={{textAlign:'left',padding:'10px 12px',borderRadius:8,border:`1.5px solid ${templateSel===t.id?'var(--brand)':'var(--gray-200)'}`,background:templateSel===t.id?'var(--brand-light)':'#fff',cursor:'pointer',fontSize:13,fontWeight:500,color:templateSel===t.id?'var(--brand)':'var(--gray-700)',transition:'all .15s'}}>
+                  className={`msg-template-btn${templateSel===t.id?' msg-template-btn--active':''}`}
+                  style={{textAlign:'left',padding:'10px 12px',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:500,transition:'all .15s'}}>
                   {t.label}
                 </button>
               ))}
