@@ -159,7 +159,7 @@ export default function Mecanicos() {
           <h1 className="page-title">🔧 Mecânicos</h1>
           <p className="page-subtitle">Gerencie os mecânicos da sua oficina e suas comissões</p>
         </div>
-        <button className="btn-primary" onClick={abrirCriar}>
+        <button className="btn btn-primary" onClick={abrirCriar}>
           + Novo Mecânico
         </button>
       </div>
@@ -269,7 +269,7 @@ export default function Mecanicos() {
               {/* Ações */}
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
-                  className="btn-secondary"
+                  className="btn btn-outline"
                   style={{ flex: 1, fontSize: 13, padding: '8px 0' }}
                   onClick={() => abrirEditar(mec)}
                 >
@@ -295,10 +295,10 @@ export default function Mecanicos() {
 
       {/* Modal Criar/Editar */}
       {modal && (
-        <div className="modal-overlay" onClick={fecharModal}>
+        <div className="modal-overlay open" onClick={fecharModal}>
           <div className="modal" style={{ maxWidth: 520, width: '100%' }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h2 className="modal-title">
+              <h2 style={{ fontSize: 'var(--font-lg)', fontWeight: 'var(--fw-bold)', color: 'var(--gray-900)' }}>
                 {modal === 'criar' ? '+ Novo Mecânico' : '✏️ Editar Mecânico'}
               </h2>
               <button className="modal-close" onClick={fecharModal}>✕</button>
@@ -309,9 +309,9 @@ export default function Mecanicos() {
 
                 {/* Nome */}
                 <div className="form-group">
-                  <label className="form-label">Nome *</label>
+                  <label >Nome *</label>
                   <input
-                    className="form-input"
+                    
                     name="nome"
                     value={form.nome}
                     onChange={handleChange}
@@ -323,9 +323,9 @@ export default function Mecanicos() {
 
                 {/* E-mail */}
                 <div className="form-group">
-                  <label className="form-label">E-mail *</label>
+                  <label >E-mail *</label>
                   <input
-                    className="form-input"
+                    
                     name="email"
                     type="email"
                     value={form.email}
@@ -336,12 +336,12 @@ export default function Mecanicos() {
 
                 {/* Senha */}
                 <div className="form-group">
-                  <label className="form-label">
+                  <label >
                     {modal === 'criar' ? 'Senha *' : 'Nova senha (deixe vazio para não alterar)'}
                   </label>
                   <div style={{ position: 'relative' }}>
                     <input
-                      className="form-input"
+                      
                       name="senha"
                       type={mostrarSenha ? 'text' : 'password'}
                       value={form.senha}
@@ -364,9 +364,9 @@ export default function Mecanicos() {
 
                 {/* Telefone */}
                 <div className="form-group">
-                  <label className="form-label">Telefone</label>
+                  <label >Telefone</label>
                   <input
-                    className="form-input"
+                    
                     name="telefone"
                     value={form.telefone}
                     onChange={handleChange}
@@ -401,7 +401,7 @@ export default function Mecanicos() {
                     {form.recebe_servicos && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingLeft: 24 }}>
                         <input
-                          className="form-input"
+                          
                           name="pct_servicos"
                           type="number"
                           min="0"
@@ -434,7 +434,7 @@ export default function Mecanicos() {
                     {form.recebe_pecas && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingLeft: 24 }}>
                         <input
-                          className="form-input"
+                          
                           name="pct_pecas"
                           type="number"
                           min="0"
@@ -464,11 +464,11 @@ export default function Mecanicos() {
                 )}
               </div>
 
-              <div className="modal-footer" style={{ display: 'flex', gap: 10 }}>
-                <button type="button" className="btn-secondary" onClick={fecharModal} style={{ flex: 1 }}>
+              <div className="form-actions" style={{ display: 'flex', gap: 10 }}>
+                <button type="button" className="btn btn-outline" onClick={fecharModal} style={{ flex: 1 }}>
                   Cancelar
                 </button>
-                <button type="submit" className="btn-primary" disabled={saving} style={{ flex: 2 }}>
+                <button type="submit" className="btn btn-primary" disabled={saving} style={{ flex: 2 }}>
                   {saving ? 'Salvando...' : modal === 'criar' ? 'Cadastrar Mecânico' : 'Salvar Alterações'}
                 </button>
               </div>
@@ -479,10 +479,10 @@ export default function Mecanicos() {
 
       {/* Modal confirmar toggle status */}
       {confirmDesativar && (
-        <div className="modal-overlay" onClick={() => setConfirmDesativar(null)}>
+        <div className="modal-overlay open" onClick={() => setConfirmDesativar(null)}>
           <div className="modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h2 className="modal-title">
+              <h2 style={{ fontSize: 'var(--font-lg)', fontWeight: 'var(--fw-bold)', color: 'var(--gray-900)' }}>
                 {confirmDesativar.ativo ? '🚫 Desativar Mecânico' : '✅ Ativar Mecânico'}
               </h2>
               <button className="modal-close" onClick={() => setConfirmDesativar(null)}>✕</button>
@@ -495,8 +495,8 @@ export default function Mecanicos() {
                 }
               </p>
             </div>
-            <div className="modal-footer" style={{ display: 'flex', gap: 10 }}>
-              <button className="btn-secondary" onClick={() => setConfirmDesativar(null)} style={{ flex: 1 }}>
+            <div className="form-actions" style={{ display: 'flex', gap: 10 }}>
+              <button className="btn btn-outline" onClick={() => setConfirmDesativar(null)} style={{ flex: 1 }}>
                 Cancelar
               </button>
               <button
