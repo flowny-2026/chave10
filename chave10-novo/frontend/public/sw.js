@@ -2,8 +2,8 @@
 // Network-first para HTML/JS/API, cache-first para assets estáticos
 // Background Sync para operações offline
 
-const CACHE_NAME = 'chave10-v9';
-const RUNTIME_CACHE = 'chave10-runtime-v9';
+const CACHE_NAME = 'chave10-v10';
+const RUNTIME_CACHE = 'chave10-runtime-v10';
 const STATIC_ASSETS = [
   '/',
   '/favicon.jpeg',

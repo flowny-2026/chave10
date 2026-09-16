@@ -33,9 +33,26 @@ function saveMeta(v) { localStorage.setItem('c10_meta', v); }
 // Gráfico de barras com SVG — coordenadas absolutas, sem distorção
 function ModernChart({ data }) {
   const [selected, setSelected] = useState(null);
-  
+  // Detecta o tema escuro (o app usa dark mode em telas <= 768px).
+  // Ajusta as cores do SVG para terem contraste sobre fundo escuro.
+  const [isDark, setIsDark] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
+  );
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const handler = e => setIsDark(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
   if (!data?.length || data.every(d => (d.total||0) === 0))
     return <div style={{textAlign:'center',padding:'32px 0',color:'#9ca3af',fontSize:13}}>Sem dados de faturamento ainda</div>;
+
+  // Cores adaptadas ao tema
+  const gridStrong = isDark ? 'rgba(255,255,255,.2)' : '#cbd5e1';
+  const gridWeak   = isDark ? 'rgba(255,255,255,.07)' : '#f1f5f9';
+  // Cor do texto das barras não-selecionadas / labels dos meses
+  const textNormal = isDark ? '#c9d1d9' : '#1E3A5F';
 
   const SVG_W   = 340;
   const SVG_H   = 160;
@@ -62,8 +79,8 @@ function ModernChart({ data }) {
             <stop offset="100%" stopColor="#fed7aa"/>
           </linearGradient>
           <linearGradient id="g-blue" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#1E3A5F"/>
-            <stop offset="100%" stopColor="#3b82f6"/>
+            <stop offset="0%" stopColor={isDark ? '#3b82f6' : '#1E3A5F'}/>
+            <stop offset="100%" stopColor={isDark ? '#93c5fd' : '#3b82f6'}/>
           </linearGradient>
           <linearGradient id="g-blue-active" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#2563eb"/>
@@ -76,7 +93,7 @@ function ModernChart({ data }) {
           <line key={i}
             x1={0} y1={TOP + BAR_H * (1 - f)}
             x2={SVG_W} y2={TOP + BAR_H * (1 - f)}
-            stroke={f === 1 ? '#cbd5e1' : '#f1f5f9'}
+            stroke={f === 1 ? gridStrong : gridWeak}
             strokeWidth={f === 1 ? 1 : 0.5}
           />
         ))}
@@ -90,7 +107,7 @@ function ModernChart({ data }) {
           const isLast = i === n - 1;
           const isSelected = selected === i;
           const fill   = isLast ? 'url(#g-orange)' : isSelected ? 'url(#g-blue-active)' : 'url(#g-blue)';
-          const tc     = isLast ? '#ea6c0a' : isSelected ? '#2563eb' : '#1E3A5F';
+          const tc     = isLast ? (isDark ? '#fb923c' : '#ea6c0a') : isSelected ? (isDark ? '#60a5fa' : '#2563eb') : textNormal;
 
           return (
             <g key={i} onClick={()=>setSelected(isSelected?null:i)} style={{cursor:'pointer'}}>
