@@ -2,8 +2,8 @@
 // Network-first para HTML/JS/API, cache-first para assets estáticos
 // Background Sync para operações offline
 
-const CACHE_NAME = 'chave10-v6';
-const RUNTIME_CACHE = 'chave10-runtime-v6';
+const CACHE_NAME = 'chave10-v7';
+const RUNTIME_CACHE = 'chave10-runtime-v7';
 const STATIC_ASSETS = [
   '/',
   '/favicon.jpeg',
@@ -31,7 +31,7 @@ const ROUTES_TO_CACHE = [
 // INSTALAÇÃO
 // ===============================
 self.addEventListener('install', (event) => {
-  console.log('[SW] Instalando service worker v6...');
+  console.log('[SW] Instalando service worker v7...');
   
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -53,7 +53,7 @@ self.addEventListener('install', (event) => {
 // ATIVAÇÃO
 // ===============================
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Ativando service worker v6...');
+  console.log('[SW] Ativando service worker v7...');
   
   event.waitUntil(
     caches.keys()
@@ -88,6 +88,12 @@ self.addEventListener('fetch', (event) => {
 
   // Ignora requisições de Chrome extensions
   if (url.protocol === 'chrome-extension:') {
+    return;
+  }
+
+  // Ignora requisições cross-origin (fontes do Google, Google OAuth, CDNs).
+  // O navegador as trata diretamente — evita conflito com CSP connect-src.
+  if (url.origin !== self.location.origin) {
     return;
   }
 
@@ -369,7 +375,7 @@ self.addEventListener('notificationclose', (event) => {
 // ===============================
 // LOGGING & DEBUG
 // ===============================
-console.log('[SW] Service Worker v6 carregado');
+console.log('[SW] Service Worker v7 carregado');
 console.log('[SW] Cache principal:', CACHE_NAME);
 console.log('[SW] Cache runtime:', RUNTIME_CACHE);
 console.log('[SW] Assets estáticos:', STATIC_ASSETS.length);
