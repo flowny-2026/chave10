@@ -2,8 +2,8 @@
 // Network-first para HTML/JS/API, cache-first para assets estáticos
 // Background Sync para operações offline
 
-const CACHE_NAME = 'chave10-v7';
-const RUNTIME_CACHE = 'chave10-runtime-v7';
+const CACHE_NAME = 'chave10-v8';
+const RUNTIME_CACHE = 'chave10-runtime-v8';
 const STATIC_ASSETS = [
   '/',
   '/favicon.jpeg',
@@ -31,7 +31,7 @@ const ROUTES_TO_CACHE = [
 // INSTALAÇÃO
 // ===============================
 self.addEventListener('install', (event) => {
-  console.log('[SW] Instalando service worker v7...');
+  console.log('[SW] Instalando service worker v8...');
   
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -53,7 +53,7 @@ self.addEventListener('install', (event) => {
 // ATIVAÇÃO
 // ===============================
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Ativando service worker v7...');
+  console.log('[SW] Ativando service worker v8...');
   
   event.waitUntil(
     caches.keys()
@@ -375,7 +375,7 @@ self.addEventListener('notificationclose', (event) => {
 // ===============================
 // LOGGING & DEBUG
 // ===============================
-console.log('[SW] Service Worker v7 carregado');
+console.log('[SW] Service Worker v8 carregado');
 console.log('[SW] Cache principal:', CACHE_NAME);
 console.log('[SW] Cache runtime:', RUNTIME_CACHE);
 console.log('[SW] Assets estáticos:', STATIC_ASSETS.length);
