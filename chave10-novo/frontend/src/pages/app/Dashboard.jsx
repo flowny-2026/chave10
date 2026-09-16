@@ -56,7 +56,7 @@ export default function AppDashboard() {
   const stats = data?.stats || {};
   const recentes = data?.recentes || [];
   const faturamentoMensal = data?.faturamentoMensal || [];
-  const isFuncionario = getUser()?.perfil === 'funcionario';
+  const isFuncionario = getUser()?.perfil === 'funcionario' || getUser()?.perfil === 'mecanico';
   const fat = parseFloat(stats.faturamentoMes||0);
   const fatMO = parseFloat(stats.moMes||0);
   const fatPecas = parseFloat(stats.pecasMes||0);

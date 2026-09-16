@@ -193,7 +193,7 @@ export default function DashboardV2() {
   const { showWelcome, tourActive, currentStep, startTour, skipTour, nextStep, prevStep, endTour } = useOnboarding();
   const navigate = useNavigate();
   const user = getUser();
-  const isFuncionario = user?.perfil === 'funcionario';
+  const isFuncionario = user?.perfil === 'funcionario' || user?.perfil === 'mecanico';
   // Usa o nome do responsável da oficina se disponível, senão o nome do usuário
   const nomeUsuario = (user?.responsavel || user?.nome)?.split(' ')[0] || 'você';
 

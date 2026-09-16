@@ -128,7 +128,8 @@ function gerarHTMLOrcamento(orc, clientes, veiculos, oficina, t) {
 
 export default function AppOrcamentos() {
   const t = useSegmento();
-  const isFuncionario = (() => { try { return JSON.parse(localStorage.getItem('c10_user'))?.perfil === 'funcionario'; } catch { return false; } })();
+  // Funcionário e mecânico não veem valores financeiros
+  const isFuncionario = (() => { try { const p = JSON.parse(localStorage.getItem('c10_user'))?.perfil; return p === 'funcionario' || p === 'mecanico'; } catch { return false; } })();
   const [lista, setLista]       = useState([]);
   const [clientes, setClientes] = useState([]);
   const [veiculos, setVeiculos] = useState([]);

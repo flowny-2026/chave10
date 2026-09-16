@@ -14,7 +14,7 @@ function Toast({ msg, type }) {
 function getUser() { try { return JSON.parse(localStorage.getItem('c10_user')); } catch { return null; } }
 
 export default function AppEstoque() {
-  const isFuncionario = getUser()?.perfil === 'funcionario';
+  const isFuncionario = getUser()?.perfil === 'funcionario' || getUser()?.perfil === 'mecanico';
   const [itens, setItens]     = useState([]);
   const [catFiltro, setCatFiltro] = useState('todos');
   const [search, setSearch]   = useState('');

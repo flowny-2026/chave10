@@ -48,11 +48,11 @@ function oficinaSelf(req, res, next) {
   next();
 }
 
-// Bloqueia funcionários de acessar dados financeiros
+// Bloqueia funcionários e mecânicos de acessar dados financeiros
 function naoFuncionario(req, res, next) {
-  if (req.user?.perfil === 'funcionario') {
+  if (req.user?.perfil === 'funcionario' || req.user?.perfil === 'mecanico') {
     log.security('acesso_negado', {
-      motivo: 'funcionario tentou acessar área financeira',
+      motivo: 'perfil sem acesso a área financeira',
       perfil: req.user?.perfil,
       path: req.path,
       ip: req.ip,

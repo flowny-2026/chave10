@@ -133,7 +133,8 @@ function gerarHTMLOS(os, clientes, veiculos, oficina, t) {
 
 export default function AppOS() {
   const t = useSegmento();
-  const isFuncionario = (() => { try { return JSON.parse(localStorage.getItem('c10_user'))?.perfil === 'funcionario'; } catch { return false; } })();
+  // Funcionário e mecânico não veem valores financeiros
+  const isFuncionario = (() => { try { const p = JSON.parse(localStorage.getItem('c10_user'))?.perfil; return p === 'funcionario' || p === 'mecanico'; } catch { return false; } })();
   const isMecanico    = (() => { try { return JSON.parse(localStorage.getItem('c10_user'))?.perfil === 'mecanico'; } catch { return false; } })();
   const [searchParams] = useSearchParams();
   const [osList, setOsList]     = useState([]);
