@@ -179,7 +179,7 @@ export default function MeuPerfil() {
                 <option value="paga">Paga</option>
               </select>
             </div>
-            <button className="btn-primary" style={{ height: 36, fontSize: 13 }} onClick={() => carregarComissoes(filtros)}>
+            <button className="btn btn-primary" style={{ height: 36, fontSize: 13 }} onClick={() => carregarComissoes(filtros)}>
               🔍 Filtrar
             </button>
           </div>
@@ -300,7 +300,7 @@ export default function MeuPerfil() {
 
             <button
               type="submit"
-              className="btn-primary"
+              className="btn btn-primary"
               disabled={salvandoSenha}
               style={{ marginTop: 6 }}
             >

@@ -213,7 +213,7 @@ export default function MecanicoComissoes() {
                         </td>
                         <td style={{ textAlign: 'right' }}>
                           <button
-                            className="btn-secondary"
+                            className="btn btn-outline"
                             style={{ fontSize: 12, padding: '6px 12px' }}
                             onClick={() => selecionarMecanico(r)}
                           >
@@ -270,10 +270,10 @@ export default function MecanicoComissoes() {
                 <option value="cancelada">Cancelada</option>
               </select>
             </div>
-            <button className="btn-primary" style={{ height: 36, fontSize: 13 }} onClick={aplicarFiltros}>
+            <button className="btn btn-primary" style={{ height: 36, fontSize: 13 }} onClick={aplicarFiltros}>
               🔍 Filtrar
             </button>
-            <button className="btn-secondary" style={{ height: 36, fontSize: 13 }} onClick={() => {
+            <button className="btn btn-outline" style={{ height: 36, fontSize: 13 }} onClick={() => {
               const f = { inicio: '', fim: '', status: '' };
               setFiltros(f);
               carregarComissoes(mecSelecionado.mecanico_id || mecSelecionado.id, f);
@@ -395,10 +395,10 @@ export default function MecanicoComissoes() {
 
       {/* Modal confirmação de ação */}
       {confirmAcao && (
-        <div className="modal-overlay" onClick={() => setConfirmAcao(null)}>
+        <div className="modal-overlay open" onClick={() => setConfirmAcao(null)}>
           <div className="modal" style={{ maxWidth: 380 }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h2 className="modal-title">
+              <h2 style={{ fontSize: 'var(--font-lg)', fontWeight: 'var(--fw-bold)', color: 'var(--gray-900)' }}>
                 {confirmAcao.acao === 'aprovar' && '✓ Aprovar Comissão'}
                 {confirmAcao.acao === 'pagar'   && '💵 Marcar como Paga'}
                 {confirmAcao.acao === 'cancelar' && '✕ Cancelar Comissão'}
@@ -412,8 +412,8 @@ export default function MecanicoComissoes() {
                 {confirmAcao.acao === 'cancelar' && `Cancelar comissão de ${fmt.currency(confirmAcao.comissao.valor_total)}? Esta ação não pode ser desfeita.`}
               </p>
             </div>
-            <div className="modal-footer" style={{ display: 'flex', gap: 10 }}>
-              <button className="btn-secondary" onClick={() => setConfirmAcao(null)} style={{ flex: 1 }}>
+            <div className="form-actions" style={{ display: 'flex', gap: 10 }}>
+              <button className="btn btn-outline" onClick={() => setConfirmAcao(null)} style={{ flex: 1 }}>
                 Voltar
               </button>
               <button
