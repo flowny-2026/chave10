@@ -57,7 +57,8 @@ async function initDB() {
       nome TEXT NOT NULL,
       email TEXT UNIQUE NOT NULL,
       senha_hash TEXT NOT NULL,
-      perfil TEXT DEFAULT 'funcionario' CHECK(perfil IN ('master_admin','admin_oficina','funcionario')),
+      perfil TEXT DEFAULT 'funcionario' CHECK(perfil IN ('master_admin','admin_oficina','funcionario','mecanico')),
+      telefone TEXT,
       ativo INTEGER DEFAULT 1,
       ultimo_acesso TEXT
     );
