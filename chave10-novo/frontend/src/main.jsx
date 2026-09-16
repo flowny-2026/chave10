@@ -13,6 +13,16 @@ const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
 // Registra o Service Worker para habilitar PWA e notificações
 if ('serviceWorker' in navigator) {
+  // Quando um novo service worker assume o controle, recarrega a página uma
+  // única vez para garantir que os assets (CSS/JS) novos sejam carregados.
+  // Sem isso, a página continua servindo o CSS antigo do cache runtime.
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing) return;
+    refreshing = true;
+    window.location.reload();
+  });
+
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
       .then(reg => {
