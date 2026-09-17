@@ -315,17 +315,17 @@ export default function AppFinanceiro() {
               <div>
                 {/* Alerta do dia */}
                 {(parcelasHoje.length > 0 || parcelasAtrasadas.length > 0) && (
-                  <div style={{background:'#F0FDF4',border:'1px solid #BBF7D0',borderRadius:'var(--r-sm)',padding:'12px 16px',marginBottom:16}}>
+                  <div className="fin-alerta" style={{borderRadius:'var(--r-sm)',padding:'12px 16px',marginBottom:16}}>
                     {parcelasHoje.length > 0 && (
                       <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:parcelasAtrasadas.length?8:0}}>
                         <span style={{fontSize:18}}>🔔</span>
-                        <span style={{fontSize:13,fontWeight:600,color:'#166534'}}>Hoje você recebe <strong>{fmt.currency(totalHoje)}</strong> ({parcelasHoje.length} parcela{parcelasHoje.length>1?'s':''})</span>
+                        <span className="fin-alerta-hoje" style={{fontSize:13,fontWeight:600}}>Hoje você recebe <strong>{fmt.currency(totalHoje)}</strong> ({parcelasHoje.length} parcela{parcelasHoje.length>1?'s':''})</span>
                       </div>
                     )}
                     {parcelasAtrasadas.length > 0 && (
                       <div style={{display:'flex',alignItems:'center',gap:8}}>
                         <span style={{fontSize:18}}>⚠️</span>
-                        <span style={{fontSize:13,fontWeight:600,color:'#B91C1C'}}>{parcelasAtrasadas.length} parcela{parcelasAtrasadas.length>1?'s':''} atrasada{parcelasAtrasadas.length>1?'s':''} — {fmt.currency(totalAtrasado)}</span>
+                        <span className="fin-alerta-atraso" style={{fontSize:13,fontWeight:600}}>{parcelasAtrasadas.length} parcela{parcelasAtrasadas.length>1?'s':''} atrasada{parcelasAtrasadas.length>1?'s':''} — {fmt.currency(totalAtrasado)}</span>
                       </div>
                     )}
                   </div>
@@ -338,9 +338,10 @@ export default function AppFinanceiro() {
                       {[...parcelasAtrasadas, ...parcelasHoje, ...parcelasProximas].map(p => {
                         const isHoje = p.data_recebimento === hojeStr;
                         const isAtrasado = p.data_recebimento < hojeStr;
+                        const rowClass = isHoje ? 'fin-row-hoje' : isAtrasado ? 'fin-row-atrasado' : '';
                         return (
-                          <tr key={p.id} style={{background:isHoje?'#F0FDF4':isAtrasado?'#FEF2F2':''}}>
-                            <td style={{fontWeight:isHoje||isAtrasado?700:400,color:isAtrasado?'var(--danger)':isHoje?'var(--success)':'var(--gray-600)',whiteSpace:'nowrap'}}>{fmt.date(p.data_recebimento)}</td>
+                          <tr key={p.id} className={rowClass}>
+                            <td className="fin-cell-data" style={{fontWeight:isHoje||isAtrasado?700:400,whiteSpace:'nowrap'}}>{fmt.date(p.data_recebimento)}</td>
                             <td style={{maxWidth:120,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.cliente_nome||'—'}</td>
                             <td><strong style={{color:'var(--brand)'}}>#{String(p.os_id).padStart(4,'0')}</strong></td>
                             <td>{p.numero_parcela}ª</td>

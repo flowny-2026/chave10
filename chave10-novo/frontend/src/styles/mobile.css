@@ -275,6 +275,18 @@
   tbody td { color: #c9d1d9 !important; border-bottom: 1px solid rgba(255,255,255,.05) !important; }
   tbody tr:hover td { background: rgba(255,255,255,.04) !important; }
 
+  /* Linhas destacadas do Financeiro no dark — fundo translucido + texto claro */
+  .fin-row-hoje td     { background: rgba(74,222,128,.10) !important; }
+  .fin-row-atrasado td { background: rgba(248,113,113,.10) !important; }
+  .fin-cell-data       { color: #c9d1d9 !important; }
+  .fin-row-hoje .fin-cell-data     { color: #4ade80 !important; }
+  .fin-row-atrasado .fin-cell-data { color: #f87171 !important; }
+
+  /* Alerta de parcelas do Financeiro no dark */
+  .fin-alerta        { background: rgba(74,222,128,.10) !important; border-color: rgba(74,222,128,.25) !important; }
+  .fin-alerta-hoje   { color: #4ade80 !important; }
+  .fin-alerta-atraso { color: #f87171 !important; }
+
   .app-shell input, .app-shell select, .app-shell textarea { background: #1c2128 !important; border-color: rgba(255,255,255,.1) !important; color: #e6edf3 !important; }
   .app-shell input:focus, .app-shell select:focus, .app-shell textarea:focus { border-color: #F97316 !important; box-shadow: 0 0 0 3px rgba(249,115,22,.15) !important; background: #1c2128 !important; }
   .app-shell input::placeholder { color: rgba(255,255,255,.25) !important; }

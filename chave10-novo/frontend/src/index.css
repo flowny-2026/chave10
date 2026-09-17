@@ -640,6 +640,18 @@ tbody td {
 tbody tr:last-child td { border-bottom: none; }
 tbody tr:hover td { background: #fafbff; }
 
+/* Linhas destacadas do Financeiro (parcelas hoje/atrasadas) — tema claro */
+.fin-row-hoje td     { background: #F0FDF4; }
+.fin-row-atrasado td { background: #FEF2F2; }
+.fin-cell-data       { color: var(--gray-600); }
+.fin-row-hoje .fin-cell-data     { color: var(--success); }
+.fin-row-atrasado .fin-cell-data { color: var(--danger); }
+
+/* Alerta de parcelas do Financeiro — tema claro */
+.fin-alerta        { background: #F0FDF4; border: 1px solid #BBF7D0; }
+.fin-alerta-hoje   { color: #166534; }
+.fin-alerta-atraso { color: #B91C1C; }
+
 /* FORMS */
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .form-group { display: flex; flex-direction: column; gap: 5px; }
