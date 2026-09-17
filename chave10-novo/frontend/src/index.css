@@ -13,6 +13,10 @@
   --accent:       #F97316;
   --accent-dark:  #ea6c0a;
   --accent-light: #fff7ed;
+  /* Aliases: alguns componentes (Mecanicos, MecanicoComissoes, MeuPerfil)
+     usam --primary/--primary-dark. Apontam para o accent (laranja da marca). */
+  --primary:      #F97316;
+  --primary-dark: #ea6c0a;
   --success:      #16a34a;
   --success-bg:   #f0fdf4;
   --warning:      #d97706;

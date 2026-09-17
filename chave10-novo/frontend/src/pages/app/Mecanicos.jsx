@@ -173,7 +173,7 @@ export default function Mecanicos() {
             style={{
               padding: '6px 16px', borderRadius: 20, fontSize: 13, fontWeight: 600,
               border: filtroAtivo === f ? 'none' : '1.5px solid var(--gray-200)',
-              background: filtroAtivo === f ? 'var(--primary)' : '#fff',
+              background: filtroAtivo === f ? 'var(--brand)' : '#fff',
               color: filtroAtivo === f ? '#fff' : 'var(--gray-600)',
               cursor: 'pointer',
             }}
