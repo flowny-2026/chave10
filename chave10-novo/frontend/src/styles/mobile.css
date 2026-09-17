@@ -302,6 +302,13 @@
   .modal { background: #161b22 !important; border: 1px solid rgba(255,255,255,.1) !important; }
   .modal-header { background: #161b22 !important; border-bottom: 1px solid rgba(255,255,255,.07) !important; }
   .modal-header h2 { color: #e6edf3 !important; }
+  /* Blocos brancos internos do modal (ex: resumo de taxa no pagamento da OS) */
+  .modal-body div[style*="background:#fff"],
+  .modal-body div[style*="background: #fff"],
+  .modal-body div[style*="background:'#fff'"] {
+    background: #1c2128 !important;
+    border-color: rgba(255,255,255,.1) !important;
+  }
   .modal-close { background: rgba(255,255,255,.08) !important; color: rgba(255,255,255,.6) !important; }
   .modal-close:hover { background: rgba(255,255,255,.14) !important; }
 

@@ -16,7 +16,6 @@ function Toast({ msg, type }) {
 }
 
 export default function AppFinanceiro() {
-  const hoje = new Date();
   const [periodoTipo, setPeriodoTipo] = useState('30'); // '7', '15', '30', 'custom'
   const [filtroCustom, setFiltroCustom] = useState(false);
   const [dataInicio, setDataInicio] = useState('');
