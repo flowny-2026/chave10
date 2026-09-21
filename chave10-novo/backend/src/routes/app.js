@@ -1027,4 +1027,89 @@ router.get('/exportar', async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Erro ao exportar dados' }); }
 });
 
+// ── CONSULTA DE PLACA POR FOTO (OCR — Simples API) ────────────
+// Proxy seguro: a chave da Simples API fica só no servidor (SIMPLES_API_KEY).
+// Recebe a imagem em base64, envia para o OCR e retorna a placa + dados do
+// veículo (marca/modelo/ano/cor) quando a confiança for alta.
+router.post('/consulta-placa', async (req, res) => {
+  try {
+    const apiKey = process.env.SIMPLES_API_KEY;
+    if (!apiKey) {
+      log.error('consulta_placa', 'SIMPLES_API_KEY não configurada');
+      return res.status(503).json({ error: 'Consulta de placa não configurada no servidor' });
+    }
+
+    const { image } = req.body || {};
+    if (!image || typeof image !== 'string' || image.length < 100) {
+      return res.status(400).json({ error: 'Imagem inválida ou ausente' });
+    }
+    // Limite de tamanho defensivo (~8MB em base64) antes de repassar
+    if (image.length > 11 * 1024 * 1024) {
+      return res.status(413).json({ error: 'Imagem muito grande. Máximo ~8MB.' });
+    }
+
+    const axios = require('axios');
+    let resp;
+    try {
+      resp = await axios.post(
+        'https://api.simplesapi.com.br/v1/ocr/plate',
+        { image, include_vehicle_info: true },
+        {
+          headers: {
+            authorization: 'Bearer ' + apiKey,
+            'Content-Type': 'application/json',
+          },
+          timeout: 65000, // a API pode levar até 60s
+        }
+      );
+    } catch (apiErr) {
+      const status = apiErr.response?.status;
+      if (status === 401 || status === 403) {
+        log.error('consulta_placa', 'Chave da Simples API inválida ou sem acesso');
+        return res.status(502).json({ error: 'Falha de autenticação no serviço de placa' });
+      }
+      if (status === 422) {
+        return res.status(422).json({ error: 'Não foi possível ler a placa na imagem. Tente uma foto mais nítida.' });
+      }
+      if (status === 429) {
+        return res.status(429).json({ error: 'Limite de consultas atingido. Tente novamente mais tarde.' });
+      }
+      log.error('consulta_placa_api', apiErr.message || apiErr);
+      return res.status(502).json({ error: 'Serviço de consulta de placa indisponível' });
+    }
+
+    const data = resp.data || {};
+    const plates = Array.isArray(data.plates) ? data.plates : [];
+    if (!plates.length) {
+      return res.status(404).json({ error: 'Nenhuma placa detectada na imagem' });
+    }
+
+    // Usa a placa de maior confiança
+    const melhor = plates.reduce((a, b) => ((b.confidence || 0) > (a.confidence || 0) ? b : a));
+    const info = melhor.vehicle_info || melhor.vehicle || {};
+
+    // Normaliza os campos (a API pode variar a nomenclatura)
+    const pick = (...keys) => {
+      for (const k of keys) {
+        const v = info[k] ?? melhor[k];
+        if (v != null && String(v).trim() !== '') return String(v).trim();
+      }
+      return '';
+    };
+
+    res.json({
+      placa:      (melhor.plate || '').toUpperCase(),
+      tipo:       melhor.plate_type || '',
+      confianca:  melhor.confidence ?? null,
+      marca:      pick('marca', 'brand', 'make', 'MARCA'),
+      modelo:     pick('modelo', 'model', 'MODELO'),
+      ano:        pick('ano', 'year', 'anoModelo', 'ano_modelo', 'ANO'),
+      cor:        pick('cor', 'color', 'COR'),
+    });
+  } catch (err) {
+    log.error('consulta_placa', err);
+    res.status(500).json({ error: 'Erro interno ao consultar placa' });
+  }
+});
+
 module.exports = router;

@@ -119,6 +119,7 @@ export const api = {
       create:  (data)                => post('/app/veiculos', data),
       update:  (id, data)            => put('/app/veiculos/'+id, data),
       remove:  (id)                  => del('/app/veiculos/'+id),
+      consultaPlaca: (image)         => post('/app/consulta-placa', { image }),
     },
     os: {
       list:    (status)              => get('/app/os' + (status ? '?status='+status : '')),

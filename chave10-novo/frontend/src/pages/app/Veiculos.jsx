@@ -4,6 +4,7 @@ import { useLocalPagination } from '../../hooks/usePagination';
 import Pagination from '../../components/Pagination';
 import KPICard from '../../components/KPICard';
 import { useSegmento } from '../../hooks/useSegmento';
+import { compressImage } from '../../utils/imageCompressor';
 
 const EMPTY = { marca: '', modelo: '', ano: '', placa: '', km: '', cliente_id: '' };
 
@@ -26,6 +27,7 @@ export default function AppVeiculos() {
   const [editing, setEditing] = useState(null);
   const [historico, setHistorico] = useState({ veiculo: null, ordens: [] });
   const [toast, setToast] = useState({ msg: '', type: '' });
+  const [lendoPlaca, setLendoPlaca] = useState(false);
 
   // Filtra veículos baseado na busca
   const filteredVeiculos = allVeiculos.filter(v => {
@@ -108,6 +110,38 @@ export default function AppVeiculos() {
       load();
       showToast(`${t.veiculo} excluído`);
     } catch { showToast('Erro ao excluir', 'error'); }
+  }
+
+  // Lê a placa a partir de uma foto (Simples API OCR) e preenche os campos.
+  async function lerPlacaPorFoto(e) {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // permite reenviar a mesma foto
+    if (!file) return;
+    setLendoPlaca(true);
+    showToast('Lendo a placa da foto...', 'info');
+    try {
+      const { dataUrl } = await compressImage(file, { maxDimension: 1280, quality: 0.85 });
+      const r = await api.app.veiculos.consultaPlaca(dataUrl);
+      // Preenche apenas os campos que a API retornou; mantém o que já estava
+      setForm(f => ({
+        ...f,
+        placa:  r.placa  ? r.placa  : f.placa,
+        marca:  r.marca  ? r.marca  : f.marca,
+        modelo: r.modelo ? r.modelo : f.modelo,
+        ano:    r.ano    ? r.ano    : f.ano,
+      }));
+      if (r.marca || r.modelo) {
+        showToast(`Placa ${r.placa} — ${[r.marca, r.modelo].filter(Boolean).join(' ')}`, 'success');
+      } else if (r.placa) {
+        showToast(`Placa ${r.placa} lida. Complete os demais dados.`, 'success');
+      } else {
+        showToast('Placa lida, mas sem dados do veículo.', 'info');
+      }
+    } catch (err) {
+      showToast(err.error || 'Não foi possível ler a placa. Tente uma foto mais nítida.', 'error');
+    } finally {
+      setLendoPlaca(false);
+    }
   }
 
   function handleSearch(e) {
@@ -227,6 +261,25 @@ export default function AppVeiculos() {
               <button className="modal-close" onClick={() => setModal(null)}>✕</button>
             </div>
             <div className="modal-body">
+              {/* Leitura de placa por foto (OCR) */}
+              <div style={{ marginBottom: 16, padding: '12px 14px', background: 'var(--accent-light)', border: '1px solid var(--accent)', borderRadius: 'var(--r-sm)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <label className="btn btn-primary btn-sm" style={{ cursor: lendoPlaca ? 'wait' : 'pointer', margin: 0, opacity: lendoPlaca ? 0.7 : 1 }}>
+                    {lendoPlaca ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <svg style={{ animation: 'spin .7s linear infinite' }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                        Lendo...
+                      </span>
+                    ) : (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>📷 Ler {t.placa.toLowerCase()} por foto</span>
+                    )}
+                    <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" style={{ display: 'none' }} onChange={lerPlacaPorFoto} disabled={lendoPlaca} />
+                  </label>
+                  <span style={{ fontSize: 12, color: 'var(--gray-600)' }}>
+                    Tire uma foto da placa para preencher {t.marca.toLowerCase()}, {t.modelo.toLowerCase()} e {t.ano.toLowerCase()} automaticamente.
+                  </span>
+                </div>
+              </div>
               <form onSubmit={save}>
                 <div className="form-grid">
                   <div className="form-group">
