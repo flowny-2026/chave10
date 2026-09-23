@@ -34,6 +34,31 @@ export default function AppConfiguracoes() {
   const [toast, setToast]     = useState({ msg: '', type: '' });
   const { resetOnboarding }   = useOnboarding();
 
+  // Trocar senha (movido de "Meu Perfil")
+  const [senhaForm, setSenhaForm] = useState({ senha_atual: '', nova_senha: '', confirmar: '' });
+  const [mostrarSenhas, setMostrarSenhas] = useState(false);
+  const [salvandoSenha, setSalvandoSenha] = useState(false);
+
+  async function trocarSenha(e) {
+    e.preventDefault();
+    if (!senhaForm.senha_atual) { showToast('Informe a senha atual', 'error'); return; }
+    if (!senhaForm.nova_senha || senhaForm.nova_senha.length < 6) { showToast('Nova senha deve ter no mínimo 6 caracteres', 'error'); return; }
+    if (senhaForm.nova_senha !== senhaForm.confirmar) { showToast('As senhas não coincidem', 'error'); return; }
+    setSalvandoSenha(true);
+    try {
+      await api.patch('/app/meu-perfil/senha', {
+        senha_atual: senhaForm.senha_atual,
+        nova_senha: senhaForm.nova_senha,
+      });
+      showToast('Senha alterada com sucesso!');
+      setSenhaForm({ senha_atual: '', nova_senha: '', confirmar: '' });
+    } catch (err) {
+      showToast(err?.error || 'Erro ao alterar senha', 'error');
+    } finally {
+      setSalvandoSenha(false);
+    }
+  }
+
   function showToast(msg, type = 'success') {
     setToast({ msg, type });
     setTimeout(() => setToast({ msg: '', type: '' }), 3000);
@@ -204,6 +229,55 @@ export default function AppConfiguracoes() {
           <div className="form-actions" style={{ marginTop: 8 }}>
             <button type="submit" className="btn btn-primary" disabled={saving}>
               {saving ? '⏳ Salvando...' : '💾 Salvar configurações'}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* Trocar senha */}
+      <div className="card" style={{ maxWidth: 720, marginTop: 24 }}>
+        <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--gray-800)', marginBottom: 16 }}>🔐 Alterar senha</h3>
+        <form onSubmit={trocarSenha} className="form-grid">
+          <div className="form-group full">
+            <label>Senha atual *</label>
+            <div style={{ position: 'relative' }}>
+              <input
+                type={mostrarSenhas ? 'text' : 'password'}
+                value={senhaForm.senha_atual}
+                onChange={e => setSenhaForm(f => ({ ...f, senha_atual: e.target.value }))}
+                placeholder="••••••"
+                style={{ paddingRight: 44, width: '100%' }}
+              />
+              <button type="button" onClick={() => setMostrarSenhas(v => !v)}
+                style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: 'var(--gray-400)' }}>
+                {mostrarSenhas ? '🙈' : '👁️'}
+              </button>
+            </div>
+          </div>
+          <div className="form-group">
+            <label>Nova senha *</label>
+            <input
+              type={mostrarSenhas ? 'text' : 'password'}
+              value={senhaForm.nova_senha}
+              onChange={e => setSenhaForm(f => ({ ...f, nova_senha: e.target.value }))}
+              placeholder="Mínimo 6 caracteres"
+            />
+          </div>
+          <div className="form-group">
+            <label>Confirmar nova senha *</label>
+            <input
+              type={mostrarSenhas ? 'text' : 'password'}
+              value={senhaForm.confirmar}
+              onChange={e => setSenhaForm(f => ({ ...f, confirmar: e.target.value }))}
+              placeholder="Repita a nova senha"
+            />
+          </div>
+          {senhaForm.nova_senha && senhaForm.confirmar && senhaForm.nova_senha !== senhaForm.confirmar && (
+            <div className="form-group full" style={{ fontSize: 12, color: 'var(--danger)' }}>⚠️ As senhas não coincidem</div>
+          )}
+          <div className="form-actions full" style={{ marginTop: 4 }}>
+            <button type="submit" className="btn btn-primary" disabled={salvandoSenha}>
+              {salvandoSenha ? '⏳ Salvando...' : '🔐 Alterar senha'}
             </button>
           </div>
         </form>

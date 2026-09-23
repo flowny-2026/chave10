@@ -47,7 +47,9 @@ const appNavGestao = [
   { to: '/app/pos-venda',      label: 'Pós-venda',     icon: IC.mensagens,     soNaoFuncionario: true, soNaoMecanico: true, badge: 'Novo' },
   { to: '/app/notificacoes',   label: 'Notificações',  icon: IC.notificacoes },
   { to: '/app/configuracoes',  label: 'Configurações', icon: IC.configuracoes, soNaoFuncionario: true, soNaoMecanico: true },
-  { to: '/app/meu-perfil',     label: 'Meu Perfil',    icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
+  // "Meu Perfil" permanece acessível apenas ao mecânico (comissões + senha),
+  // filtrado no render do menu. Admin/gerente troca a senha em Configurações.
+  { to: '/app/meu-perfil',     label: 'Meu Perfil',    icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>, soMecanico: true },
 ];
 
 function getUser() {
@@ -659,6 +661,8 @@ export default function Layout({ area }) {
             <nav className="sidebar-nav">
               {appNavGestao
                 .filter(item => {
+                  // Itens exclusivos do mecânico (ex.: Meu Perfil)
+                  if (item.soMecanico) return user?.perfil === 'mecanico';
                   if (user?.perfil === 'mecanico'    && item.soNaoMecanico)    return false;
                   if (user?.perfil === 'funcionario' && item.soNaoFuncionario) return false;
                   return true;
