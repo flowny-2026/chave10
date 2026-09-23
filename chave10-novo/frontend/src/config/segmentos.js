@@ -28,7 +28,7 @@ const BASE_VEICULAR = {
   kmPlaceholder: 'Ex: 45000',
   peca:       'Peça',
   pecas:      'Peças',
-  pecaLabel:  '🔩 Peças utilizadas',
+  pecaLabel:  'Peças utilizadas',
   os:         'Ordem de Serviço',
   oss:        'Ordens de Serviço',
   novaOs:     'Nova OS',
@@ -52,7 +52,7 @@ const BASE_NAUTICO = {
   kmPlaceholder: 'Ex: 1500',
   peca:       'Peça',
   pecas:      'Peças',
-  pecaLabel:  '🔩 Peças utilizadas',
+  pecaLabel:  'Peças utilizadas',
   os:         'Ordem de Serviço',
   oss:        'Ordens de Serviço',
   novaOs:     'Nova OS',
@@ -69,7 +69,6 @@ const BASE_NAUTICO = {
 export const SEGMENTOS = {
   carro: {
     label:      'Carro',
-    emoji:      '🚗',
     ...BASE_VEICULAR,
     veiculo:    'Veículo',
     veiculos:   'Veículos',
@@ -79,7 +78,6 @@ export const SEGMENTOS = {
 
   moto: {
     label:      'Moto',
-    emoji:      '🏍️',
     ...BASE_VEICULAR,
     veiculo:    'Moto',
     veiculos:   'Motos',
@@ -89,7 +87,6 @@ export const SEGMENTOS = {
 
   caminhao: {
     label:      'Caminhão',
-    emoji:      '🚚',
     ...BASE_VEICULAR,
     veiculo:    'Caminhão',
     veiculos:   'Caminhões',
@@ -99,7 +96,6 @@ export const SEGMENTOS = {
 
   jetski: {
     label:      'Jet Ski',
-    emoji:      '🌊',
     ...BASE_NAUTICO,
     veiculo:    'Jet Ski',
     veiculos:   'Jet Skis',
@@ -109,7 +105,6 @@ export const SEGMENTOS = {
 
   barco: {
     label:      'Barco',
-    emoji:      '⛵',
     ...BASE_NAUTICO,
     veiculo:    'Embarcação',
     veiculos:   'Embarcações',

@@ -156,7 +156,7 @@ export default function Mecanicos() {
       {/* Cabeçalho */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">🔧 Mecânicos</h1>
+          <h1 className="page-title">Mecânicos</h1>
           <p className="page-subtitle">Gerencie os mecânicos da sua oficina e suas comissões</p>
         </div>
         <button className="btn btn-primary" onClick={abrirCriar}>
@@ -273,7 +273,7 @@ export default function Mecanicos() {
                   style={{ flex: 1, fontSize: 13, padding: '8px 0' }}
                   onClick={() => abrirEditar(mec)}
                 >
-                  ✏️ Editar
+                  Editar
                 </button>
                 <button
                   onClick={() => setConfirmDesativar(mec)}
@@ -299,7 +299,7 @@ export default function Mecanicos() {
           <div className="modal" style={{ maxWidth: 520, width: '100%' }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h2 style={{ fontSize: 'var(--font-lg)', fontWeight: 'var(--fw-bold)', color: 'var(--gray-900)' }}>
-                {modal === 'criar' ? '+ Novo Mecânico' : '✏️ Editar Mecânico'}
+                {modal === 'criar' ? '+ Novo Mecânico' : 'Editar Mecânico'}
               </h2>
               <button className="modal-close" onClick={fecharModal}>✕</button>
             </div>

@@ -271,7 +271,7 @@ export default function MecanicoComissoes() {
               </select>
             </div>
             <button className="btn btn-primary" style={{ height: 36, fontSize: 13 }} onClick={aplicarFiltros}>
-              🔍 Filtrar
+              Filtrar
             </button>
             <button className="btn btn-outline" style={{ height: 36, fontSize: 13 }} onClick={() => {
               const f = { inicio: '', fim: '', status: '' };

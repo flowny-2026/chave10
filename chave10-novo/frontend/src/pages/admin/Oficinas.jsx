@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api';
 import CepInput from '../../components/CepInput';
+import { IcoSearch, IcoEdit, IcoTrash, IcoCard, IcoLock, IcoCheck, IcoKey, IcoRefresh, IcoUnlink } from '../../components/ActionIcons';
 
 const fmt = {
   currency: v => 'R$ ' + parseFloat(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.'),
@@ -139,7 +140,7 @@ export default function AdminOficinas() {
         <div className="page-actions">
           {selected.size > 0 && (
             <button className="btn btn-secondary btn-sm" onClick={()=>setModal('lote')}>
-              🔄 Renovar {selected.size} selecionada(s)
+              <IcoRefresh /> Renovar {selected.size} selecionada(s)
             </button>
           )}
           <select className="dash-select" value={filterStatus} onChange={e=>setFilterStatus(e.target.value)}>
@@ -197,8 +198,6 @@ export default function AdminOficinas() {
                     <td>
                       <span style={{color:vencido?'var(--danger)':vencendo?'var(--warning)':'var(--gray-700)',fontWeight:vencido||vencendo?700:400}}>
                         {fmt.date(o.data_vencimento)}
-                        {vencendo&&' ⚠️'}
-                        {vencido&&' 🔴'}
                       </span>
                     </td>
                     <td style={{fontSize:12,color:'var(--gray-400)'}}>
@@ -207,14 +206,14 @@ export default function AdminOficinas() {
                     <td><span className={`badge ${STATUS_CLASS[o.status_assinatura]}`}>{STATUS_LABEL[o.status_assinatura]}</span></td>
                     <td>
                       <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
-                        <button className="btn btn-outline btn-sm" onClick={()=>abrirDetalhes(o)} title="Ver detalhes">🔍</button>
-                        <button className="btn btn-outline btn-sm" onClick={()=>{setForm({...o});setEditing(o.id);setModal('oficina');}}>✏️</button>
+                        <button className="btn btn-outline btn-sm" onClick={()=>abrirDetalhes(o)} title="Ver detalhes"><IcoSearch /></button>
+                        <button className="btn btn-outline btn-sm" onClick={()=>{setForm({...o});setEditing(o.id);setModal('oficina');}} title="Editar"><IcoEdit /></button>
                         <button className="btn btn-outline btn-sm" onClick={()=>{setSelectedOf(o);setUserForm(EMPTY_USR);setShowSenhaUser(false);setModal('usuario');}}>+ Login</button>
-                        <button className="btn btn-success btn-sm" onClick={()=>{setSelectedOf(o);setPagForm({...EMPTY_PAG});setModal('pagamento');}}>💳</button>
+                        <button className="btn btn-success btn-sm" onClick={()=>{setSelectedOf(o);setPagForm({...EMPTY_PAG});setModal('pagamento');}} title="Registrar pagamento"><IcoCard /></button>
                         {o.status_assinatura!=='blocked'
-                          ? <button className="btn btn-danger btn-sm" onClick={()=>setStatus(o.id,'blocked')}>🔒</button>
-                          : <button className="btn btn-success btn-sm" onClick={()=>setStatus(o.id,'active')}>✓</button>}
-                        <button className="btn btn-ghost btn-sm" style={{color:'var(--danger)'}} onClick={()=>removeOficina(o.id)}>🗑</button>
+                          ? <button className="btn btn-danger btn-sm" onClick={()=>setStatus(o.id,'blocked')} title="Bloquear"><IcoLock /></button>
+                          : <button className="btn btn-success btn-sm" onClick={()=>setStatus(o.id,'active')} title="Ativar"><IcoCheck /></button>}
+                        <button className="btn btn-ghost btn-sm" style={{color:'var(--danger)'}} onClick={()=>removeOficina(o.id)} title="Excluir"><IcoTrash /></button>
                       </div>
                     </td>
                   </tr>
@@ -230,7 +229,7 @@ export default function AdminOficinas() {
         <div className="modal-overlay open">
           <div className="modal" style={{maxWidth:680}}>
             <div className="modal-header">
-              <h2>🔍 {selectedOf?.nome}</h2>
+              <h2>{selectedOf?.nome}</h2>
               <button className="modal-close" onClick={()=>setModal(null)}>✕</button>
             </div>
             <div className="modal-body">
@@ -239,14 +238,13 @@ export default function AdminOficinas() {
                   {/* Uso do sistema */}
                   <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:12,marginBottom:20}}>
                     {[
-                      {label:'Clientes',val:detalhes.uso.clientes,icon:'👥'},
-                      {label:'Veículos',val:detalhes.uso.veiculos,icon:'🚗'},
-                      {label:'OS total',val:detalhes.uso.os,icon:'🔧'},
-                      {label:'OS este mês',val:detalhes.uso.osMes,icon:'📅'},
-                      {label:'Faturamento',val:fmt.currency(detalhes.uso.faturamento),icon:'💰',small:true},
+                      {label:'Clientes',val:detalhes.uso.clientes},
+                      {label:'Veículos',val:detalhes.uso.veiculos},
+                      {label:'OS total',val:detalhes.uso.os},
+                      {label:'OS este mês',val:detalhes.uso.osMes},
+                      {label:'Faturamento',val:fmt.currency(detalhes.uso.faturamento),small:true},
                     ].map(item=>(
                       <div key={item.label} style={{background:'var(--gray-50)',borderRadius:'var(--r-sm)',padding:'12px 10px',textAlign:'center'}}>
-                        <div style={{fontSize:20,marginBottom:4}}>{item.icon}</div>
                         <div style={{fontFamily:'Poppins,sans-serif',fontSize:item.small?13:18,fontWeight:800,color:'var(--gray-900)'}}>{item.val}</div>
                         <div style={{fontSize:11,color:'var(--gray-400)',marginTop:2}}>{item.label}</div>
                       </div>
@@ -292,7 +290,7 @@ export default function AdminOficinas() {
                             className="btn btn-outline btn-sm"
                             title="Redefinir senha"
                             onClick={()=>{ setResetForm({usuario_id:u.id,nome:u.nome,nova_senha:''}); setShowNovaSenha(false); setModal('resetSenha'); }}
-                          >🔑 Redefinir senha</button>
+                          ><IcoKey /> Redefinir senha</button>
                         </div>
                       </div>
                     )) : <p style={{fontSize:13,color:'var(--gray-400)'}}>Nenhum usuário cadastrado</p>}
@@ -311,8 +309,8 @@ export default function AdminOficinas() {
 
                   <div className="form-actions" style={{marginTop:16}}>
                     <button className="btn btn-outline" onClick={()=>setModal(null)}>Fechar</button>
-                    <button className="btn btn-success" onClick={()=>{setModal('pagamento');}}>💳 Registrar pagamento</button>
-                    <button className="btn btn-primary" onClick={()=>{setForm({...detalhes.oficina});setEditing(detalhes.oficina.id);setModal('oficina');}}>✏️ Editar</button>
+                    <button className="btn btn-success" onClick={()=>{setModal('pagamento');}}><IcoCard /> Registrar pagamento</button>
+                    <button className="btn btn-primary" onClick={()=>{setForm({...detalhes.oficina});setEditing(detalhes.oficina.id);setModal('oficina');}}><IcoEdit /> Editar</button>
                   </div>
                 </>
               )}
@@ -326,7 +324,7 @@ export default function AdminOficinas() {
         <div className="modal-overlay open">
           <div className="modal" style={{maxWidth:440}}>
             <div className="modal-header">
-              <h2>🔄 Renovar {selected.size} oficina(s)</h2>
+              <h2>Renovar {selected.size} oficina(s)</h2>
               <button className="modal-close" onClick={()=>setModal(null)}>✕</button>
             </div>
             <div className="modal-body">
@@ -354,7 +352,7 @@ export default function AdminOficinas() {
                 </div>
                 <div className="form-actions">
                   <button type="button" className="btn btn-outline" onClick={()=>setModal(null)}>Cancelar</button>
-                  <button type="submit" className="btn btn-primary">🔄 Renovar todas</button>
+                  <button type="submit" className="btn btn-primary"><IcoRefresh /> Renovar todas</button>
                 </div>
               </form>
             </div>
@@ -422,8 +420,8 @@ export default function AdminOficinas() {
                   <div className="form-group">
                     <label>Perfil *</label>
                     <select value={userForm.perfil} onChange={e=>setUserForm(f=>({...f,perfil:e.target.value}))}>
-                      <option value="funcionario">👷 Funcionário — sem acesso financeiro</option>
-                      <option value="admin_oficina">👔 Gerente — acesso completo</option>
+                      <option value="funcionario">Funcionário — sem acesso financeiro</option>
+                      <option value="admin_oficina">Gerente — acesso completo</option>
                     </select>
                     <small style={{fontSize:11,color:'var(--gray-400)',marginTop:4,display:'block'}}>
                       {userForm.perfil==='funcionario'
@@ -447,7 +445,7 @@ export default function AdminOficinas() {
         <div className="modal-overlay open">
           <div className="modal" style={{maxWidth:420}}>
             <div className="modal-header">
-              <h2>🔑 Redefinir senha</h2>
+              <h2>Redefinir senha</h2>
               <button className="modal-close" onClick={()=>setModal(null)}>✕</button>
             </div>
             <div className="modal-body">
@@ -532,7 +530,7 @@ export default function AdminOficinas() {
       {pendentes.length > 0 && (
         <div className="card" style={{marginTop:24}}>
           <div className="card-header">
-            <div className="card-title">👥 Todos os usuários ({pendentes.length})</div>
+            <div className="card-title">Todos os usuários ({pendentes.length})</div>
           </div>
           <div className="table-wrapper">
             <table>
@@ -551,13 +549,13 @@ export default function AdminOficinas() {
                             if(!window.confirm(`Desvincular ${u.nome} da oficina #${u.oficina_id}?`)) return;
                             try { await api.admin.usuarios.desvincular(u.id); loadPendentes(); showToast('Usuário desvinculado'); }
                             catch { showToast('Erro','error'); }
-                          }}>🔗 Desvincular</button>
+                          }}><IcoUnlink /> Desvincular</button>
                         )}
                         <button className="btn btn-danger btn-sm" onClick={async()=>{
                           if(!window.confirm(`Deletar usuário ${u.nome} (${u.email})?`)) return;
                           try { await api.admin.usuarios.remove(u.id); loadPendentes(); showToast('Usuário deletado'); }
                           catch { showToast('Erro ao deletar','error'); }
-                        }}>🗑️</button>
+                        }} title="Excluir"><IcoTrash /></button>
                       </div>
                     </td>
                   </tr>

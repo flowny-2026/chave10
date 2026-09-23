@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api';
 import KPICard from '../../components/KPICard';
+import { IcoEdit, IcoTrash, IcoCheck } from '../../components/ActionIcons';
 
 const fmt = {
   currency: v => 'R$ ' + parseFloat(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.'),
@@ -131,7 +132,7 @@ export default function AppFinanceiro() {
             <option value="7">Últimos 7 dias</option>
             <option value="15">Últimos 15 dias</option>
             <option value="30">Últimos 30 dias</option>
-            <option value="custom">📅 Personalizado</option>
+            <option value="custom">Personalizado</option>
           </select>
           {filtroCustom && (
             <div style={{display:'flex',gap:6,alignItems:'center'}}>
@@ -207,7 +208,7 @@ export default function AppFinanceiro() {
 
         return (
           <div className="card" style={{marginBottom:20}}>
-            <div className="card-header"><div className="card-title">📊 Formas de pagamento do mês</div></div>
+            <div className="card-header"><div className="card-title">Formas de pagamento do mês</div></div>
             <div style={{display:'flex',alignItems:'center',gap:24,flexWrap:'wrap',justifyContent:'center'}}>
               {/* Pizza SVG */}
               <svg viewBox="0 0 100 100" style={{width:140,height:140,flexShrink:0,maxWidth:'40%'}}>
@@ -298,7 +299,7 @@ export default function AppFinanceiro() {
       {parcelas.filter(p=>!p.recebido).length > 0 && (
         <div className="card" style={{marginBottom:20}}>
           <div className="card-header">
-            <div className="card-title">💳 Parcelas a receber</div>
+            <div className="card-title">Parcelas a receber</div>
             <span style={{fontSize:12,color:'var(--gray-400)'}}>{parcelas.filter(p=>!p.recebido).length} pendente(s)</span>
           </div>
           {(() => {
@@ -317,13 +318,11 @@ export default function AppFinanceiro() {
                   <div className="fin-alerta" style={{borderRadius:'var(--r-sm)',padding:'12px 16px',marginBottom:16}}>
                     {parcelasHoje.length > 0 && (
                       <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:parcelasAtrasadas.length?8:0}}>
-                        <span style={{fontSize:18}}>🔔</span>
                         <span className="fin-alerta-hoje" style={{fontSize:13,fontWeight:600}}>Hoje você recebe <strong>{fmt.currency(totalHoje)}</strong> ({parcelasHoje.length} parcela{parcelasHoje.length>1?'s':''})</span>
                       </div>
                     )}
                     {parcelasAtrasadas.length > 0 && (
                       <div style={{display:'flex',alignItems:'center',gap:8}}>
-                        <span style={{fontSize:18}}>⚠️</span>
                         <span className="fin-alerta-atraso" style={{fontSize:13,fontWeight:600}}>{parcelasAtrasadas.length} parcela{parcelasAtrasadas.length>1?'s':''} atrasada{parcelasAtrasadas.length>1?'s':''} — {fmt.currency(totalAtrasado)}</span>
                       </div>
                     )}
@@ -381,9 +380,9 @@ export default function AppFinanceiro() {
                       <td><strong style={{color:'var(--danger)'}}>{fmt.currency(d.valor)}</strong></td>
                       <td>
                         <div style={{display:'flex',gap:4}}>
-                          {!d.pago&&<button className="btn btn-success btn-sm" onClick={()=>marcarPago(d.id)} title="Marcar como pago">✓</button>}
-                          <button className="btn btn-ghost btn-sm" onClick={()=>{setForm({descricao:d.descricao,categoria:d.categoria,valor:d.valor,data:d.data,vencimento:d.vencimento||'',pago:!!d.pago,obs:d.obs||''});setEditing(d.id);setModal(true);}}>✏️</button>
-                          <button className="btn btn-ghost btn-sm" style={{color:'var(--danger)'}} onClick={()=>removeDespesa(d.id)}>🗑️</button>
+                          {!d.pago&&<button className="btn btn-success btn-sm" onClick={()=>marcarPago(d.id)} title="Marcar como pago"><IcoCheck /></button>}
+                          <button className="btn btn-ghost btn-sm" title="Editar" onClick={()=>{setForm({descricao:d.descricao,categoria:d.categoria,valor:d.valor,data:d.data,vencimento:d.vencimento||'',pago:!!d.pago,obs:d.obs||''});setEditing(d.id);setModal(true);}}><IcoEdit /></button>
+                          <button className="btn btn-ghost btn-sm" title="Excluir" style={{color:'var(--danger)'}} onClick={()=>removeDespesa(d.id)}><IcoTrash /></button>
                         </div>
                       </td>
                     </tr>
@@ -406,7 +405,7 @@ export default function AppFinanceiro() {
         <div className="modal-overlay open">
           <div className="modal">
             <div className="modal-header">
-              <h2>{editing?'✏️ Editar despesa':'📄 Nova despesa'}</h2>
+              <h2>{editing?'Editar despesa':'Nova despesa'}</h2>
               <button className="modal-close" onClick={()=>setModal(false)}>✕</button>
             </div>
             <div className="modal-body">
@@ -448,7 +447,7 @@ export default function AppFinanceiro() {
                 </div>
                 <div className="form-actions">
                   <button type="button" className="btn btn-outline" onClick={()=>setModal(false)}>Cancelar</button>
-                  <button type="submit" className="btn btn-primary">💾 Salvar</button>
+                  <button type="submit" className="btn btn-primary">Salvar</button>
                 </div>
               </form>
             </div>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../../api';
 import FotoUploader from '../../components/FotoUploader';
 import { useSegmento, getTermosSegmento } from '../../hooks/useSegmento';
+import { IcoView, IcoEdit, IcoTrash, IcoPrint, IcoWhatsApp } from '../../components/ActionIcons';
 
 const fmt = {
   currency: v => 'R$ ' + parseFloat(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.'),
@@ -411,11 +412,11 @@ export default function AppOrcamentos() {
                         <td><span className={`badge ${STATUS_CLASS[orc.status]||'badge-gray'}`}>{STATUS_LABEL[orc.status]||orc.status}</span></td>
                         <td>
                           <div style={{display:'flex',gap:4}}>
-                            <button className="btn btn-outline btn-sm" onClick={()=>openView(orc)}>👁️</button>
-                            <button className="btn btn-outline btn-sm" onClick={()=>imprimir(orc)} title="Imprimir">🖨️</button>
-                            <button className="btn btn-outline btn-sm" onClick={()=>enviarWhatsApp(orc)} title="WhatsApp">💬</button>
-                            <button className="btn btn-outline btn-sm" onClick={()=>openEdit(orc)}>✏️</button>
-                            <button className="btn btn-outline btn-sm" onClick={()=>remove(orc.id)}>🗑️</button>
+                            <button className="btn btn-outline btn-sm" onClick={()=>openView(orc)} title="Ver"><IcoView /></button>
+                            <button className="btn btn-outline btn-sm" onClick={()=>imprimir(orc)} title="Imprimir"><IcoPrint /></button>
+                            <button className="btn btn-outline btn-sm" onClick={()=>enviarWhatsApp(orc)} title="WhatsApp"><IcoWhatsApp /></button>
+                            <button className="btn btn-outline btn-sm" onClick={()=>openEdit(orc)} title="Editar"><IcoEdit /></button>
+                            <button className="btn btn-outline btn-sm" onClick={()=>remove(orc.id)} title="Excluir"><IcoTrash /></button>
                           </div>
                         </td>
                       </tr>
@@ -446,10 +447,10 @@ export default function AppOrcamentos() {
                   <div className="os-card-bottom">
                     {!isFuncionario&&<span className="os-card-valor">{fmt.currency(total)}</span>}
                     <div className="os-card-actions">
-                      <button className="btn btn-outline btn-sm" onClick={e=>{e.stopPropagation();imprimir(orc);}}>🖨️</button>
-                      <button className="btn btn-outline btn-sm" onClick={e=>{e.stopPropagation();openEdit(orc);}}>✏️</button>
-                      <button className="btn btn-outline btn-sm" onClick={e=>{e.stopPropagation();enviarWhatsApp(orc);}}>💬</button>
-                      <button className="btn btn-outline btn-sm" onClick={e=>{e.stopPropagation();remove(orc.id);}}>🗑️</button>
+                      <button className="btn btn-outline btn-sm" onClick={e=>{e.stopPropagation();imprimir(orc);}} title="Imprimir"><IcoPrint /></button>
+                      <button className="btn btn-outline btn-sm" onClick={e=>{e.stopPropagation();openEdit(orc);}} title="Editar"><IcoEdit /></button>
+                      <button className="btn btn-outline btn-sm" onClick={e=>{e.stopPropagation();enviarWhatsApp(orc);}} title="WhatsApp"><IcoWhatsApp /></button>
+                      <button className="btn btn-outline btn-sm" onClick={e=>{e.stopPropagation();remove(orc.id);}} title="Excluir"><IcoTrash /></button>
                     </div>
                   </div>
                   <div className="os-card-tap-hint">
@@ -549,9 +550,9 @@ export default function AppOrcamentos() {
                   <div className="form-group">
                     <label>Status</label>
                     <select value={form.status} onChange={e=>setForm(f=>({...f,status:e.target.value}))}>
-                      <option value="pendente">⏳ Pendente</option>
-                      <option value="aprovado">✅ Aprovado</option>
-                      <option value="rejeitado">❌ Rejeitado</option>
+                      <option value="pendente">Pendente</option>
+                      <option value="aprovado">Aprovado</option>
+                      <option value="rejeitado">Rejeitado</option>
                     </select>
                   </div>
                   <div className="form-group"><label>Validade</label><input type="date" value={form.validade} onChange={e=>setForm(f=>({...f,validade:e.target.value}))} /></div>
@@ -562,7 +563,7 @@ export default function AppOrcamentos() {
                 <div style={{ marginTop: 16, marginBottom: 16, padding: '14px 16px', background: 'var(--gray-50)', borderRadius: 10, border: '1px solid var(--gray-200)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gray-700)' }}>
-                      📷 Fotos dos problemas {pendingPhotos.length > 0 && <span style={{ fontWeight: 400, color: 'var(--gray-400)' }}>({pendingPhotos.length} selecionada{pendingPhotos.length > 1 ? 's' : ''})</span>}
+                      Fotos dos problemas {pendingPhotos.length > 0 && <span style={{ fontWeight: 400, color: 'var(--gray-400)' }}>({pendingPhotos.length} selecionada{pendingPhotos.length > 1 ? 's' : ''})</span>}
                     </div>
                     <div style={{ display: 'flex', gap: 6 }}>
                       <label style={{
@@ -570,7 +571,7 @@ export default function AppOrcamentos() {
                         padding: '5px 10px', borderRadius: 7, cursor: 'pointer',
                         background: 'var(--accent)', color: '#fff', fontSize: 12, fontWeight: 600,
                       }}>
-                        📸 Câmera
+                        Câmera
                         <input
                           type="file"
                           accept="image/jpeg,image/png,image/webp"
@@ -584,7 +585,7 @@ export default function AppOrcamentos() {
                         padding: '5px 10px', borderRadius: 7, cursor: 'pointer',
                         background: 'var(--brand)', color: '#fff', fontSize: 12, fontWeight: 600,
                       }}>
-                        🖼️ Galeria
+                        Galeria
                         <input
                           type="file"
                           accept="image/jpeg,image/png,image/webp"
@@ -617,7 +618,7 @@ export default function AppOrcamentos() {
 
                 <div className="form-actions">
                   <button type="button" className="btn btn-outline" onClick={()=>setModal(null)}>Cancelar</button>
-                  <button type="submit" className="btn btn-primary">💾 Salvar</button>
+                  <button type="submit" className="btn btn-primary">Salvar</button>
                 </div>
               </form>
             </div>
@@ -717,7 +718,6 @@ export default function AppOrcamentos() {
                   />
                 ) : (
                   <div style={{marginTop:16,padding:'16px',background:'var(--gray-50)',borderRadius:10,border:'2px dashed var(--gray-200)',textAlign:'center'}}>
-                    <div style={{fontSize:24,marginBottom:6}}>📷</div>
                     <div style={{fontSize:12,color:'var(--gray-500)'}}>Nenhuma foto vinculada a este orçamento</div>
                     <div style={{fontSize:11,color:'var(--gray-400)',marginTop:4}}>Ao criar o orçamento, adicione fotos para que apareçam aqui e no link de aprovação</div>
                   </div>
@@ -725,12 +725,12 @@ export default function AppOrcamentos() {
 
                 <div className="os-view-actions">
                   <button className="btn btn-outline" onClick={()=>setModal(null)}>Fechar</button>
-                  <button className="btn btn-outline" onClick={()=>imprimir(viewing)}>🖨️ Imprimir</button>
-                  <button className="btn btn-outline" onClick={()=>enviarWhatsApp(viewing)}>💬 WhatsApp</button>
-                  <button className="btn btn-outline" style={{background:'#25D366',color:'#fff',borderColor:'#25D366'}} onClick={()=>enviarLinkAprovacao(viewing)}>🔗 Link de Aprovação</button>
-                  <button className="btn btn-primary" onClick={()=>openEdit(viewing)}>✏️ Editar</button>
-                  {viewing.status==='pendente'&&<button className="btn btn-success" onClick={()=>setStatus(viewing.id,'aprovado')}>✅ Aprovar</button>}
-                  {viewing.status==='pendente'&&<button className="btn btn-outline" style={{color:'var(--danger)',borderColor:'var(--danger)'}} onClick={()=>setStatus(viewing.id,'rejeitado')}>❌ Rejeitar</button>}
+                  <button className="btn btn-outline" onClick={()=>imprimir(viewing)}><IcoPrint /> Imprimir</button>
+                  <button className="btn btn-outline" onClick={()=>enviarWhatsApp(viewing)}><IcoWhatsApp /> WhatsApp</button>
+                  <button className="btn btn-outline" style={{background:'#25D366',color:'#fff',borderColor:'#25D366'}} onClick={()=>enviarLinkAprovacao(viewing)}>Link de Aprovação</button>
+                  <button className="btn btn-primary" onClick={()=>openEdit(viewing)}><IcoEdit /> Editar</button>
+                  {viewing.status==='pendente'&&<button className="btn btn-success" onClick={()=>setStatus(viewing.id,'aprovado')}>Aprovar</button>}
+                  {viewing.status==='pendente'&&<button className="btn btn-outline" style={{color:'var(--danger)',borderColor:'var(--danger)'}} onClick={()=>setStatus(viewing.id,'rejeitado')}>Rejeitar</button>}
                   {viewing.status!=='pendente'&&<button className="btn btn-outline" onClick={()=>setStatus(viewing.id,'pendente')}>↩ Reabrir</button>}
                 </div>
               </div>

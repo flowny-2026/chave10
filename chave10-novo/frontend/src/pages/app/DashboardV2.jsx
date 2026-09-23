@@ -144,14 +144,14 @@ function ModernChart({ data }) {
 // Card de item do Painel do Dia
 // Usa classes CSS reais (.painel-item*) em vez de estilos inline, garantindo
 // que o tema (claro/escuro) seja aplicado corretamente via CSS.
-function PainelItem({ emoji, color, label, count, items, renderItem, onAction, actionLabel, emptyMsg }) {
+function PainelItem({ color, label, count, items, renderItem, onAction, actionLabel, emptyMsg }) {
   const [expanded, setExpanded] = useState(false);
   if (!count) return null;
   return (
     <div className="painel-item">
       <div className="painel-item-header" onClick={() => setExpanded(e => !e)}>
         <div className="painel-item-left">
-          <span className="painel-item-emoji">{emoji}</span>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0, display: 'inline-block' }} />
           <div>
             <div className="painel-item-label">{label}</div>
             {!expanded && <div className="painel-item-count">{count} {count===1?'item':'itens'}</div>}
@@ -250,14 +250,14 @@ export default function DashboardV2() {
 
   // Mensagem de assistente inteligente
   function getMensagemAssistente() {
-    if (osAtrasadas.length > 0)      return `⚠️ ${osAtrasadas.length} OS com mais de 3 dias em aberto.`;
-    if (osProntas.length > 0)        return `🚗 ${osProntas.length} veículo${osProntas.length>1?'s':''} pronto${osProntas.length>1?'s':''} para entrega.`;
-    if (orcAguardando.length > 0)    return `📋 ${orcAguardando.length} orçamento${orcAguardando.length>1?'s':''} aguardando resposta.`;
-    if (agendaHoje.length > 0)       return `📅 ${agendaHoje.length} cliente${agendaHoje.length>1?'s':''} agendado${agendaHoje.length>1?'s':''} para hoje.`;
-    if (despVencidas.length > 0)     return `💸 ${despVencidas.length} conta${despVencidas.length>1?'s':''} vencida${despVencidas.length>1?'s':''} sem pagamento.`;
-    if (semFatHoje)                  return `💡 Você ainda não registrou faturamento hoje.`;
-    if (emAndamento > 0)             return `🔧 ${emAndamento} OS em andamento. Boa produção!`;
-    return `✅ Tudo em ordem por aqui. Bom trabalho!`;
+    if (osAtrasadas.length > 0)      return `${osAtrasadas.length} OS com mais de 3 dias em aberto.`;
+    if (osProntas.length > 0)        return `${osProntas.length} veículo${osProntas.length>1?'s':''} pronto${osProntas.length>1?'s':''} para entrega.`;
+    if (orcAguardando.length > 0)    return `${orcAguardando.length} orçamento${orcAguardando.length>1?'s':''} aguardando resposta.`;
+    if (agendaHoje.length > 0)       return `${agendaHoje.length} cliente${agendaHoje.length>1?'s':''} agendado${agendaHoje.length>1?'s':''} para hoje.`;
+    if (despVencidas.length > 0)     return `${despVencidas.length} conta${despVencidas.length>1?'s':''} vencida${despVencidas.length>1?'s':''} sem pagamento.`;
+    if (semFatHoje)                  return `Você ainda não registrou faturamento hoje.`;
+    if (emAndamento > 0)             return `${emAndamento} OS em andamento. Boa produção!`;
+    return `Tudo em ordem por aqui. Bom trabalho!`;
   }
 
   return (
@@ -269,7 +269,7 @@ export default function DashboardV2() {
       <div className="dash-greeting">
         <div className="dash-greeting-left">
           <div className="dash-greeting-title">
-            {saudacao()}, {nomeUsuario} 👋
+            {saudacao()}, {nomeUsuario}
           </div>
           <div className="dash-greeting-msg">{getMensagemAssistente()}</div>
         </div>
@@ -284,14 +284,13 @@ export default function DashboardV2() {
         <div className="painel-do-dia">
           <div className="painel-do-dia-header">
             <div className="painel-do-dia-title">
-              {totalAtencao > 0 ? '🚨' : '💡'}
               <span>Atenção hoje</span>
               {totalAtencao > 0 && <span className="painel-badge">{totalAtencao}</span>}
             </div>
           </div>
           <div style={{padding:'8px 12px 12px',display:'flex',flexDirection:'column',gap:6}}>
             <PainelItem
-              emoji="🟢" color="#16a34a"
+              color="#16a34a"
             label={`${t.veiculos} prontos para entrega`}
               count={osProntas.length}
               items={osProntas}
@@ -310,7 +309,7 @@ export default function DashboardV2() {
               )}
             />
             <PainelItem
-              emoji="🟠" color="#f97316"
+              color="#f97316"
               label="Orçamentos aguardando aprovação"
               count={orcAguardando.length}
               items={orcAguardando}
@@ -324,7 +323,7 @@ export default function DashboardV2() {
               )}
             />
             <PainelItem
-              emoji="📅" color="#0284c7"
+              color="#0284c7"
               label="Agendamentos de hoje"
               count={agendaHoje.length}
               items={agendaHoje}
@@ -341,7 +340,7 @@ export default function DashboardV2() {
               )}
             />
             <PainelItem
-              emoji="🔧" color="#dc2626"
+              color="#dc2626"
               label="OS atrasadas (+ 3 dias)"
               count={osAtrasadas.length}
               items={osAtrasadas}
@@ -361,7 +360,7 @@ export default function DashboardV2() {
             />
             {!isFuncionario && (
               <PainelItem
-                emoji="💰" color="#dc2626"
+                color="#dc2626"
                 label="Contas vencidas sem pagamento"
                 count={despVencidas.length}
                 items={despVencidas}
@@ -377,7 +376,7 @@ export default function DashboardV2() {
             )}
             {agendaAmanha.length > 0 && (
               <PainelItem
-                emoji="📆" color="#7c3aed"
+                color="#7c3aed"
                 label="Agendamentos amanhã"
                 count={agendaAmanha.length}
                 items={agendaAmanha}
@@ -395,7 +394,6 @@ export default function DashboardV2() {
               <div className="painel-item">
                 <div className="painel-item-header" style={{cursor:'default'}}>
                   <div className="painel-item-left">
-                    <span className="painel-item-emoji">💡</span>
                     <div className="painel-item-label">Você ainda não registrou faturamento hoje</div>
                   </div>
                   <button
@@ -434,7 +432,7 @@ export default function DashboardV2() {
       {!isFuncionario && (
         <div className="meta-progress-premium" style={{marginBottom:20}}>
           <div className="meta-header">
-            <div className="meta-title"><span>🎯</span><span>Meta do mês</span></div>
+            <div className="meta-title"><span>Meta do mês</span></div>
             <button className="btn btn-ghost btn-sm" onClick={()=>{setMetaInput(meta||'');setShowMeta(true);}}>
               {meta>0?'Editar':'Definir meta'}
             </button>
@@ -449,7 +447,7 @@ export default function DashboardV2() {
                 <div className="meta-progress-fill" style={{width:`${pctMeta}%`}}/>
               </div>
               <div className="meta-progress-hint" style={{marginTop:10,fontSize:12,fontWeight:600,textAlign:'center'}}>
-                {pctMeta>=100?'🎉 Meta atingida!':`Faturar ${fmt.currency(porDia)}/dia nos próximos ${diasRestantes} dias`}
+                {pctMeta>=100?'Meta atingida!':`Faturar ${fmt.currency(porDia)}/dia nos próximos ${diasRestantes} dias`}
               </div>
             </>
           ) : (
@@ -466,7 +464,7 @@ export default function DashboardV2() {
           <div className="modern-chart-card" style={{display:'flex',flexDirection:'column'}}>
             {/* Header */}
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
-              <span style={{fontSize:14,fontWeight:700,color:'var(--gray-800)'}}>📊 Faturamento mensal</span>
+              <span style={{fontSize:14,fontWeight:700,color:'var(--gray-800)'}}>Faturamento mensal</span>
               <span style={{fontSize:11,color:'#9ca3af'}}>{faturamentoMensal.length} meses</span>
             </div>
 
@@ -519,7 +517,7 @@ export default function DashboardV2() {
         {!isFuncionario && fat > 0 && (
           <div className="modern-chart-card">
             <div style={{marginBottom:12}}>
-              <span style={{fontSize:14,fontWeight:700,color:'var(--gray-800)'}}>🔩 MO vs {t.pecas}</span>
+              <span style={{fontSize:14,fontWeight:700,color:'var(--gray-800)'}}>MO vs {t.pecas}</span>
             </div>
             <div style={{marginBottom:12,textAlign:'center'}}>
               <div style={{fontSize:22,fontWeight:800,color:'var(--gray-900)',fontFamily:'Poppins'}}>{fmt.currency(fat)}</div>
@@ -548,12 +546,11 @@ export default function DashboardV2() {
 
         <div className="activity-feed">
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
-            <span style={{fontSize:14,fontWeight:700,color:'var(--gray-800)'}}>📋 OS recentes</span>
+            <span style={{fontSize:14,fontWeight:700,color:'var(--gray-800)'}}>OS recentes</span>
             <button className="btn btn-ghost btn-sm" onClick={()=>navigate('/app/os')}>Ver todas</button>
           </div>
           {recentes.length===0 ? (
             <div style={{textAlign:'center',padding:24,color:'var(--gray-400)'}}>
-              <div style={{fontSize:28,marginBottom:8}}>🔧</div>
               <p style={{fontSize:13}}>Nenhuma OS ainda</p>
               <button className="btn btn-primary btn-sm" style={{marginTop:12}} onClick={()=>navigate('/app/os')}>Criar primeira OS</button>
             </div>
@@ -582,7 +579,7 @@ export default function DashboardV2() {
         <div className="modal-overlay open">
           <div className="modal" style={{maxWidth:380}}>
             <div className="modal-header">
-              <h2>🎯 Meta mensal</h2>
+              <h2>Meta mensal</h2>
               <button className="modal-close" onClick={()=>setShowMeta(false)}>✕</button>
             </div>
             <div className="modal-body">

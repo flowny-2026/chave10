@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../../api';
 import BarcodeScanner from '../../components/BarcodeScanner';
 import KPICard from '../../components/KPICard';
+import { IcoEdit, IcoTrash } from '../../components/ActionIcons';
 
 const fmt = { currency: v => 'R$ ' + parseFloat(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.') };
 const EMPTY = { nome:'', categoria:'peca', tipo:'', marca:'', aplicacao:'', quantidade:'', estoque_min:'', preco:'', data_compra:'', obs:'' };
@@ -92,8 +93,8 @@ export default function AppEstoque() {
       <div className="page-header" style={{marginBottom:24}}>
         <div><div className="page-title">Estoque & Patrimônio</div><div className="page-subtitle">{itens.length} item(ns) cadastrado(s)</div></div>
         <div style={{display:'flex',gap:8}}>
-          {!isFuncionario && <button className={`btn ${view==='patrimonio'?'btn-primary':'btn-outline'} btn-sm`} onClick={()=>setView('patrimonio')}>📊 Patrimônio</button>}
-          <button className={`btn ${view==='lista'?'btn-primary':'btn-outline'} btn-sm`} onClick={()=>setView('lista')}>📋 Lista</button>
+          {!isFuncionario && <button className={`btn ${view==='patrimonio'?'btn-primary':'btn-outline'} btn-sm`} onClick={()=>setView('patrimonio')}>Patrimônio</button>}
+          <button className={`btn ${view==='lista'?'btn-primary':'btn-outline'} btn-sm`} onClick={()=>setView('lista')}>Lista</button>
           <button className="btn btn-outline" onClick={()=>setScanner(true)} title="Ler código de barras">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="5" height="5"/><rect x="16" y="3" width="5" height="5"/><rect x="3" y="16" width="5" height="5"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/></svg>
             Scanner
@@ -181,13 +182,13 @@ export default function AppEstoque() {
           <div className="estoque-grid-2">
             {/* Top 5 */}
             <div className="card">
-              <div className="card-header"><div className="card-title">🏆 Top 5 itens mais valiosos</div></div>
+              <div className="card-header"><div className="card-title">Top 5 itens mais valiosos</div></div>
               {top5.length ? top5.map((i,idx)=>(
                 <div key={i.id} style={{display:'flex',alignItems:'center',gap:12,padding:'11px 0',borderBottom:'1px solid var(--gray-100)'}}>
                   <div style={{width:26,height:26,borderRadius:'50%',background:idx===0?'var(--accent)':idx===1?'var(--gray-300)':idx===2?'#cd7f32':'var(--gray-100)',color:idx<3?'#fff':'var(--gray-500)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:800,flexShrink:0}}>{idx+1}</div>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontSize:13,fontWeight:600,color:'var(--gray-800)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{i.nome}</div>
-                    <div style={{fontSize:11.5,color:'var(--gray-400)'}}>{i.categoria==='peca'?'⚙️ Peça':'🔧 Ferramenta'}{i.marca?` · ${i.marca}`:''}</div>
+                    <div style={{fontSize:11.5,color:'var(--gray-400)'}}>{i.categoria==='peca'?'Peça':'Ferramenta'}{i.marca?` · ${i.marca}`:''}</div>
                   </div>
                   <div style={{textAlign:'right',flexShrink:0}}>
                     <div style={{fontSize:13,fontWeight:700,color:'var(--success)'}}>{fmt.currency(i.valorTotal)}</div>
@@ -199,7 +200,7 @@ export default function AppEstoque() {
 
             {/* Composição */}
             <div className="card">
-              <div className="card-header"><div className="card-title">🥧 Composição do patrimônio</div></div>
+              <div className="card-header"><div className="card-title">Composição do patrimônio</div></div>
               {valTotal>0 ? (
                 <div style={{display:'flex',flexDirection:'column',gap:20,marginTop:8}}>
                   <div style={{display:'flex',height:28,borderRadius:99,overflow:'hidden',gap:2}}>
@@ -226,7 +227,7 @@ export default function AppEstoque() {
           {/* Alertas */}
           {(zerado.length>0||baixo.length>0) ? (
             <div className="card">
-              <div className="card-header"><div className="card-title">🚨 Itens que precisam de atenção</div></div>
+              <div className="card-header"><div className="card-title">Itens que precisam de atenção</div></div>
               <div className="table-wrapper">
                 <table>
                   <thead><tr><th>Item</th><th>Tipo</th><th>Qtd atual</th><th>Mínimo</th><th>Status</th><th></th></tr></thead>
@@ -238,7 +239,7 @@ export default function AppEstoque() {
                         <td><strong style={{color:i._s==='zerado'?'var(--danger)':'var(--warning)'}}>{i.quantidade||0}</strong></td>
                         <td>{i.estoque_min||0}</td>
                         <td>{i._s==='zerado'?<span className="badge badge-red">Zerado</span>:<span className="badge badge-yellow">Baixo</span>}</td>
-                        <td><button className="btn btn-outline btn-sm" onClick={()=>openEdit(i)}>✏️ Repor</button></td>
+                        <td><button className="btn btn-outline btn-sm" onClick={()=>openEdit(i)}><IcoEdit /> Repor</button></td>
                       </tr>
                     ))}
                   </tbody>
@@ -265,7 +266,7 @@ export default function AppEstoque() {
             <div className="estoque-tab-group">
               {['todos','peca','ferramenta'].map(c=>(
                 <button key={c} className={`estoque-tab${catFiltro===c?' active':''}`} onClick={()=>setCatFiltro(c)}>
-                  {c==='todos'?'Todos':c==='peca'?'⚙️ Peças':'🔧 Ferramentas'}
+                  {c==='todos'?'Todos':c==='peca'?'Peças':'Ferramentas'}
                 </button>
               ))}
             </div>
@@ -282,15 +283,15 @@ export default function AppEstoque() {
                       return (
                         <tr key={i.id}>
                           <td><strong>{i.nome}</strong>{i.obs&&<><br/><small style={{color:'var(--gray-400)'}}>{i.obs}</small></>}</td>
-                          <td>{i.categoria==='peca'?<span className="badge badge-blue">⚙️ Peça</span>:<span className="badge badge-orange">🔧 Ferramenta</span>}</td>
+                          <td>{i.categoria==='peca'?<span className="badge badge-blue">Peça</span>:<span className="badge badge-orange">Ferramenta</span>}</td>
                           <td>{i.tipo||'—'}</td>
                           <td>{i.marca||'—'}</td>
                           <td>{i.categoria==='peca'?<span className={`badge ${zeradoItem?'badge-red':baixoItem?'badge-yellow':'badge-green'}`}>{i.quantidade||0}</span>:'—'}</td>
                           {!isFuncionario&&<td>{i.preco?fmt.currency(i.preco):'—'}</td>}
                           <td>
                             <div style={{display:'flex',gap:4}}>
-                              <button className="btn btn-outline btn-sm" onClick={()=>openEdit(i)}>✏️</button>
-                              <button className="btn btn-outline btn-sm" onClick={()=>remove(i.id)}>🗑️</button>
+                              <button className="btn btn-outline btn-sm" onClick={()=>openEdit(i)} title="Editar"><IcoEdit /></button>
+                              <button className="btn btn-outline btn-sm" onClick={()=>remove(i.id)} title="Excluir"><IcoTrash /></button>
                             </div>
                           </td>
                         </tr>
@@ -322,7 +323,7 @@ export default function AppEstoque() {
                       {['peca','ferramenta'].map(c=>(
                         <label key={c} className={`estoque-radio${form.categoria===c?' active':''}`} style={{cursor:'pointer'}}>
                           <input type="radio" name="cat" value={c} checked={form.categoria===c} onChange={()=>setForm(f=>({...f,categoria:c}))} style={{display:'none'}} />
-                          {c==='peca'?'⚙️ Peça':'🔧 Ferramenta'}
+                          {c==='peca'?'Peça':'Ferramenta'}
                         </label>
                       ))}
                     </div>
@@ -349,7 +350,7 @@ export default function AppEstoque() {
                 </div>
                 <div className="form-actions">
                   <button type="button" className="btn btn-outline" onClick={()=>setModal(false)}>Cancelar</button>
-                  <button type="submit" className="btn btn-primary">💾 Salvar</button>
+                  <button type="submit" className="btn btn-primary">Salvar</button>
                 </div>
               </form>
             </div>

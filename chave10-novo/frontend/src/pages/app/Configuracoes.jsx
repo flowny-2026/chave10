@@ -190,7 +190,7 @@ export default function AppConfiguracoes() {
                         transition: 'all .15s',
                       }}
                     >
-                      <span style={{ fontSize: 16 }}>{seg.emoji}</span>{seg.label}
+                      {seg.label}
                     </button>
                   );
                 })}

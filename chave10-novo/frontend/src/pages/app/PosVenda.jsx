@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api';
 import { useSegmento } from '../../hooks/useSegmento';
+import { IcoWhatsApp, IcoCheck } from '../../components/ActionIcons';
 
 const fmt = {
   currency: v => 'R$ ' + parseFloat(v || 0).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.'),
@@ -121,7 +122,7 @@ export default function AppPosVenda() {
       {posOS.length > 0 && (
         <div className="card" style={{ marginBottom: 16 }}>
           <div className="card-header">
-            <div className="card-title">🔧 Pós-venda — serviços recentes ({posOS.length})</div>
+            <div className="card-title">Pós-venda — serviços recentes ({posOS.length})</div>
           </div>
           <div className="pv-list">
             {posOS.map(o => {
@@ -144,7 +145,7 @@ export default function AppPosVenda() {
       {revisoes.length > 0 && (
         <div className="card" style={{ marginBottom: 16 }}>
           <div className="card-header">
-            <div className="card-title">📅 Lembretes de revisão / retorno ({revisoes.length})</div>
+            <div className="card-title">Lembretes de revisão / retorno ({revisoes.length})</div>
           </div>
           <div className="pv-list">
             {revisoes.map(r => {
@@ -167,7 +168,7 @@ export default function AppPosVenda() {
       {orcamentos.length > 0 && (
         <div className="card" style={{ marginBottom: 16 }}>
           <div className="card-header">
-            <div className="card-title">📋 Orçamentos parados ({orcamentos.length})</div>
+            <div className="card-title">Orçamentos parados ({orcamentos.length})</div>
           </div>
           <div className="pv-list">
             {orcamentos.map(o => {
@@ -190,7 +191,7 @@ export default function AppPosVenda() {
       {aniversarios.length > 0 && (
         <div className="card" style={{ marginBottom: 16 }}>
           <div className="card-header">
-            <div className="card-title">🎂 Aniversariantes da semana ({aniversarios.length})</div>
+            <div className="card-title">Aniversariantes da semana ({aniversarios.length})</div>
           </div>
           <div className="pv-list">
             {aniversarios.map(a => {
@@ -239,7 +240,7 @@ function PvRow({ nome, sub, enviado, onEnviar }) {
         onClick={onEnviar}
         style={{ flexShrink: 0, whiteSpace: 'nowrap' }}
       >
-        {enviado ? '✓ Enviado' : '💬 WhatsApp'}
+        {enviado ? <><IcoCheck /> Enviado</> : <><IcoWhatsApp /> WhatsApp</>}
       </button>
     </div>
   );

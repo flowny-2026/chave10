@@ -4,6 +4,7 @@ import { api } from '../../api';
 import { offlineManager, OPERATION_TYPES, useOfflineManager } from '../../utils/offlineManager';
 import FotoUploader from '../../components/FotoUploader';
 import { useSegmento, getTermosSegmento } from '../../hooks/useSegmento';
+import { IcoView, IcoEdit, IcoTrash, IcoPrint, IcoWhatsApp } from '../../components/ActionIcons';
 
 const fmt = {
   currency: v => 'R$ ' + parseFloat(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.'),
@@ -517,11 +518,11 @@ export default function AppOS() {
                         <td><span className={`badge ${STATUS_CLASS[os.status]||'badge-gray'}`}>{STATUS_LABEL[os.status]||os.status}</span></td>
                         <td>
                           <div style={{display:'flex',gap:4}}>
-                            <button className="btn btn-outline btn-sm" onClick={()=>openView(os)}>👁️</button>
-                            <button className="btn btn-outline btn-sm" onClick={()=>imprimir(os)} title="Imprimir">🖨️</button>
-                            <button className="btn btn-outline btn-sm" onClick={()=>enviarWhatsApp(os)} title="WhatsApp">💬</button>
-                            <button className="btn btn-outline btn-sm" onClick={()=>openEdit(os)}>✏️</button>
-                            <button className="btn btn-outline btn-sm" onClick={()=>remove(os.id)}>🗑️</button>
+                            <button className="btn btn-outline btn-sm" onClick={()=>openView(os)} title="Ver"><IcoView /></button>
+                            <button className="btn btn-outline btn-sm" onClick={()=>imprimir(os)} title="Imprimir"><IcoPrint /></button>
+                            <button className="btn btn-outline btn-sm" onClick={()=>enviarWhatsApp(os)} title="WhatsApp"><IcoWhatsApp /></button>
+                            <button className="btn btn-outline btn-sm" onClick={()=>openEdit(os)} title="Editar"><IcoEdit /></button>
+                            <button className="btn btn-outline btn-sm" onClick={()=>remove(os.id)} title="Excluir"><IcoTrash /></button>
                           </div>
                         </td>
                       </tr>
@@ -551,10 +552,10 @@ export default function AppOS() {
                   <div className="os-card-bottom">
                     {!isFuncionario&&<span className="os-card-valor">{fmt.currency(total)}</span>}
                     <div className="os-card-actions">
-                      <button className="btn btn-outline btn-sm" onClick={e=>{e.stopPropagation();imprimir(os);}}>🖨️</button>
-                      <button className="btn btn-outline btn-sm" onClick={e=>{e.stopPropagation();openEdit(os);}}>✏️</button>
-                      <button className="btn btn-outline btn-sm" onClick={e=>{e.stopPropagation();enviarWhatsApp(os);}}>💬</button>
-                      <button className="btn btn-outline btn-sm" onClick={e=>{e.stopPropagation();remove(os.id);}}>🗑️</button>
+                      <button className="btn btn-outline btn-sm" onClick={e=>{e.stopPropagation();imprimir(os);}} title="Imprimir"><IcoPrint /></button>
+                      <button className="btn btn-outline btn-sm" onClick={e=>{e.stopPropagation();openEdit(os);}} title="Editar"><IcoEdit /></button>
+                      <button className="btn btn-outline btn-sm" onClick={e=>{e.stopPropagation();enviarWhatsApp(os);}} title="WhatsApp"><IcoWhatsApp /></button>
+                      <button className="btn btn-outline btn-sm" onClick={e=>{e.stopPropagation();remove(os.id);}} title="Excluir"><IcoTrash /></button>
                     </div>
                   </div>
                   <div className="os-card-tap-hint">
@@ -744,8 +745,8 @@ export default function AppOS() {
                   <div className="form-group">
                     <label>Status</label>
                     <select value={form.status} onChange={e=>setForm(f=>({...f,status:e.target.value}))}>
-                      <option value="em_andamento">🔧 Em andamento</option>
-                      <option value="finalizado">✅ Finalizado</option>
+                      <option value="em_andamento">Em andamento</option>
+                      <option value="finalizado">Finalizado</option>
                     </select>
                   </div>
                   <div className="form-group full"><label>Observações</label><input value={form.observacao} onChange={e=>setForm(f=>({...f,observacao:e.target.value}))} placeholder="Observações adicionais..." /></div>
@@ -755,7 +756,7 @@ export default function AppOS() {
                 <div style={{ marginTop: 16, marginBottom: 16, padding: '14px 16px', background: 'var(--gray-50)', borderRadius: 10, border: '1px solid var(--gray-200)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gray-700)' }}>
-                      📷 Fotos {pendingPhotos.length > 0 && <span style={{ fontWeight: 400, color: 'var(--gray-400)' }}>({pendingPhotos.length} selecionada{pendingPhotos.length > 1 ? 's' : ''})</span>}
+                      Fotos {pendingPhotos.length > 0 && <span style={{ fontWeight: 400, color: 'var(--gray-400)' }}>({pendingPhotos.length} selecionada{pendingPhotos.length > 1 ? 's' : ''})</span>}
                     </div>
                     <label style={{
                       display: 'inline-flex', alignItems: 'center', gap: 5,
@@ -797,7 +798,7 @@ export default function AppOS() {
 
                 <div className="form-actions">
                   <button type="button" className="btn btn-outline" onClick={()=>setModal(null)}>Cancelar</button>
-                  <button type="submit" className="btn btn-primary">💾 Salvar OS</button>
+                  <button type="submit" className="btn btn-primary">Salvar OS</button>
                 </div>
               </form>
             </div>
@@ -824,7 +825,7 @@ export default function AppOS() {
                     {l:t.veiculo,v:(viewing.veiculo_marca?viewing.veiculo_marca+' ':'')+( viewing.veiculo_modelo||'—')},
                     {l:t.placa,v:viewing.placa||'—'},
                     {l:'Data',v:fmt.date(viewing.data)},
-                    ...(viewing.mecanico_nome ? [{l:'Mecânico',v:`🔧 ${viewing.mecanico_nome}`}] : []),
+                    ...(viewing.mecanico_nome ? [{l:'Mecânico',v:viewing.mecanico_nome}] : []),
                     {l:'Status',v:<span className={`badge ${STATUS_CLASS[viewing.status]||'badge-gray'}`}>{STATUS_LABEL[viewing.status]||viewing.status}</span>}
                   ].map(item=>(
                     <div key={item.l} className="os-view-field">
@@ -925,10 +926,10 @@ export default function AppOS() {
 
                 <div className="os-view-actions">
                   <button className="btn btn-outline" onClick={()=>setModal(null)}>Fechar</button>
-                  <button className="btn btn-outline" onClick={()=>imprimir(viewing)}>🖨️ Imprimir</button>
-                  <button className="btn btn-outline" onClick={()=>enviarWhatsApp(viewing)}>💬 WhatsApp</button>
-                  <button className="btn btn-primary" onClick={()=>openEdit(viewing)}>✏️ Editar</button>
-                  {viewing.status==='em_andamento'&&<button className="btn btn-success" onClick={()=>finalizar(viewing.id)}>✅ Finalizar</button>}
+                  <button className="btn btn-outline" onClick={()=>imprimir(viewing)}><IcoPrint /> Imprimir</button>
+                  <button className="btn btn-outline" onClick={()=>enviarWhatsApp(viewing)}><IcoWhatsApp /> WhatsApp</button>
+                  <button className="btn btn-primary" onClick={()=>openEdit(viewing)}><IcoEdit /> Editar</button>
+                  {viewing.status==='em_andamento'&&<button className="btn btn-success" onClick={()=>finalizar(viewing.id)}>Finalizar</button>}
                   {viewing.status==='finalizado'&&<button className="btn btn-outline" onClick={()=>reabrir(viewing.id)}>↩ Reabrir</button>}
                 </div>
               </div>
@@ -944,7 +945,7 @@ export default function AppOS() {
         <div className="modal-overlay open">
           <div className="modal" style={{maxWidth:520}}>
             <div className="modal-header">
-              <h2>💳 Dar baixa — Forma de pagamento</h2>
+              <h2>Dar baixa — Forma de pagamento</h2>
               <button className="modal-close" onClick={()=>setModal(null)}>✕</button>
             </div>
             <div className="modal-body">
@@ -960,14 +961,14 @@ export default function AppOS() {
                   <label style={{fontSize:12,fontWeight:700,color:'var(--gray-600)',marginBottom:8,display:'block'}}>Forma de pagamento *</label>
                   <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(130px, 1fr))',gap:8}}>
                     {[
-                      {v:'pix',icon:'📱',label:'PIX'},
-                      {v:'dinheiro',icon:'💵',label:'Dinheiro'},
-                      {v:'debito',icon:'💳',label:'Débito'},
-                      {v:'credito',icon:'💳',label:'Crédito'},
+                      {v:'pix',label:'PIX'},
+                      {v:'dinheiro',label:'Dinheiro'},
+                      {v:'debito',label:'Débito'},
+                      {v:'credito',label:'Crédito'},
                     ].map(f=>(
                       <button key={f.v} type="button" onClick={()=>setPagForm(p=>({...p,forma:f.v,parcelas:1,bandeira:'',taxa_maquininha:''}))}
-                        style={{padding:'14px 12px',borderRadius:'var(--r-sm)',border:pagForm.forma===f.v?'2px solid var(--accent)':'2px solid var(--gray-200)',background:pagForm.forma===f.v?'#FFF7ED':'#fff',cursor:'pointer',display:'flex',alignItems:'center',gap:8,fontSize:14,fontWeight:pagForm.forma===f.v?700:500,color:pagForm.forma===f.v?'var(--accent)':'var(--gray-700)',transition:'all .15s'}}>
-                        <span style={{fontSize:20}}>{f.icon}</span>{f.label}
+                        style={{padding:'14px 12px',borderRadius:'var(--r-sm)',border:pagForm.forma===f.v?'2px solid var(--accent)':'2px solid var(--gray-200)',background:pagForm.forma===f.v?'#FFF7ED':'#fff',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8,fontSize:14,fontWeight:pagForm.forma===f.v?700:500,color:pagForm.forma===f.v?'var(--accent)':'var(--gray-700)',transition:'all .15s'}}>
+                        {f.label}
                       </button>
                     ))}
                   </div>
@@ -1065,7 +1066,7 @@ export default function AppOS() {
 
                 <div className="form-actions">
                   <button type="button" className="btn btn-outline" onClick={()=>setModal(null)}>Cancelar</button>
-                  <button type="submit" className="btn btn-primary" disabled={!pagForm.forma}>✅ Confirmar pagamento e finalizar</button>
+                  <button type="submit" className="btn btn-primary" disabled={!pagForm.forma}>Confirmar pagamento e finalizar</button>
                 </div>
               </form>
             </div>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api';
+import { IcoEdit, IcoTrash, IcoWhatsApp } from '../../components/ActionIcons';
 
 const EMPTY = { veiculo_id:'', tipo:'oleo', descricao:'', data_previsao:'', km_previsao:'' };
 
@@ -86,7 +87,7 @@ export default function AppLembretes() {
           <div className="page-subtitle">{lista.length} lembrete(s) ativo(s){qtdVistos?` · ${qtdVistos} visto(s)`:''}</div>
         </div>
         <div style={{display:'flex',gap:8,alignItems:'center'}}>
-          {qtdVistos>0 && <button className="btn btn-ghost btn-sm" onClick={()=>setMostrarVistos(v=>!v)}>{mostrarVistos?'🙈 Ocultar vistos':'👁️ Mostrar vistos'}</button>}
+          {qtdVistos>0 && <button className="btn btn-ghost btn-sm" onClick={()=>setMostrarVistos(v=>!v)}>{mostrarVistos?'Ocultar vistos':'Mostrar vistos'}</button>}
           <button className="btn btn-primary" onClick={openCreate}>+ Novo Lembrete</button>
         </div>
       </div>
@@ -114,9 +115,9 @@ export default function AppLembretes() {
               {!l.visto
                 ? <button className="btn btn-success btn-sm" onClick={()=>marcarVisto(l.id,true)}>✓ Visto</button>
                 : <button className="btn btn-ghost btn-sm" onClick={()=>marcarVisto(l.id,false)}>↩ Reativar</button>}
-              <button className="btn btn-outline btn-sm" onClick={()=>enviarWhatsApp(l)} disabled={!c?.telefone} style={!c?.telefone?{opacity:.4,cursor:'not-allowed'}:{}}>💬</button>
-              <button className="btn btn-outline btn-sm" onClick={()=>openEdit(l)}>✏️</button>
-              <button className="btn btn-outline btn-sm" onClick={()=>remove(l.id)}>🗑️</button>
+              <button className="btn btn-outline btn-sm" onClick={()=>enviarWhatsApp(l)} disabled={!c?.telefone} title="WhatsApp" style={!c?.telefone?{opacity:.4,cursor:'not-allowed'}:{}}><IcoWhatsApp /></button>
+              <button className="btn btn-outline btn-sm" onClick={()=>openEdit(l)} title="Editar"><IcoEdit /></button>
+              <button className="btn btn-outline btn-sm" onClick={()=>remove(l.id)} title="Excluir"><IcoTrash /></button>
             </div>
           </div>
         );
@@ -151,9 +152,9 @@ export default function AppLembretes() {
                   <div className="form-group full">
                     <label>Tipo</label>
                     <select value={form.tipo} onChange={e=>setForm(f=>({...f,tipo:e.target.value}))}>
-                      <option value="oleo">🛢️ Troca de óleo</option>
-                      <option value="revisao">🔧 Revisão</option>
-                      <option value="outro">📅 Outro</option>
+                      <option value="oleo">Troca de óleo</option>
+                      <option value="revisao">Revisão</option>
+                      <option value="outro">Outro</option>
                     </select>
                   </div>
                   <div className="form-group full">
@@ -171,7 +172,7 @@ export default function AppLembretes() {
                 </div>
                 <div className="form-actions">
                   <button type="button" className="btn btn-outline" onClick={()=>setModal(false)}>Cancelar</button>
-                  <button type="submit" className="btn btn-primary">💾 Salvar</button>
+                  <button type="submit" className="btn btn-primary">Salvar</button>
                 </div>
               </form>
             </div>

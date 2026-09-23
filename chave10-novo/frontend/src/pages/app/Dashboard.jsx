@@ -189,7 +189,7 @@ export default function AppDashboard() {
               </div>
             ) : (
               <button onClick={()=>{setMetaInput('');setShowMeta(true);}} style={{background:'rgba(255,255,255,.12)',color:'#fff',border:'1px solid rgba(255,255,255,.2)',borderRadius:'var(--r-sm)',padding:'6px 14px',fontSize:13,cursor:'pointer'}}>
-                🎯 Definir meta mensal
+                Definir meta mensal
               </button>
             )}
           </div>

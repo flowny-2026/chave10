@@ -5,6 +5,7 @@ import Pagination from '../../components/Pagination';
 import KPICard from '../../components/KPICard';
 import { useSegmento } from '../../hooks/useSegmento';
 import { compressImage } from '../../utils/imageCompressor';
+import { IcoEdit, IcoTrash } from '../../components/ActionIcons';
 
 const EMPTY = { marca: '', modelo: '', ano: '', placa: '', km: '', cliente_id: '' };
 
@@ -224,9 +225,9 @@ export default function AppVeiculos() {
                       <td>{v.cliente_nome || '—'}</td>
                       <td>
                         <div style={{ display: 'flex', gap: 6 }}>
-                          <button className="btn btn-outline btn-sm" onClick={() => openHistorico(v)}>📜 Histórico</button>
-                          <button className="btn btn-outline btn-sm" onClick={() => openEdit(v)}>✏️</button>
-                          <button className="btn btn-outline btn-sm" onClick={() => remove(v.id)}>🗑️</button>
+                          <button className="btn btn-outline btn-sm" onClick={() => openHistorico(v)}>Histórico</button>
+                          <button className="btn btn-outline btn-sm" onClick={() => openEdit(v)} title="Editar"><IcoEdit /></button>
+                          <button className="btn btn-outline btn-sm" onClick={() => remove(v.id)} title="Excluir"><IcoTrash /></button>
                         </div>
                       </td>
                     </tr>
@@ -271,7 +272,7 @@ export default function AppVeiculos() {
                         Lendo...
                       </span>
                     ) : (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>📷 Ler {t.placa.toLowerCase()} por foto</span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>Ler {t.placa.toLowerCase()} por foto</span>
                     )}
                     <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" style={{ display: 'none' }} onChange={lerPlacaPorFoto} disabled={lendoPlaca} />
                   </label>
@@ -312,7 +313,7 @@ export default function AppVeiculos() {
                 </div>
                 <div className="form-actions">
                   <button type="button" className="btn btn-outline" onClick={() => setModal(null)}>Cancelar</button>
-                  <button type="submit" className="btn btn-primary">💾 Salvar</button>
+                  <button type="submit" className="btn btn-primary">Salvar</button>
                 </div>
               </form>
             </div>
@@ -325,7 +326,7 @@ export default function AppVeiculos() {
         <div className="modal-overlay open">
           <div className="modal" style={{ maxWidth: 640 }}>
             <div className="modal-header">
-              <h2>📜 Histórico — {historico.veiculo.marca} {historico.veiculo.modelo} ({historico.veiculo.placa})</h2>
+              <h2>Histórico — {historico.veiculo.marca} {historico.veiculo.modelo} ({historico.veiculo.placa})</h2>
               <button className="modal-close" onClick={() => setModal(null)}>✕</button>
             </div>
             <div className="modal-body">

@@ -112,7 +112,7 @@ export default function MeuPerfil() {
           <div>
             <div style={{ fontWeight: 800, fontSize: 18, color: 'var(--gray-900)' }}>{user?.nome || 'Usuário'}</div>
             <div style={{ fontSize: 13, color: 'var(--gray-400)', marginTop: 2 }}>
-              {user?.perfil === 'mecanico' ? '🔧 Mecânico' : user?.perfil === 'funcionario' ? '👷 Funcionário' : '👑 Admin'}
+              {user?.perfil === 'mecanico' ? 'Mecânico' : user?.perfil === 'funcionario' ? 'Funcionário' : 'Admin'}
             </div>
             {user?.email && (
               <div style={{ fontSize: 12, color: 'var(--gray-400)', marginTop: 2 }}>✉ {user.email}</div>
@@ -180,7 +180,7 @@ export default function MeuPerfil() {
               </select>
             </div>
             <button className="btn btn-primary" style={{ height: 36, fontSize: 13 }} onClick={() => carregarComissoes(filtros)}>
-              🔍 Filtrar
+              Filtrar
             </button>
           </div>
 

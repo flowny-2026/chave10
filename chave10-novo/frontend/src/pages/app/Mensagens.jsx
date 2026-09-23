@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react';
 import { api } from '../../api';
 
 const TEMPLATES = [
-  { id:'orcamento',       label:'💰 Orçamento aprovado',      fn:(c,v)=>`Olá ${c}! Seu orçamento para o *${v}* foi aprovado. Pode trazer o veículo que já vamos iniciar o serviço. Qualquer dúvida estamos à disposição! 🔧` },
-  { id:'os_pronta',       label:'✅ OS finalizada',            fn:(c,v,os)=>`Olá ${c}! Seu *${v}* está pronto para retirada.${os?` OS #${os} finalizada com sucesso.`:''} Aguardamos você! 😊` },
-  { id:'revisao',         label:'🔔 Lembrete de revisão',      fn:(c,v)=>`Olá ${c}! Passando para lembrar que o *${v}* está próximo da revisão. Agende agora e evite problemas! 📅` },
-  { id:'orcamento_envio', label:'📋 Enviar orçamento',         fn:(c,v)=>`Olá ${c}! Segue o orçamento para o *${v}*:\n\n📌 Serviços: [descreva aqui]\n💰 Valor total: R$ [valor]\n\nAguardo sua confirmação! 🔧` },
-  { id:'agradecimento',   label:'⭐ Agradecimento',             fn:(c,v)=>`Olá ${c}! Obrigado por confiar em nossos serviços! Esperamos que o *${v}* esteja rodando perfeitamente. Qualquer problema, pode chamar! 😊` },
-  { id:'cobranca',        label:'💳 Cobrança pendente',        fn:(c,v)=>`Olá ${c}! Identificamos um pagamento pendente referente ao serviço do *${v}*. Por favor, entre em contato para regularizar. Obrigado!` },
-  { id:'personalizada',   label:'✏️ Mensagem personalizada',   fn:()=>`` },
+  { id:'orcamento',       label:'Orçamento aprovado',      fn:(c,v)=>`Olá ${c}! Seu orçamento para o *${v}* foi aprovado. Pode trazer o veículo que já vamos iniciar o serviço. Qualquer dúvida estamos à disposição! 🔧` },
+  { id:'os_pronta',       label:'OS finalizada',            fn:(c,v,os)=>`Olá ${c}! Seu *${v}* está pronto para retirada.${os?` OS #${os} finalizada com sucesso.`:''} Aguardamos você! 😊` },
+  { id:'revisao',         label:'Lembrete de revisão',      fn:(c,v)=>`Olá ${c}! Passando para lembrar que o *${v}* está próximo da revisão. Agende agora e evite problemas! 📅` },
+  { id:'orcamento_envio', label:'Enviar orçamento',         fn:(c,v)=>`Olá ${c}! Segue o orçamento para o *${v}*:\n\n📌 Serviços: [descreva aqui]\n💰 Valor total: R$ [valor]\n\nAguardo sua confirmação! 🔧` },
+  { id:'agradecimento',   label:'Agradecimento',             fn:(c,v)=>`Olá ${c}! Obrigado por confiar em nossos serviços! Esperamos que o *${v}* esteja rodando perfeitamente. Qualquer problema, pode chamar! 😊` },
+  { id:'cobranca',        label:'Cobrança pendente',        fn:(c,v)=>`Olá ${c}! Identificamos um pagamento pendente referente ao serviço do *${v}*. Por favor, entre em contato para regularizar. Obrigado!` },
+  { id:'personalizada',   label:'Mensagem personalizada',   fn:()=>`` },
 ];
 
 function getHistorico() { try { return JSON.parse(localStorage.getItem('c10_msg_hist'))||[]; } catch { return []; } }
@@ -106,7 +106,7 @@ export default function AppMensagens() {
 
           {/* Busca de cliente */}
           <div className="card">
-            <div className="card-title" style={{marginBottom:14}}>👤 Selecionar cliente</div>
+            <div className="card-title" style={{marginBottom:14}}>Selecionar cliente</div>
             <div className="search-input-wrap" style={{marginBottom:12}}>
               <svg className="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
               <input type="text" placeholder="Buscar cliente..." value={search} onChange={e=>setSearch(e.target.value)} style={{paddingLeft:36}} />
@@ -129,7 +129,7 @@ export default function AppMensagens() {
 
           {/* Templates */}
           <div className="card">
-            <div className="card-title" style={{marginBottom:14}}>📋 Templates de mensagem</div>
+            <div className="card-title" style={{marginBottom:14}}>Templates de mensagem</div>
             <div style={{display:'flex',flexDirection:'column',gap:6}}>
               {TEMPLATES.map(t=>(
                 <button key={t.id} onClick={()=>setTemplateSel(t.id)}
@@ -147,7 +147,7 @@ export default function AppMensagens() {
 
           {/* Composer */}
           <div className="card">
-            <div className="card-title" style={{marginBottom:16}}>✍️ Compor mensagem</div>
+            <div className="card-title" style={{marginBottom:16}}>Compor mensagem</div>
 
             {/* Cliente selecionado */}
             {clienteSel && (
@@ -193,7 +193,7 @@ export default function AppMensagens() {
           {/* Histórico */}
           <div className="card">
             <div className="card-header">
-              <div className="card-title">📨 Histórico de mensagens</div>
+              <div className="card-title">Histórico de mensagens</div>
               {historico.length > 0 && (
                 <button className="btn btn-ghost btn-sm" style={{color:'var(--danger)'}} onClick={()=>{if(window.confirm('Limpar todo o histórico?')){clearHistorico();setHistorico([]);}}}>Limpar</button>
               )}
