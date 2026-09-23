@@ -495,6 +495,16 @@
     color: #60a5fa !important;
   }
 
+  /* Item de cliente na lista de seleção — dark mode */
+  .msg-cliente-item:hover { background: rgba(255,255,255,.05) !important; }
+  .msg-cliente-item--active {
+    background: rgba(30,58,95,.45) !important;
+    border-color: #60a5fa !important;
+  }
+  .msg-cliente-nome { color: #e6edf3 !important; }
+  .msg-cliente-tel  { color: rgba(255,255,255,.45) !important; }
+  .msg-cliente-item--active .msg-cliente-nome { color: #93c5fd !important; }
+
   .fin-card { background: #161b22 !important; border: 1px solid rgba(255,255,255,.07) !important; box-shadow: none !important; }
   .fin-card-label { color: rgba(255,255,255,.4) !important; }
 

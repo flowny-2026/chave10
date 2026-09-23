@@ -1,13 +1,36 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api';
 
+// Formata moeda em pt-BR
+const fmtMoeda = v => 'R$ ' + parseFloat(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+
+// Extrai descrição do serviço e valor total de uma OS selecionada (se houver).
+// Usa 'servicos' como descrição preferencial; cai para 'descricao'.
+// Valor = valor_mo + valor_pecas, ou o campo 'valor'.
+function dadosOS(osObj) {
+  if (!osObj) return { servicos: null, valor: null };
+  const servicos = (osObj.servicos && osObj.servicos.trim())
+    || (osObj.descricao && osObj.descricao.trim())
+    || null;
+  const soma = parseFloat(osObj.valor_mo||0) + parseFloat(osObj.valor_pecas||0);
+  const valor = soma > 0 ? soma : parseFloat(osObj.valor||0);
+  return { servicos, valor: valor > 0 ? valor : null };
+}
+
 const TEMPLATES = [
   { id:'orcamento',       label:'Orçamento aprovado',      fn:(c,v)=>`Olá ${c}! Seu orçamento para o *${v}* foi aprovado. Pode trazer o veículo que já vamos iniciar o serviço. Qualquer dúvida estamos à disposição! 🔧` },
   { id:'os_pronta',       label:'OS finalizada',            fn:(c,v,os)=>`Olá ${c}! Seu *${v}* está pronto para retirada.${os?` OS #${os} finalizada com sucesso.`:''} Aguardamos você! 😊` },
   { id:'revisao',         label:'Lembrete de revisão',      fn:(c,v)=>`Olá ${c}! Passando para lembrar que o *${v}* está próximo da revisão. Agende agora e evite problemas! 📅` },
-  { id:'orcamento_envio', label:'Enviar orçamento',         fn:(c,v)=>`Olá ${c}! Segue o orçamento para o *${v}*:\n\n📌 Serviços: [descreva aqui]\n💰 Valor total: R$ [valor]\n\nAguardo sua confirmação! 🔧` },
+  { id:'orcamento_envio', label:'Enviar orçamento',         fn:(c,v,os,d)=>{
+      const servicos = d?.servicos || '[descreva aqui]';
+      const valor    = d?.valor != null ? fmtMoeda(d.valor) : 'R$ [valor]';
+      return `Olá ${c}! Segue o orçamento para o *${v}*:\n\n📌 Serviços: ${servicos}\n💰 Valor total: ${valor}\n\nAguardo sua confirmação! 🔧`;
+    } },
   { id:'agradecimento',   label:'Agradecimento',             fn:(c,v)=>`Olá ${c}! Obrigado por confiar em nossos serviços! Esperamos que o *${v}* esteja rodando perfeitamente. Qualquer problema, pode chamar! 😊` },
-  { id:'cobranca',        label:'Cobrança pendente',        fn:(c,v)=>`Olá ${c}! Identificamos um pagamento pendente referente ao serviço do *${v}*. Por favor, entre em contato para regularizar. Obrigado!` },
+  { id:'cobranca',        label:'Cobrança pendente',        fn:(c,v,os,d)=>{
+      const valor = d?.valor != null ? ` no valor de *${fmtMoeda(d.valor)}*` : '';
+      return `Olá ${c}! Identificamos um pagamento pendente referente ao serviço do *${v}*${valor}. Por favor, entre em contato para regularizar. Obrigado!`;
+    } },
   { id:'personalizada',   label:'Mensagem personalizada',   fn:()=>`` },
 ];
 
@@ -50,11 +73,15 @@ export default function AppMensagens() {
     const t = TEMPLATES.find(t=>t.id===templateSel);
     if (!t) return;
     const c = clienteSel?.nome || 'cliente';
-    const vObj = veiculos.find(v=>String(v.id)===String(veiculoSel));
+    // A OS é selecionada pelo número formatado (ex.: "0154"); casa com id numérico
+    const osObj = osList.find(o=>String(o.id).padStart(4,'0')===String(osSel)) || null;
+    // Se não escolheu veículo mas a OS tem veículo, usa o da OS
+    const vObj = veiculos.find(v=>String(v.id)===String(veiculoSel))
+      || (osObj ? veiculos.find(v=>String(v.id)===String(osObj.veiculo_id)) : null);
     const v = vObj ? `${vObj.marca} ${vObj.modelo}` : 'seu veículo';
     const os = osSel || '';
-    setTexto(t.fn(c, v, os));
-  }, [templateSel, clienteSel, veiculoSel, osSel]);
+    setTexto(t.fn(c, v, os, dadosOS(osObj)));
+  }, [templateSel, clienteSel, veiculoSel, osSel, osList, veiculos]);
 
   function selecionarCliente(c) {
     setClienteSel(c);
@@ -114,12 +141,12 @@ export default function AppMensagens() {
             <div style={{maxHeight:280,overflowY:'auto',display:'flex',flexDirection:'column',gap:2}}>
               {clientesFiltrados.length ? clientesFiltrados.map(c=>(
                 <div key={c.id} onClick={()=>selecionarCliente(c)}
-                  style={{padding:'10px 12px',borderRadius:8,cursor:'pointer',transition:'background .15s',border:`1.5px solid ${clienteSel?.id===c.id?'var(--brand)':'transparent'}`,background:clienteSel?.id===c.id?'var(--brand-light)':''}}>
+                  className={`msg-cliente-item${clienteSel?.id===c.id?' msg-cliente-item--active':''}`}>
                   <div style={{display:'flex',alignItems:'center',gap:10}}>
-                    <div style={{width:34,height:34,borderRadius:'50%',background:'var(--brand)',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:13,flexShrink:0}}>{c.nome[0].toUpperCase()}</div>
+                    <div className="msg-cliente-avatar">{c.nome[0].toUpperCase()}</div>
                     <div>
-                      <div style={{fontSize:13,fontWeight:600,color:'var(--gray-800)'}}>{c.nome}</div>
-                      <div style={{fontSize:11.5,color:'var(--gray-400)'}}>{c.telefone||'Sem telefone'}</div>
+                      <div className="msg-cliente-nome">{c.nome}</div>
+                      <div className="msg-cliente-tel">{c.telefone||'Sem telefone'}</div>
                     </div>
                   </div>
                 </div>
