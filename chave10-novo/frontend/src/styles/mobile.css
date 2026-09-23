@@ -606,6 +606,43 @@
   .agenda-event strong { display: block; }
   /* Botão de excluir do evento menor no mobile */
   .agenda-event button { font-size: 11px !important; }
+
+  /* ── Cores dark: grade legível sobre o fundo escuro do app ── */
+  /* O card que envolve a grade */
+  .agenda-grid { background: #161b22 !important; }
+  /* Cabeçalho (Hora + dias) */
+  .agenda-header-cell {
+    background: #1c2128 !important;
+    color: rgba(255,255,255,.75) !important;
+    border-bottom: 1px solid rgba(255,255,255,.12) !important;
+  }
+  .agenda-header-cell strong { color: #e6edf3 !important; }
+  .agenda-header-cell.today { background: rgba(96,165,250,.18) !important; color: #93c5fd !important; }
+  .agenda-header-cell.today strong { color: #93c5fd !important; }
+  /* Coluna de horas */
+  .agenda-time-cell {
+    background: #1c2128 !important;
+    color: rgba(255,255,255,.55) !important;
+    border-bottom: 1px solid rgba(255,255,255,.08) !important;
+    border-right: 1px solid rgba(255,255,255,.08) !important;
+  }
+  /* Células (slots) — linhas mais visíveis */
+  .agenda-slot {
+    border-right: 1px solid rgba(255,255,255,.08) !important;
+    border-bottom: 1px solid rgba(255,255,255,.08) !important;
+  }
+  .agenda-slot:hover { background: rgba(255,255,255,.04) !important; }
+  /* Eventos com contraste */
+  .agenda-event.orange {
+    background: rgba(249,115,22,.22) !important;
+    border-left-color: #F97316 !important;
+    color: #fdba74 !important;
+  }
+  .agenda-event.green {
+    background: rgba(22,163,74,.22) !important;
+    border-left-color: #16a34a !important;
+    color: #86efac !important;
+  }
 }
 
 /* ══════════════════════════════════════════

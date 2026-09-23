@@ -327,7 +327,7 @@ export default function AppAgenda() {
       <div className="card" style={{padding:0,overflow:'hidden',marginBottom:20}}>
         <div className="agenda-grid">
           {/* Header */}
-          <div className="agenda-header-cell" style={{background:'var(--gray-50)'}}>Hora</div>
+          <div className="agenda-header-cell">Hora</div>
           {diasSemana.map((d,i)=>{
             const isToday = d.toDateString() === hoje.toDateString();
             const qtd = eventosPorDia[i].length;

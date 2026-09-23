@@ -232,14 +232,14 @@ export default function AppRelatorios() {
         />
       </div>
 
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:20}}>
+      <div className="rel-cards-grid">
         <div className="card">
           <div className="card-header"><div className="card-title">Top 5 serviços mais realizados</div></div>
           {topSvc.length ? topSvc.map((s,i)=>(
             <div key={i} className="top-item">
               <div className="top-rank">{i+1}</div>
               <div className="top-info">
-                <div className="top-name">{s.nome}</div>
+                <div className="top-name" title={s.nome}>{s.nome}</div>
                 <div className="top-bar-wrap"><div className="top-bar" style={{width:`${(s.qtd/maxQtd*100).toFixed(0)}%`}} /></div>
               </div>
               <div className="top-stats">
@@ -253,17 +253,17 @@ export default function AppRelatorios() {
         <div className="card">
           <div className="card-header"><div className="card-title">Distribuição de receita</div></div>
           {catEntries.length ? (
-            <div style={{display:'flex',flexDirection:'column',gap:10,marginTop:4}}>
+            <div style={{display:'flex',flexDirection:'column',gap:12,marginTop:4}}>
               {catEntries.sort((a,b)=>b[1]-a[1]).map(([cat,val],i)=>{
                 const pct = totalCat>0?(val/totalCat*100).toFixed(1):0;
                 return (
                   <div key={cat}>
-                    <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
-                      <span style={{fontSize:13,fontWeight:600,color:'var(--gray-700)',display:'flex',alignItems:'center',gap:6}}>
-                        <span style={{width:10,height:10,borderRadius:2,background:CAT_COLORS[i%CAT_COLORS.length],display:'inline-block'}} />
-                        {cat}
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:10,marginBottom:5}}>
+                      <span style={{fontSize:13,fontWeight:600,color:'var(--gray-700)',display:'flex',alignItems:'center',gap:6,minWidth:0}}>
+                        <span style={{width:10,height:10,borderRadius:2,background:CAT_COLORS[i%CAT_COLORS.length],display:'inline-block',flexShrink:0}} />
+                        <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{cat}</span>
                       </span>
-                      <span style={{fontSize:13,fontWeight:700,color:'var(--gray-800)'}}>{fmt.currency(val)} <span style={{color:'var(--gray-400)',fontWeight:400,fontSize:11}}>({pct}%)</span></span>
+                      <span style={{fontSize:13,fontWeight:700,color:'var(--gray-800)',whiteSpace:'nowrap',flexShrink:0}}>{fmt.currency(val)} <span style={{color:'var(--gray-400)',fontWeight:400,fontSize:11}}>({pct}%)</span></span>
                     </div>
                     <div style={{height:6,background:'var(--gray-100)',borderRadius:99,overflow:'hidden'}}>
                       <div style={{height:'100%',width:`${pct}%`,background:CAT_COLORS[i%CAT_COLORS.length],borderRadius:99}} />

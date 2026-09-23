@@ -3230,6 +3230,23 @@ tbody tr:hover td { background: rgba(249,115,22,.04); }
 }
 .rel-resumo-chip strong { color: var(--gray-800); }
 
+/* Grid dos cards de relatório: 2 colunas no desktop, 1 no mobile */
+.rel-cards-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+/* Nome do serviço no Top 5: até 2 linhas, sem sobrepor a barra */
+.rel-cards-grid .top-name {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.25;
+  margin-bottom: 6px;
+  word-break: break-word;
+}
+.rel-cards-grid .top-bar-wrap { margin-top: 2px; }
+@media (max-width: 768px) {
+  .rel-cards-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
+}
+
 /* Dark mode (mobile <=768px) — mesma abordagem do resto do app */
 @media (max-width: 768px) {
   .rel-filtros { background: #161b22; border-color: rgba(255,255,255,.07); flex-direction: column; align-items: stretch; }
