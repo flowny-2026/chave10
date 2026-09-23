@@ -134,6 +134,170 @@ router.get('/dashboard', async (req,res) => {
   } catch(err){log.error('app_dashboard',err);res.status(500).json({error:'Erro interno'});}
 });
 
+// DASHBOARD RESUMO — indicadores por período (com filtro inicio/fim)
+// Todos os dados são reais e isolados por oficina_id (do JWT).
+// Bloqueado para funcionário/mecânico (dados financeiros).
+router.get('/dashboard-resumo', naoFuncionario, naoMecanico, async (req, res) => {
+  try {
+    const id = oid(req);
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    const hoje = new Date().toISOString().split('T')[0];
+
+    // Período: usa inicio/fim válidos; senão, mês corrente
+    let inicio = req.query.inicio;
+    let fim = req.query.fim;
+    if (!inicio || !dateRegex.test(inicio)) inicio = hoje.substring(0, 7) + '-01';
+    if (!fim || !dateRegex.test(fim)) fim = hoje;
+    if (inicio > fim) { const tmp = inicio; inicio = fim; fim = tmp; }
+
+    // Período anterior de mesma duração (para comparação)
+    const dInicio = new Date(inicio + 'T00:00:00');
+    const dFim    = new Date(fim + 'T00:00:00');
+    const durDias = Math.round((dFim - dInicio) / 86400000) + 1;
+    const prevFim    = new Date(dInicio.getTime() - 86400000);
+    const prevInicio = new Date(prevFim.getTime() - (durDias - 1) * 86400000);
+    const prevInicioStr = prevInicio.toISOString().split('T')[0];
+    const prevFimStr    = prevFim.toISOString().split('T')[0];
+
+    // Helpers de agregação (faturamento = OS finalizadas por data; despesa = despesas por data)
+    const sumFaturamento = (ini, f) => queryOne(
+      "SELECT COALESCE(SUM(valor),0) t FROM ordens_servico WHERE oficina_id=$1 AND status='finalizado' AND data>=$2 AND data<=$3",
+      [id, ini, f]
+    );
+    const sumDespesas = (ini, f) => queryOne(
+      "SELECT COALESCE(SUM(valor),0) t FROM despesas WHERE oficina_id=$1 AND data>=$2 AND data<=$3",
+      [id, ini, f]
+    );
+
+    const [
+      fatAtual, fatPrev,
+      despAtual, despPrev,
+      osEmAndamento, osConcluidas, osCanceladas,
+      osConcluidasPrev,
+      orcPendentes,
+      pecasVendidasRow,
+      servicosRow,
+    ] = await Promise.all([
+      sumFaturamento(inicio, fim),
+      sumFaturamento(prevInicioStr, prevFimStr),
+      sumDespesas(inicio, fim),
+      sumDespesas(prevInicioStr, prevFimStr),
+      queryOne("SELECT COUNT(*) n FROM ordens_servico WHERE oficina_id=$1 AND status='em_andamento' AND data>=$2 AND data<=$3", [id, inicio, fim]),
+      queryOne("SELECT COUNT(*) n FROM ordens_servico WHERE oficina_id=$1 AND status='finalizado' AND data>=$2 AND data<=$3", [id, inicio, fim]),
+      queryOne("SELECT COUNT(*) n FROM ordens_servico WHERE oficina_id=$1 AND status='cancelada' AND data>=$2 AND data<=$3", [id, inicio, fim]),
+      queryOne("SELECT COUNT(*) n FROM ordens_servico WHERE oficina_id=$1 AND status='finalizado' AND data>=$2 AND data<=$3", [id, prevInicioStr, prevFimStr]),
+      // Orçamentos pendentes (query corrigida — usa status='pendente', sem colunas inexistentes)
+      queryOne("SELECT COUNT(*) n FROM orcamentos WHERE oficina_id=$1 AND status='pendente'", [id]),
+      // Total em peças e mão de obra das OS finalizadas no período
+      queryOne("SELECT COALESCE(SUM(valor_mo),0) mo, COALESCE(SUM(valor_pecas),0) pecas FROM ordens_servico WHERE oficina_id=$1 AND status='finalizado' AND data>=$2 AND data<=$3", [id, inicio, fim]),
+      // reservado (placeholder para manter Promise.all alinhado) — total de OS finalizadas
+      queryOne("SELECT COUNT(*) n FROM ordens_servico WHERE oficina_id=$1 AND status='finalizado' AND data>=$2 AND data<=$3", [id, inicio, fim]),
+    ]);
+
+    const faturamento = +fatAtual.t;
+    const despesas    = +despAtual.t;
+    const lucro       = faturamento - despesas;
+    const faturamentoPrev = +fatPrev.t;
+    const despesasPrev    = +despPrev.t;
+    const lucroPrev       = faturamentoPrev - despesasPrev;
+
+    // Variação percentual (null quando não há base de comparação)
+    const variacao = (atual, prev) => (prev > 0 ? Math.round(((atual - prev) / prev) * 100) : null);
+
+    const cards = {
+      faturamento:      { valor: faturamento, variacao: variacao(faturamento, faturamentoPrev) },
+      despesas:         { valor: despesas,    variacao: variacao(despesas, despesasPrev) },
+      lucro:            { valor: lucro,        variacao: variacao(lucro, lucroPrev) },
+      osEmAndamento:    { valor: +osEmAndamento.n },
+      osConcluidas:     { valor: +osConcluidas.n, variacao: variacao(+osConcluidas.n, +osConcluidasPrev.n) },
+      orcamentosPendentes: { valor: +orcPendentes.n },
+    };
+
+    // ── Série temporal: diária se período <= 62 dias, senão mensal ──
+    let serie = [];
+    if (durDias <= 62) {
+      // Agrupamento diário
+      const [fatDia, despDia] = await Promise.all([
+        query("SELECT data, COALESCE(SUM(valor),0) t FROM ordens_servico WHERE oficina_id=$1 AND status='finalizado' AND data>=$2 AND data<=$3 GROUP BY data", [id, inicio, fim]),
+        query("SELECT data, COALESCE(SUM(valor),0) t FROM despesas WHERE oficina_id=$1 AND data>=$2 AND data<=$3 GROUP BY data", [id, inicio, fim]),
+      ]);
+      const mapaFat = Object.fromEntries(fatDia.map(r => [r.data, +r.t]));
+      const mapaDesp = Object.fromEntries(despDia.map(r => [r.data, +r.t]));
+      for (let i = 0; i < durDias; i++) {
+        const d = new Date(dInicio.getTime() + i * 86400000).toISOString().split('T')[0];
+        serie.push({ label: d.slice(8, 10) + '/' + d.slice(5, 7), data: d, faturamento: mapaFat[d] || 0, despesas: mapaDesp[d] || 0 });
+      }
+    } else {
+      // Agrupamento mensal
+      const [fatMes, despMes] = await Promise.all([
+        query("SELECT SUBSTRING(data,1,7) ym, COALESCE(SUM(valor),0) t FROM ordens_servico WHERE oficina_id=$1 AND status='finalizado' AND data>=$2 AND data<=$3 GROUP BY SUBSTRING(data,1,7)", [id, inicio, fim]),
+        query("SELECT SUBSTRING(data,1,7) ym, COALESCE(SUM(valor),0) t FROM despesas WHERE oficina_id=$1 AND data>=$2 AND data<=$3 GROUP BY SUBSTRING(data,1,7)", [id, inicio, fim]),
+      ]);
+      const mapaFat = Object.fromEntries(fatMes.map(r => [r.ym, +r.t]));
+      const mapaDesp = Object.fromEntries(despMes.map(r => [r.ym, +r.t]));
+      const cur = new Date(dInicio.getFullYear(), dInicio.getMonth(), 1);
+      const last = new Date(dFim.getFullYear(), dFim.getMonth(), 1);
+      while (cur <= last) {
+        const ym = cur.getFullYear() + '-' + String(cur.getMonth() + 1).padStart(2, '0');
+        serie.push({ label: ym.slice(5, 7) + '/' + ym.slice(2, 4), data: ym, faturamento: mapaFat[ym] || 0, despesas: mapaDesp[ym] || 0 });
+        cur.setMonth(cur.getMonth() + 1);
+      }
+    }
+
+    // ── OS por status (3 status reais) ──
+    const osPorStatus = [
+      { status: 'em_andamento', label: 'Em andamento', valor: +osEmAndamento.n },
+      { status: 'finalizado',   label: 'Concluídas',   valor: +osConcluidas.n },
+      { status: 'cancelada',    label: 'Canceladas',   valor: +osCanceladas.n },
+    ];
+
+    // ── Top 5 clientes por faturamento no período ──
+    const topClientes = await query(
+      `SELECT c.id, c.nome, COALESCE(SUM(os.valor),0) total, COUNT(os.id) qtd
+       FROM ordens_servico os JOIN clientes c ON c.id = os.cliente_id
+       WHERE os.oficina_id=$1 AND os.status='finalizado' AND os.data>=$2 AND os.data<=$3
+       GROUP BY c.id, c.nome
+       HAVING COALESCE(SUM(os.valor),0) > 0
+       ORDER BY total DESC LIMIT 5`,
+      [id, inicio, fim]
+    );
+
+    // ── Últimas OS do período ──
+    const ultimasOS = await query(
+      `SELECT os.id, os.numero, os.data, os.valor, os.status,
+              c.nome as cliente_nome, v.modelo as veiculo_modelo, v.marca as veiculo_marca, v.placa
+       FROM ordens_servico os
+       LEFT JOIN clientes c ON c.id=os.cliente_id
+       LEFT JOIN veiculos v ON v.id=os.veiculo_id
+       WHERE os.oficina_id=$1 AND os.data>=$2 AND os.data<=$3
+       ORDER BY os.id DESC LIMIT 6`,
+      [id, inicio, fim]
+    );
+
+    // ── Resumo do mês/período ──
+    const resumo = {
+      servicos:   +pecasVendidasRow.mo,      // mão de obra (serviços)
+      pecas:      +pecasVendidasRow.pecas,   // peças vendidas
+      receitas:   faturamento,
+      despesas:   despesas,
+      lucro:      lucro,
+    };
+
+    res.json({
+      periodo: { inicio, fim, dias: durDias, agrupamento: durDias <= 62 ? 'diario' : 'mensal' },
+      cards,
+      serie,
+      osPorStatus,
+      topClientes,
+      ultimasOS,
+      resumo,
+    });
+  } catch (err) {
+    log.error('app_dashboard_resumo', err);
+    res.status(500).json({ error: 'Erro ao carregar resumo do dashboard' });
+  }
+});
+
 // CLIENTES
 router.get('/clientes', validateQuery, async (req,res) => {
   try {
@@ -228,7 +392,7 @@ router.get('/os', async (req,res) => {
     const perfil = req.user?.perfil;
     const isFuncionario = perfil === 'funcionario';
     const isMecanico    = perfil === 'mecanico';
-    if(status&&!['em_andamento','finalizado'].includes(status)) return res.status(400).json({error:'Status inválido'});
+    if(status&&!['em_andamento','finalizado','cancelada'].includes(status)) return res.status(400).json({error:'Status inválido'});
     let q="SELECT os.*,c.nome as cliente_nome,c.telefone as cliente_telefone,c.endereco as cliente_endereco,v.modelo as veiculo_modelo,v.placa,v.marca as veiculo_marca,v.ano as veiculo_ano,v.km as veiculo_km,u.nome as mecanico_nome FROM ordens_servico os LEFT JOIN clientes c ON c.id=os.cliente_id LEFT JOIN veiculos v ON v.id=os.veiculo_id LEFT JOIN usuarios u ON u.id=os.mecanico_id WHERE os.oficina_id=$1";
     const p=[oid(req)];
     if(status){q+=' AND os.status=$2';p.push(status);}
@@ -330,7 +494,7 @@ router.put('/os/:id', validateId, checkOwns('ordens_servico'), validateOS, check
     const perfil = req.user?.perfil;
     const isFuncionario = perfil === 'funcionario';
     const isMecanico    = perfil === 'mecanico';
-    if(status&&!['em_andamento','finalizado'].includes(status)) return res.status(400).json({error:'Status inválido'});
+    if(status&&!['em_andamento','finalizado','cancelada'].includes(status)) return res.status(400).json({error:'Status inválido'});
 
     // Mecânicos só podem atualizar: descricao, servicos, observacao
     if (isMecanico) {
@@ -447,7 +611,7 @@ router.put('/os/:id', validateId, checkOwns('ordens_servico'), validateOS, check
 router.patch('/os/:id/status', validateId, checkOwns('ordens_servico'), async (req,res) => {
   try {
     const status = req.body?.status;
-    if(!status || !['em_andamento','finalizado'].includes(status)) return res.status(400).json({error:'Status inválido'});
+    if(!status || !['em_andamento','finalizado','cancelada'].includes(status)) return res.status(400).json({error:'Status inválido'});
     const result = await run('UPDATE ordens_servico SET status=$1 WHERE id=$2 AND oficina_id=$3',[status,req.params.id,oid(req)]);
     if(result.rowCount === 0) return res.status(404).json({error:'OS não encontrada'});
     audit(req, ACOES.ALTERAR_STATUS_OS, 'ordens_servico', req.params.id, { novo_status: status });

@@ -865,3 +865,166 @@
   .painel-item-header  { padding: 9px 10px; }
   .painel-item-label   { font-size: var(--font-xs); }
 }
+
+/* ══════════════════════════════════════════
+   DASHBOARD WIDGETS (cards + gráficos recharts)
+══════════════════════════════════════════ */
+
+/* Grid de cards de indicador */
+.dw-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+@media (max-width: 1100px) { .dw-stats-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 640px)  { .dw-stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; } }
+
+.dw-stat {
+  background: #fff;
+  border: 1px solid var(--gray-200);
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: var(--sh-sm);
+}
+.dw-stat-top { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.dw-stat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dw-stat-titulo { font-size: 12px; font-weight: 600; color: var(--gray-500); line-height: 1.2; }
+.dw-stat-valor { font-family: 'Poppins', sans-serif; font-size: 20px; font-weight: 800; color: var(--gray-900); line-height: 1.1; }
+.dw-stat-var { font-size: 11px; font-weight: 700; margin-top: 6px; }
+.dw-stat-var-sub { font-weight: 500; color: var(--gray-400); }
+.dw-stat-var-empty { color: var(--gray-300); }
+
+/* Grid de gráficos (3 colunas no desktop) */
+.dw-grid {
+  display: grid;
+  grid-template-columns: 2fr 1.2fr 1.2fr;
+  gap: 16px;
+  margin-bottom: 16px;
+  align-items: stretch;
+}
+.dw-grid-2 {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+  align-items: stretch;
+}
+@media (max-width: 900px) {
+  .dw-grid, .dw-grid-2 { grid-template-columns: 1fr; }
+}
+
+.dw-card {
+  background: #fff;
+  border: 1px solid var(--gray-200);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: var(--sh-sm);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.dw-card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.dw-card-titulo { font-size: 14px; font-weight: 700; color: var(--gray-800); }
+.dw-card-sub { font-size: 11px; color: var(--gray-400); margin-bottom: 10px; }
+.dw-card-link { font-size: 12px; font-weight: 600; color: var(--accent); background: none; border: none; cursor: pointer; padding: 0; }
+
+.dw-vazio {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 160px; color: var(--gray-400); font-size: 13px; text-align: center; padding: 20px;
+}
+
+/* Tooltip custom */
+.dw-tooltip { background: #fff; border: 1px solid var(--gray-200); border-radius: 8px; padding: 8px 10px; box-shadow: var(--sh-md); font-size: 12px; }
+.dw-tooltip-label { font-weight: 700; color: var(--gray-700); margin-bottom: 4px; }
+.dw-tooltip-row { display: flex; align-items: center; gap: 6px; color: var(--gray-600); }
+.dw-tooltip-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+/* Rosca de status */
+.dw-rosca-wrap { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.dw-rosca-chart { position: relative; width: 160px; flex-shrink: 0; }
+.dw-rosca-centro { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+.dw-rosca-total { font-family: 'Poppins', sans-serif; font-size: 26px; font-weight: 800; color: var(--gray-900); line-height: 1; }
+.dw-rosca-total-label { font-size: 11px; color: var(--gray-400); }
+.dw-rosca-legenda { flex: 1; min-width: 130px; display: flex; flex-direction: column; gap: 8px; }
+.dw-legenda-item { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+.dw-legenda-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.dw-legenda-label { color: var(--gray-600); flex: 1; }
+.dw-legenda-val { font-weight: 700; color: var(--gray-800); }
+
+/* Listas (top clientes, últimas OS) */
+.dw-lista { display: flex; flex-direction: column; }
+.dw-cliente-item { padding: 8px 0; border-bottom: 1px solid var(--gray-100); }
+.dw-cliente-item:last-child { border-bottom: none; }
+.dw-cliente-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+.dw-cliente-nome { font-size: 13px; font-weight: 600; color: var(--gray-800); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dw-cliente-valor { font-size: 13px; font-weight: 700; color: var(--success); white-space: nowrap; margin-left: 8px; }
+.dw-cliente-bar-track { height: 6px; background: var(--gray-100); border-radius: 99px; overflow: hidden; }
+.dw-cliente-bar-fill { height: 100%; background: var(--brand); border-radius: 99px; }
+.dw-cliente-sub { font-size: 11px; color: var(--gray-400); margin-top: 3px; }
+
+.dw-os-item { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--gray-100); }
+.dw-os-item:last-child { border-bottom: none; }
+.dw-os-info { min-width: 0; flex: 1; }
+.dw-os-num { font-size: 12px; font-weight: 700; color: var(--brand); }
+.dw-os-cliente { font-size: 13px; font-weight: 600; color: var(--gray-800); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dw-os-veiculo { font-size: 11.5px; color: var(--gray-400); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dw-os-right { text-align: right; flex-shrink: 0; }
+.dw-os-valor { font-size: 13px; font-weight: 700; color: var(--gray-800); margin-top: 3px; }
+.dw-os-data { font-size: 11px; color: var(--gray-400); }
+
+/* Resumo */
+.dw-resumo-linha { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--gray-100); font-size: 13px; }
+.dw-resumo-linha:last-child { border-bottom: none; }
+.dw-resumo-label { color: var(--gray-600); }
+.dw-resumo-valor { font-weight: 700; color: var(--gray-800); }
+.dw-resumo-linha--destaque { background: var(--accent-light); margin: 6px -16px -16px; padding: 12px 16px; border-radius: 0 0 14px 14px; border-bottom: none; }
+.dw-resumo-linha--destaque .dw-resumo-label { font-weight: 700; color: var(--accent-dark); }
+.dw-resumo-linha--destaque .dw-resumo-valor { font-size: 15px; color: var(--accent-dark); }
+
+/* Filtro de período no cabeçalho do dashboard */
+.dw-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.dw-header-titulo { font-family: 'Poppins', sans-serif; font-size: 20px; font-weight: 800; color: var(--gray-900); }
+
+/* ── DARK MODE (mobile <=768px) — mesma abordagem do resto do app ── */
+@media (max-width: 768px) {
+  .dw-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .dw-grid, .dw-grid-2 { grid-template-columns: 1fr !important; }
+
+  .dw-stat { background: #161b22 !important; border-color: rgba(255,255,255,.07) !important; box-shadow: none !important; }
+  .dw-stat-titulo { color: rgba(255,255,255,.5) !important; }
+  .dw-stat-valor { color: #e6edf3 !important; }
+  .dw-stat-var-sub { color: rgba(255,255,255,.35) !important; }
+
+  .dw-card { background: #161b22 !important; border-color: rgba(255,255,255,.07) !important; box-shadow: none !important; }
+  .dw-card-titulo { color: #e6edf3 !important; }
+  .dw-card-sub { color: rgba(255,255,255,.4) !important; }
+
+  .dw-vazio { color: rgba(255,255,255,.4) !important; }
+
+  .dw-rosca-total { color: #e6edf3 !important; }
+  .dw-rosca-total-label { color: rgba(255,255,255,.4) !important; }
+  .dw-legenda-label { color: rgba(255,255,255,.6) !important; }
+  .dw-legenda-val { color: #e6edf3 !important; }
+
+  .dw-cliente-item, .dw-os-item, .dw-resumo-linha { border-bottom-color: rgba(255,255,255,.06) !important; }
+  .dw-cliente-nome, .dw-os-cliente, .dw-resumo-valor { color: #e6edf3 !important; }
+  .dw-cliente-sub, .dw-os-veiculo, .dw-os-data { color: rgba(255,255,255,.4) !important; }
+  .dw-cliente-bar-track { background: rgba(255,255,255,.08) !important; }
+  .dw-cliente-bar-fill { background: #60a5fa !important; }
+  .dw-os-num { color: #60a5fa !important; }
+  .dw-os-valor { color: #e6edf3 !important; }
+  .dw-resumo-label { color: rgba(255,255,255,.55) !important; }
+  .dw-resumo-linha--destaque { background: rgba(249,115,22,.12) !important; }
+  .dw-resumo-linha--destaque .dw-resumo-label,
+  .dw-resumo-linha--destaque .dw-resumo-valor { color: #fb923c !important; }
+
+  .dw-tooltip { background: #1c2128 !important; border-color: rgba(255,255,255,.12) !important; }
+  .dw-tooltip-label { color: #e6edf3 !important; }
+  .dw-tooltip-row { color: rgba(255,255,255,.7) !important; }
+
+  .dw-header-titulo { color: #e6edf3 !important; }
+
+  /* eixos e grid dos gráficos no escuro */
+  .dw-card { --dw-grid: rgba(255,255,255,.08); --dw-axis: rgba(255,255,255,.4); }
+}

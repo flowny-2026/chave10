@@ -104,6 +104,7 @@ export const api = {
   },
   app: {
     dashboard: ()                    => get('/app/dashboard'),
+    dashboardResumo: (inicio, fim)   => get('/app/dashboard-resumo' + (inicio||fim ? '?'+(inicio?'inicio='+inicio:'')+(inicio&&fim?'&':'')+(fim?'fim='+fim:'') : '')),
     config: {
       get:     ()                    => get('/app/config'),
       save:    (data)                => put('/app/config', data),

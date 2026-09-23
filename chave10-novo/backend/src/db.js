@@ -422,6 +422,26 @@ async function initDB() {
   await pool.query(`ALTER TABLE oficinas ADD COLUMN IF NOT EXISTS segmento TEXT DEFAULT 'oficina_mecanica';`).catch(() => {});
   await pool.query(`ALTER TABLE clientes ADD COLUMN IF NOT EXISTS data_nascimento TEXT;`).catch(() => {});
 
+  // ── Status 'cancelada' em ordens_servico ──────────────────
+  // Recria o CHECK para aceitar em_andamento | finalizado | cancelada.
+  // Idempotente: dropa o constraint antigo (qualquer nome) e cria o novo.
+  await pool.query(`
+    DO $$
+    DECLARE cname text;
+    BEGIN
+      SELECT conname INTO cname
+      FROM pg_constraint
+      WHERE conrelid = 'ordens_servico'::regclass AND contype = 'c'
+        AND pg_get_constraintdef(oid) ILIKE '%status%';
+      IF cname IS NOT NULL THEN
+        EXECUTE 'ALTER TABLE ordens_servico DROP CONSTRAINT ' || quote_ident(cname);
+      END IF;
+      ALTER TABLE ordens_servico
+        ADD CONSTRAINT ordens_servico_status_check
+        CHECK (status IN ('em_andamento','finalizado','cancelada'));
+    END $$;
+  `).catch(() => {});
+
   // ── ÍNDICES para performance ──────────────────────────────
   const indices = [
     'CREATE INDEX IF NOT EXISTS idx_usuarios_email ON usuarios(email)',

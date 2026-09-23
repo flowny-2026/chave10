@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../api';
 import WelcomeModal from '../../components/WelcomeModal';
@@ -7,6 +7,22 @@ import KPICard from '../../components/KPICard';
 import { useOnboarding } from '../../hooks/useOnboarding';
 import '../../styles/dashboardPremium.css';
 import { useSegmento } from '../../hooks/useSegmento';
+import PeriodFilter from '../../components/PeriodFilter';
+import {
+  StatCard, GraficoFaturamento, GraficoOSStatus, GraficoReceitasDespesas,
+  TopClientes, UltimasOS, ResumoLinha,
+} from '../../components/DashboardWidgets';
+
+// Período inicial: mês corrente
+function periodoInicial() {
+  const now = new Date();
+  const iso = d => d.toISOString().split('T')[0];
+  return {
+    preset: 'thisMonth',
+    start: iso(new Date(now.getFullYear(), now.getMonth(), 1)),
+    end: iso(now),
+  };
+}
 
 const fmt = {
   currency: v => 'R$ ' + parseFloat(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.'),
@@ -29,117 +45,6 @@ function loadMeta() {
   try { return parseFloat(localStorage.getItem('c10_meta'))||0; } catch { return 0; }
 }
 function saveMeta(v) { localStorage.setItem('c10_meta', v); }
-
-// Gráfico de barras com SVG — coordenadas absolutas, sem distorção
-function ModernChart({ data }) {
-  const [selected, setSelected] = useState(null);
-  // Detecta o tema escuro (o app usa dark mode em telas <= 768px).
-  // Ajusta as cores do SVG para terem contraste sobre fundo escuro.
-  const [isDark, setIsDark] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
-  );
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 768px)');
-    const handler = e => setIsDark(e.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, []);
-
-  if (!data?.length || data.every(d => (d.total||0) === 0))
-    return <div style={{textAlign:'center',padding:'32px 0',color:'#9ca3af',fontSize:13}}>Sem dados de faturamento ainda</div>;
-
-  // Cores adaptadas ao tema
-  const gridStrong = isDark ? 'rgba(255,255,255,.2)' : '#cbd5e1';
-  const gridWeak   = isDark ? 'rgba(255,255,255,.07)' : '#f1f5f9';
-  // Cor do texto das barras não-selecionadas / labels dos meses
-  const textNormal = isDark ? '#c9d1d9' : '#1E3A5F';
-
-  const SVG_W   = 340;
-  const SVG_H   = 160;
-  const BAR_H   = 100; // área útil das barras
-  const TOP     = 24;  // espaço acima para o valor
-  const BOTTOM  = 22;  // espaço abaixo para o label do mês
-  const n       = data.length;
-  const colW    = SVG_W / n;
-  const barW    = colW * 0.55;
-  const max     = Math.max(...data.map(d => d.total||0), 1);
-  const baseY   = TOP + BAR_H;
-
-  return (
-    <div style={{width:'100%',overflowX:'hidden'}}>
-      <svg
-        viewBox={`0 0 ${SVG_W} ${SVG_H}`}
-        width="100%"
-        height={SVG_H}
-        style={{display:'block'}}
-      >
-        <defs>
-          <linearGradient id="g-orange" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#F97316"/>
-            <stop offset="100%" stopColor="#fed7aa"/>
-          </linearGradient>
-          <linearGradient id="g-blue" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={isDark ? '#3b82f6' : '#1E3A5F'}/>
-            <stop offset="100%" stopColor={isDark ? '#93c5fd' : '#3b82f6'}/>
-          </linearGradient>
-          <linearGradient id="g-blue-active" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#2563eb"/>
-            <stop offset="100%" stopColor="#60a5fa"/>
-          </linearGradient>
-        </defs>
-
-        {/* Linhas de grade */}
-        {[0.25, 0.5, 0.75, 1].map((f, i) => (
-          <line key={i}
-            x1={0} y1={TOP + BAR_H * (1 - f)}
-            x2={SVG_W} y2={TOP + BAR_H * (1 - f)}
-            stroke={f === 1 ? gridStrong : gridWeak}
-            strokeWidth={f === 1 ? 1 : 0.5}
-          />
-        ))}
-
-        {data.map((item, i) => {
-          const valor  = item.total || 0;
-          const h      = valor > 0 ? Math.max((valor / max) * BAR_H, 4) : 0;
-          const cx     = i * colW + colW / 2;
-          const x      = cx - barW / 2;
-          const y      = baseY - h;
-          const isLast = i === n - 1;
-          const isSelected = selected === i;
-          const fill   = isLast ? 'url(#g-orange)' : isSelected ? 'url(#g-blue-active)' : 'url(#g-blue)';
-          const tc     = isLast ? (isDark ? '#fb923c' : '#ea6c0a') : isSelected ? (isDark ? '#60a5fa' : '#2563eb') : textNormal;
-
-          return (
-            <g key={i} onClick={()=>setSelected(isSelected?null:i)} style={{cursor:'pointer'}}>
-              {/* Hit area invisível para facilitar o toque */}
-              <rect x={i*colW} y={0} width={colW} height={SVG_H} fill="transparent"/>
-              
-              {/* Barra */}
-              {h > 0 && (
-                <rect x={x} y={y} width={barW} height={h} rx={3} fill={fill}
-                  style={{transition:'all .2s',opacity:selected!==null&&!isSelected&&!isLast?0.5:1}}
-                />
-              )}
-
-              {/* Valor acima */}
-              {valor > 0 && (
-                <text x={cx} y={y - 4} textAnchor="middle" fontSize={isSelected?10:9} fontWeight={isSelected?'800':'600'} fill={tc}>
-                  {fmt.currency(valor).replace('R$ ', '')}
-                </text>
-              )}
-
-              {/* Label mês */}
-              <text x={cx} y={baseY + 14} textAnchor="middle" fontSize={9}
-                fontWeight={isLast||isSelected ? '700' : '400'} fill={tc}>
-                {item.mes}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
-    </div>
-  );
-}
 
 // Card de item do Painel do Dia
 // Usa classes CSS reais (.painel-item*) em vez de estilos inline, garantindo
@@ -200,6 +105,27 @@ export default function DashboardV2() {
     api.app.dashboard().then(setData).catch(()=>setData(null)).finally(()=>setLoading(false));
   }, []);
 
+  // ── Novo painel analítico (cards + gráficos por período) ──
+  const [periodo, setPeriodo]       = useState(periodoInicial);
+  const [resumo, setResumo]         = useState(null);
+  const [resumoLoading, setResumoLoading] = useState(true);
+  const [resumoErro, setResumoErro] = useState(false);
+
+  const carregarResumo = useCallback((p) => {
+    setResumoLoading(true);
+    setResumoErro(false);
+    api.app.dashboardResumo(p.start, p.end)
+      .then(setResumo)
+      .catch(() => { setResumo(null); setResumoErro(true); })
+      .finally(() => setResumoLoading(false));
+  }, []);
+
+  useEffect(() => {
+    // Só carrega para perfis com acesso financeiro (backend também bloqueia)
+    if (isFuncionario) { setResumoLoading(false); return; }
+    carregarResumo(periodo);
+  }, [periodo, carregarResumo, isFuncionario]);
+
   function handleSaveMeta() {
     const v = parseFloat(metaInput)||0;
     setMetaState(v);
@@ -218,15 +144,9 @@ export default function DashboardV2() {
 
   const stats             = data?.stats || {};
   const recentes          = data?.recentes || [];
-  const faturamentoMensal = data?.faturamentoMensal || [];
   const painel            = data?.painelDoDia || {};
 
   const fat            = parseFloat(stats.faturamentoMes||0);
-  const fatHoje        = parseFloat(stats.faturamentoHoje||0);
-  const fatMO          = parseFloat(stats.moMes||0);
-  const fatPecas       = parseFloat(stats.pecasMes||0);
-  const pctMO          = fat>0?Math.round((fatMO/fat)*100):0;
-  const pctPecas       = fat>0?Math.round((fatPecas/fat)*100):0;
   const finalizadasHoje= parseInt(stats.finalizadasHoje||0);
   const emAndamento    = parseInt(stats.emAndamento||0);
   const totalClientes  = parseInt(stats.totalClientes||0);
@@ -410,23 +330,95 @@ export default function DashboardV2() {
         </div>
       )}
 
-      {/* ── KPIs COMPACTOS ─────────────────────────────────── */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:12,marginBottom:20}}>
-        {!isFuncionario && (
-          <KPICard title="Faturamento" value={fmt.currency(fat)} subvalue={`Hoje: ${fmt.currency(fatHoje)}`} color="var(--accent)"
-            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>}
+      {/* ═══ PAINEL ANALÍTICO (cards + gráficos por período) ═══ */}
+      {!isFuncionario && (
+        <>
+          <div className="dw-header">
+            <div className="dw-header-titulo">Visão geral</div>
+            <PeriodFilter value={periodo} onChange={setPeriodo} />
+          </div>
+
+          {resumoErro ? (
+            <div className="dw-card"><div className="dw-vazio">Não foi possível carregar os indicadores. Tente novamente.</div></div>
+          ) : resumoLoading ? (
+            <div className="dw-card"><div className="dw-vazio"><div className="spinner" /></div></div>
+          ) : resumo ? (
+            <>
+              {/* Cards de indicadores */}
+              <div className="dw-stats-grid">
+                <StatCard titulo="Faturamento" valor={resumo.cards.faturamento.valor} moeda variacao={resumo.cards.faturamento.variacao} cor="var(--blue, #3b82f6)" />
+                <StatCard titulo="Despesas" valor={resumo.cards.despesas.valor} moeda variacao={resumo.cards.despesas.variacao} cor="var(--accent)" invertido />
+                <StatCard titulo="Lucro" valor={resumo.cards.lucro.valor} moeda variacao={resumo.cards.lucro.variacao} cor="var(--success)" />
+                <StatCard titulo="OS em andamento" valor={resumo.cards.osEmAndamento.valor} cor="#3b82f6" />
+                <StatCard titulo="OS concluídas" valor={resumo.cards.osConcluidas.valor} variacao={resumo.cards.osConcluidas.variacao} cor="var(--success)" />
+                <StatCard titulo="Orçamentos pendentes" valor={resumo.cards.orcamentosPendentes.valor} cor="var(--accent)" />
+              </div>
+
+              {/* Linha 1: Faturamento x Despesas | OS por status | Top clientes */}
+              <div className="dw-grid">
+                <div className="dw-card">
+                  <div className="dw-card-head"><div className="dw-card-titulo">Faturamento e Despesas</div></div>
+                  <div className="dw-card-sub">Evolução no período ({resumo.periodo.agrupamento === 'diario' ? 'diária' : 'mensal'})</div>
+                  <GraficoFaturamento serie={resumo.serie} />
+                </div>
+                <div className="dw-card">
+                  <div className="dw-card-head"><div className="dw-card-titulo">Status das OS</div></div>
+                  <div className="dw-card-sub">Quantidade por status</div>
+                  <GraficoOSStatus dados={resumo.osPorStatus} />
+                </div>
+                <div className="dw-card">
+                  <div className="dw-card-head">
+                    <div className="dw-card-titulo">Top clientes</div>
+                    <button className="dw-card-link" onClick={() => navigate('/app/clientes')}>Ver todos</button>
+                  </div>
+                  <div className="dw-card-sub">Por faturamento no período</div>
+                  <TopClientes clientes={resumo.topClientes} />
+                </div>
+              </div>
+
+              {/* Linha 2: Receitas x Despesas | Últimas OS | Resumo */}
+              <div className="dw-grid-2">
+                <div className="dw-card">
+                  <div className="dw-card-head"><div className="dw-card-titulo">Receitas x Despesas</div></div>
+                  <div className="dw-card-sub">Comparativo por período</div>
+                  <GraficoReceitasDespesas serie={resumo.serie} />
+                </div>
+                <div className="dw-card">
+                  <div className="dw-card-head">
+                    <div className="dw-card-titulo">Últimas OS</div>
+                    <button className="dw-card-link" onClick={() => navigate('/app/os')}>Ver todas</button>
+                  </div>
+                  <UltimasOS lista={resumo.ultimasOS} />
+                </div>
+                <div className="dw-card">
+                  <div className="dw-card-head"><div className="dw-card-titulo">Resumo do período</div></div>
+                  <div className="dw-card-sub">&nbsp;</div>
+                  <ResumoLinha label="Serviços (mão de obra)" valor={resumo.resumo.servicos} />
+                  <ResumoLinha label={`${t.pecas} vendidas`} valor={resumo.resumo.pecas} />
+                  <ResumoLinha label="Total de receitas" valor={resumo.resumo.receitas} />
+                  <ResumoLinha label="Total de despesas" valor={resumo.resumo.despesas} />
+                  <ResumoLinha label="Lucro do período" valor={resumo.resumo.lucro} destaque />
+                </div>
+              </div>
+            </>
+          ) : null}
+        </>
+      )}
+
+      {/* ── KPIs COMPACTOS (apenas funcionários — não veem o painel analítico) ── */}
+      {isFuncionario && (
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:12,marginBottom:20}}>
+          <KPICard title="OS Finalizadas" value={finalizadasHoje} subvalue="hoje" color="var(--success)"
+            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>}
           />
-        )}
-        <KPICard title="OS Finalizadas" value={finalizadasHoje} subvalue="hoje" color="var(--success)"
-          icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>}
-        />
-        <KPICard title="Em Andamento" value={emAndamento} subvalue="OS abertas" color="var(--brand)"
-          icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>}
-        />
-        <KPICard title="Clientes" value={totalClientes} subvalue="cadastrados" color="#7c3aed"
-          icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>}
-        />
-      </div>
+          <KPICard title="Em Andamento" value={emAndamento} subvalue="OS abertas" color="var(--brand)"
+            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>}
+          />
+          <KPICard title="Clientes" value={totalClientes} subvalue="cadastrados" color="#7c3aed"
+            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>}
+          />
+        </div>
+      )}
 
       {/* ── META MENSAL ────────────────────────────────────── */}
       {!isFuncionario && (
@@ -458,93 +450,9 @@ export default function DashboardV2() {
         </div>
       )}
 
-      {/* ── GRID: GRÁFICO + MO/PEÇAS + OS RECENTES ────────── */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))',gap:16,marginBottom:24,alignItems:'start'}}>
-        {!isFuncionario && (
-          <div className="modern-chart-card" style={{display:'flex',flexDirection:'column'}}>
-            {/* Header */}
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
-              <span style={{fontSize:14,fontWeight:700,color:'var(--gray-800)'}}>Faturamento mensal</span>
-              <span style={{fontSize:11,color:'#9ca3af'}}>{faturamentoMensal.length} meses</span>
-            </div>
-
-            {/* Gráfico */}
-            <ModernChart data={faturamentoMensal} />
-
-            {/* Resumo abaixo do gráfico */}
-            {(() => {
-              const comValor = faturamentoMensal.filter(d => (d.total||0) > 0);
-              if (!comValor.length) return null;
-              const melhor = comValor.reduce((a, b) => (b.total||0) > (a.total||0) ? b : a);
-              const totalAcum = comValor.reduce((s, d) => s + (d.total||0), 0);
-              const ultimo = faturamentoMensal[faturamentoMensal.length - 1]?.total || 0;
-              const penultimo = faturamentoMensal[faturamentoMensal.length - 2]?.total || 0;
-              const var_pct = penultimo > 0 ? ((ultimo - penultimo) / penultimo) * 100 : null;
-              return (
-                <div style={{
-                  marginTop:14,
-                  paddingTop:14,
-                  borderTop:'1px solid #f1f5f9',
-                  display:'grid',
-                  gridTemplateColumns:'1fr 1fr 1fr',
-                  gap:8,
-                }}>
-                  <div style={{textAlign:'center'}}>
-                    <div style={{fontSize:10,color:'#9ca3af',marginBottom:3,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.4px'}}>Acumulado</div>
-                    <div style={{fontSize:13,fontWeight:800,color:'#1f2937'}}>{fmt.currency(totalAcum).replace('R$ ','R$')}</div>
-                  </div>
-                  <div style={{textAlign:'center',borderLeft:'1px solid #f1f5f9',borderRight:'1px solid #f1f5f9'}}>
-                    <div style={{fontSize:10,color:'#9ca3af',marginBottom:3,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.4px'}}>Melhor mês</div>
-                    <div style={{fontSize:13,fontWeight:800,color:'#1f2937'}}>{melhor.mes}</div>
-                    <div style={{fontSize:10,color:'#F97316',fontWeight:600}}>{fmt.currency(melhor.total).replace('R$ ','')}</div>
-                  </div>
-                  <div style={{textAlign:'center'}}>
-                    <div style={{fontSize:10,color:'#9ca3af',marginBottom:3,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.4px'}}>vs mês ant.</div>
-                    {var_pct !== null ? (
-                      <div style={{fontSize:13,fontWeight:800,color: var_pct >= 0 ? '#16a34a' : '#dc2626'}}>
-                        {var_pct >= 0 ? '↗' : '↘'} {Math.abs(var_pct).toFixed(0)}%
-                      </div>
-                    ) : (
-                      <div style={{fontSize:12,color:'#9ca3af'}}>—</div>
-                    )}
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
-        )}
-
-        {!isFuncionario && fat > 0 && (
-          <div className="modern-chart-card">
-            <div style={{marginBottom:12}}>
-              <span style={{fontSize:14,fontWeight:700,color:'var(--gray-800)'}}>MO vs {t.pecas}</span>
-            </div>
-            <div style={{marginBottom:12,textAlign:'center'}}>
-              <div style={{fontSize:22,fontWeight:800,color:'var(--gray-900)',fontFamily:'Poppins'}}>{fmt.currency(fat)}</div>
-              <div style={{fontSize:11,color:'var(--gray-400)'}}>total do mês</div>
-            </div>
-            <div style={{marginBottom:10}}>
-              <div style={{display:'flex',justifyContent:'space-between',fontSize:12,marginBottom:4}}>
-                <span style={{color:'var(--accent)',fontWeight:600}}>● Mão de obra</span>
-                <span style={{fontWeight:700,color:'var(--accent)'}}>{fmt.currency(fatMO)}</span>
-              </div>
-              <div style={{height:8,background:'var(--gray-100)',borderRadius:99,overflow:'hidden'}}>
-                <div style={{height:'100%',width:`${pctMO}%`,background:'var(--accent)',borderRadius:99}}/>
-              </div>
-            </div>
-            <div>
-              <div style={{display:'flex',justifyContent:'space-between',fontSize:12,marginBottom:4}}>
-                <span style={{color:'var(--info)',fontWeight:600}}>● {t.pecas}</span>
-                <span style={{fontWeight:700,color:'var(--info)'}}>{fmt.currency(fatPecas)}</span>
-              </div>
-              <div style={{height:8,background:'var(--gray-100)',borderRadius:99,overflow:'hidden'}}>
-                <div style={{height:'100%',width:`${pctPecas}%`,background:'var(--info)',borderRadius:99}}/>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="activity-feed">
+      {/* ── OS RECENTES (apenas funcionários — não veem o painel analítico) ── */}
+      {isFuncionario && (
+        <div className="activity-feed" style={{marginBottom:24}}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
             <span style={{fontSize:14,fontWeight:700,color:'var(--gray-800)'}}>OS recentes</span>
             <button className="btn btn-ghost btn-sm" onClick={()=>navigate('/app/os')}>Ver todas</button>
@@ -567,12 +475,11 @@ export default function DashboardV2() {
                 <span className={`badge ${os.status==='finalizado'?'badge-green':'badge-orange'}`} style={{fontSize:9}}>
                   {os.status==='finalizado'?'Finalizado':'Em andamento'}
                 </span>
-                {!isFuncionario && <div className="activity-valor">{fmt.currency(parseFloat(os.valor||0))}</div>}
               </div>
             </div>
           ))}
         </div>
-      </div>
+      )}
 
       {/* ── MODAL META ─────────────────────────────────────── */}
       {showMeta && (
