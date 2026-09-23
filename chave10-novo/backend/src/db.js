@@ -420,6 +420,7 @@ async function initDB() {
   await pool.query(`ALTER TABLE oficinas ADD COLUMN IF NOT EXISTS endereco TEXT;`).catch(() => {});
   await pool.query(`ALTER TABLE oficinas ADD COLUMN IF NOT EXISTS whatsapp TEXT;`).catch(() => {});
   await pool.query(`ALTER TABLE oficinas ADD COLUMN IF NOT EXISTS segmento TEXT DEFAULT 'oficina_mecanica';`).catch(() => {});
+  await pool.query(`ALTER TABLE clientes ADD COLUMN IF NOT EXISTS data_nascimento TEXT;`).catch(() => {});
 
   // ── ÍNDICES para performance ──────────────────────────────
   const indices = [

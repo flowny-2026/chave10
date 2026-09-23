@@ -44,6 +44,7 @@ const appNavGestao = [
   { to: '/app/estoque',        label: 'Estoque',       icon: IC.estoque,       soNaoMecanico: true },
   { to: '/app/mecanicos',      label: 'Mecânicos',     icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>, soNaoFuncionario: true, soNaoMecanico: true },
   { to: '/app/comissoes',      label: 'Comissões',     icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>, soNaoFuncionario: true, soNaoMecanico: true },
+  { to: '/app/pos-venda',      label: 'Pós-venda',     icon: IC.mensagens,     soNaoFuncionario: true, soNaoMecanico: true, badge: 'Novo' },
   { to: '/app/notificacoes',   label: 'Notificações',  icon: IC.notificacoes,  badge: 'Novo' },
   { to: '/app/configuracoes',  label: 'Configurações', icon: IC.configuracoes, soNaoFuncionario: true, soNaoMecanico: true },
   { to: '/app/meu-perfil',     label: 'Meu Perfil',    icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },

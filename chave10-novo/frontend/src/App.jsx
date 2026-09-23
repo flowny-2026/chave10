@@ -40,6 +40,7 @@ const AppDashboardV2   = lazy(() => import('./pages/app/DashboardV2'));
 const AppMecanicos       = lazy(() => import('./pages/app/Mecanicos'));
 const AppMecanicoComissoes = lazy(() => import('./pages/app/MecanicoComissoes'));
 const AppMeuPerfil     = lazy(() => import('./pages/app/MeuPerfil'));
+const AppPosVenda      = lazy(() => import('./pages/app/PosVenda'));
 
 // Fallback simples enquanto carrega a página
 function PageLoader() {
@@ -168,6 +169,7 @@ export default function App() {
             <Route path="orcamentos"    element={<AppOrcamentos />} />
             <Route path="agenda"        element={<AppAgenda />} />
             <Route path="mensagens"     element={<AppMensagens />} />
+            <Route path="pos-venda"     element={<PrivateRoute noFuncionario noMecanico><AppPosVenda /></PrivateRoute>} />
             <Route path="financeiro"    element={<PrivateRoute noFuncionario><AppFinanceiro /></PrivateRoute>} />
             <Route path="relatorios"    element={<PrivateRoute noFuncionario><AppRelatorios /></PrivateRoute>} />
             <Route path="lembretes"     element={<PrivateRoute noMecanico><AppLembretes /></PrivateRoute>} />

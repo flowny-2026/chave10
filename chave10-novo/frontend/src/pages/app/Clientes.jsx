@@ -7,7 +7,7 @@ import CepInput from '../../components/CepInput';
 import KPICard from '../../components/KPICard';
 import { useSegmento } from '../../hooks/useSegmento';
 
-const EMPTY = { nome: '', telefone: '', email: '', obs: '', endereco: '' };
+const EMPTY = { nome: '', telefone: '', email: '', obs: '', endereco: '', data_nascimento: '' };
 
 function Toast({ msg, type }) {
   if (!msg) return null;
@@ -60,7 +60,7 @@ export default function AppClientes() {
 
   function openCreate() { setForm(EMPTY); setEditing(null); setModal(true); }
   function openEdit(c) {
-    setForm({ nome: c.nome || '', telefone: c.telefone || '', email: c.email || '', obs: c.obs || '', endereco: c.endereco || '' });
+    setForm({ nome: c.nome || '', telefone: c.telefone || '', email: c.email || '', obs: c.obs || '', endereco: c.endereco || '', data_nascimento: c.data_nascimento || '' });
     setEditing(c.id);
     setModal(true);
   }
@@ -217,6 +217,11 @@ export default function AppClientes() {
                   <div className="form-group">
                     <label>Email</label>
                     <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="email@exemplo.com" />
+                  </div>
+                  <div className="form-group">
+                    <label>Data de nascimento</label>
+                    <input type="date" value={form.data_nascimento} onChange={e => setForm(f => ({ ...f, data_nascimento: e.target.value }))} />
+                    <small style={{ fontSize: 11, color: 'var(--gray-400)', marginTop: 3, display: 'block' }}>Usado para lembretes de aniversário na Central de Pós-venda.</small>
                   </div>
                   <CepInput
                     value={form.endereco}

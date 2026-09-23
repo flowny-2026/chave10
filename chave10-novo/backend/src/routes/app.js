@@ -148,18 +148,18 @@ router.get('/clientes', validateQuery, async (req,res) => {
 
 router.post('/clientes', validateCliente, async (req,res) => {
   try {
-    const {nome,telefone,email,obs,endereco}=req.body;
-    const r=await queryOne("INSERT INTO clientes(oficina_id,nome,telefone,email,obs,endereco) VALUES($1,$2,$3,$4,$5,$6) RETURNING id",[oid(req),nome,telefone||null,email||null,obs||null,endereco||null]);
+    const {nome,telefone,email,obs,endereco,data_nascimento}=req.body;
+    const r=await queryOne("INSERT INTO clientes(oficina_id,nome,telefone,email,obs,endereco,data_nascimento) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id",[oid(req),nome,telefone||null,email||null,obs||null,endereco||null,data_nascimento||null]);
     audit(req, ACOES.CRIAR_CLIENTE, 'clientes', r.id, { nome, telefone });
-    res.status(201).json({id:r.id,nome,telefone,email,obs,endereco});
+    res.status(201).json({id:r.id,nome,telefone,email,obs,endereco,data_nascimento:data_nascimento||null});
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
 // PUT /clientes/:id — checkOwns garante pertencimento à oficina antes de atualizar
 router.put('/clientes/:id', validateId, checkOwns('clientes'), validateCliente, async (req,res) => {
   try {
-    const {nome,telefone,email,obs,endereco}=req.body;
-    const result = await run("UPDATE clientes SET nome=COALESCE($1,nome),telefone=COALESCE($2,telefone),email=COALESCE($3,email),obs=COALESCE($4,obs),endereco=COALESCE($5,endereco) WHERE id=$6 AND oficina_id=$7",[nome,telefone||null,email||null,obs||null,endereco||null,req.params.id,oid(req)]);
+    const {nome,telefone,email,obs,endereco,data_nascimento}=req.body;
+    const result = await run("UPDATE clientes SET nome=COALESCE($1,nome),telefone=COALESCE($2,telefone),email=COALESCE($3,email),obs=COALESCE($4,obs),endereco=COALESCE($5,endereco),data_nascimento=COALESCE($6,data_nascimento) WHERE id=$7 AND oficina_id=$8",[nome,telefone||null,email||null,obs||null,endereco||null,data_nascimento||null,req.params.id,oid(req)]);
     if(result.rowCount === 0) return res.status(404).json({error:'Cliente não encontrado'});
     audit(req, ACOES.EDITAR_CLIENTE, 'clientes', req.params.id, { nome, telefone });
     res.json({ok:true});
@@ -1109,6 +1109,110 @@ router.post('/consulta-placa', async (req, res) => {
   } catch (err) {
     log.error('consulta_placa', err);
     res.status(500).json({ error: 'Erro interno ao consultar placa' });
+  }
+});
+
+// ── CENTRAL DE PÓS-VENDA / FOLLOW-UPS ─────────────────────────
+// Retorna 4 grupos de sugestões de contato. Não envia nada — só identifica
+// quem contatar e devolve os dados para o frontend montar a mensagem.
+router.get('/pos-venda', naoFuncionario, async (req, res) => {
+  try {
+    const id = oid(req);
+    const hoje = new Date().toISOString().split('T')[0];
+    const trintaDiasAtras = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
+    const tresDiasAtras   = new Date(Date.now() -  3 * 86400000).toISOString().split('T')[0];
+    const quinzeDiasFrente = new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0];
+    // Janela de aniversário: hoje + próximos 7 dias, comparando só MM-DD
+    const mmddHoje = hoje.slice(5); // 'MM-DD'
+    const mmddFim  = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0].slice(5);
+
+    const [posOS, revisoes, orcamentos, aniversarios] = await Promise.all([
+      // 1) Pós-venda: OS finalizadas nos últimos 30 dias, com cliente que tem telefone
+      query(
+        `SELECT os.id, os.data, os.valor,
+                c.id AS cliente_id, c.nome AS cliente_nome, c.telefone AS cliente_telefone,
+                v.marca AS veiculo_marca, v.modelo AS veiculo_modelo, v.placa
+         FROM ordens_servico os
+         LEFT JOIN clientes c ON c.id = os.cliente_id
+         LEFT JOIN veiculos v ON v.id = os.veiculo_id
+         WHERE os.oficina_id = $1 AND os.status = 'finalizado'
+           AND os.data >= $2
+           AND c.telefone IS NOT NULL AND c.telefone <> ''
+         ORDER BY os.data DESC LIMIT 30`,
+        [id, trintaDiasAtras]
+      ).catch(() => []),
+
+      // 2) Revisão/retorno: lembretes não vistos com previsão até 15 dias à frente (ou vencidos)
+      query(
+        `SELECT l.id, l.descricao, l.tipo, l.data_previsao, l.km_previsao,
+                v.marca AS veiculo_marca, v.modelo AS veiculo_modelo, v.placa,
+                c.id AS cliente_id, c.nome AS cliente_nome, c.telefone AS cliente_telefone
+         FROM lembretes l
+         LEFT JOIN veiculos v ON v.id = l.veiculo_id
+         LEFT JOIN clientes c ON c.id = v.cliente_id
+         WHERE l.oficina_id = $1 AND COALESCE(l.visto,0) = 0
+           AND l.data_previsao IS NOT NULL AND l.data_previsao <> ''
+           AND l.data_previsao <= $2
+           AND c.telefone IS NOT NULL AND c.telefone <> ''
+         ORDER BY l.data_previsao ASC LIMIT 30`,
+        [id, quinzeDiasFrente]
+      ).catch(() => []),
+
+      // 3) Orçamento parado: pendentes criados há mais de 3 dias
+      query(
+        `SELECT o.id, o.numero, o.criado_em, o.valor_mo, o.valor_pecas, o.desconto,
+                c.id AS cliente_id, c.nome AS cliente_nome, c.telefone AS cliente_telefone,
+                v.marca AS veiculo_marca, v.modelo AS veiculo_modelo, v.placa
+         FROM orcamentos o
+         LEFT JOIN clientes c ON c.id = o.cliente_id
+         LEFT JOIN veiculos v ON v.id = o.veiculo_id
+         WHERE o.oficina_id = $1 AND o.status = 'pendente'
+           AND o.criado_em IS NOT NULL AND SUBSTRING(o.criado_em, 1, 10) <= $2
+           AND c.telefone IS NOT NULL AND c.telefone <> ''
+         ORDER BY o.criado_em ASC LIMIT 30`,
+        [id, tresDiasAtras]
+      ).catch(() => []),
+
+      // 4) Aniversariantes: nascimento (MM-DD) entre hoje e +7 dias
+      query(
+        `SELECT c.id AS cliente_id, c.nome AS cliente_nome, c.telefone AS cliente_telefone,
+                c.data_nascimento
+         FROM clientes c
+         WHERE c.oficina_id = $1
+           AND c.data_nascimento IS NOT NULL AND c.data_nascimento <> ''
+           AND c.telefone IS NOT NULL AND c.telefone <> ''
+           AND (
+             CASE WHEN $2 <= $3
+                  THEN SUBSTRING(c.data_nascimento, 6, 5) BETWEEN $2 AND $3
+                  ELSE (SUBSTRING(c.data_nascimento, 6, 5) >= $2 OR SUBSTRING(c.data_nascimento, 6, 5) <= $3)
+             END
+           )
+         ORDER BY SUBSTRING(c.data_nascimento, 6, 5) ASC LIMIT 30`,
+        [id, mmddHoje, mmddFim]
+      ).catch(() => []),
+    ]);
+
+    // Calcula total do orçamento no backend (evita expor lógica sensível de valores)
+    const orcamentosComTotal = orcamentos.map(o => {
+      const total = (parseFloat(o.valor_mo) || 0) + (parseFloat(o.valor_pecas) || 0) - (parseFloat(o.desconto) || 0);
+      return { ...o, total: Math.max(0, total) };
+    });
+
+    res.json({
+      posOS,
+      revisoes,
+      orcamentos: orcamentosComTotal,
+      aniversarios,
+      contadores: {
+        posOS: posOS.length,
+        revisoes: revisoes.length,
+        orcamentos: orcamentosComTotal.length,
+        aniversarios: aniversarios.length,
+      },
+    });
+  } catch (err) {
+    log.error('pos_venda', err);
+    res.status(500).json({ error: 'Erro ao carregar central de pós-venda' });
   }
 });
 

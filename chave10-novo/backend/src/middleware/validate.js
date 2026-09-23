@@ -187,6 +187,13 @@ function validateCliente(req, res, next) {
   const obs      = req.body.obs      ? (safeText(req.body.obs, 500) || undefined) : undefined;
   const endereco = req.body.endereco ? (safeText(req.body.endereco, 300) || undefined) : undefined;
 
+  // Data de nascimento — aceita apenas formato ISO YYYY-MM-DD; caso contrário ignora
+  let data_nascimento = undefined;
+  if (req.body.data_nascimento) {
+    const dn = String(req.body.data_nascimento).trim();
+    data_nascimento = /^\d{4}-\d{2}-\d{2}$/.test(dn) ? dn : undefined;
+  }
+
   // Strip campos desconhecidos
   req.body = {
     nome,
@@ -194,6 +201,7 @@ function validateCliente(req, res, next) {
     ...(emailVal !== undefined && { email: emailVal }),
     ...(obs      !== undefined && { obs }),
     ...(endereco !== undefined && { endereco }),
+    ...(data_nascimento !== undefined && { data_nascimento }),
   };
   next();
 }
