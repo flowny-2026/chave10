@@ -840,6 +840,17 @@
   /* Estoque cards */
   .estoque-alerta { background: rgba(251,191,36,.12) !important; border-color: rgba(251,191,36,.25) !important; color: #fbbf24 !important; }
 
+  /* Relatórios: Top 5 serviços — legível no dark (o 1º item ficava branco/invisível) */
+  .top-item { border-bottom-color: rgba(255,255,255,.08) !important; }
+  .top-item:hover { background: rgba(255,255,255,.04) !important; }
+  .top-name { color: #e6edf3 !important; }
+  .top-sub  { color: rgba(255,255,255,.45) !important; }
+  .top-qtd  { color: rgba(255,255,255,.55) !important; }
+  .top-fat  { color: #fb923c !important; }
+  .top-bar-wrap, .top-bar-bg { background: rgba(255,255,255,.1) !important; }
+  .top-rank { background: rgba(255,255,255,.1) !important; color: #e6edf3 !important; }
+  .top-bar-label { color: rgba(255,255,255,.75) !important; }
+
   /* Estoque: seletor de categoria (Peça/Ferramenta) no modal — dark mode.
      Sem override, o item selecionado usava accent-light (claro) com texto claro = invisível. */
   .estoque-radio {
