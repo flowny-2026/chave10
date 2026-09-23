@@ -852,11 +852,11 @@ export default function Layout({ area }) {
                 { to: '/app/meu-perfil', label: 'Perfil',     icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
               ]
             : [
-                { to: '/app/dashboard', label: 'Dashboard', icon: IC.dashboard },
-                { to: '/app/os',        label: t.oss,       icon: IC.os },
-                { to: '/app/clientes',  label: 'Clientes',  icon: IC.clientes },
-                { to: '/app/financeiro',label: 'Financeiro',icon: IC.financeiro },
-                { to: '/app/agenda',    label: 'Mais',      icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>, onClick: () => setOpen(true) },
+                { to: '/app/dashboard', label: 'Dashboard',  icon: IC.dashboard },
+                { to: '/app/os',        label: 'OS',         icon: IC.os },
+                { to: '/app/financeiro',label: 'Financeiro', icon: IC.financeiro },
+                { to: '/app/clientes',  label: 'Clientes',   icon: IC.clientes },
+                { to: '/app/veiculos',  label: t.veiculos,   icon: IC.veiculos },
               ]
           ).map(item => (
             <NavLink
