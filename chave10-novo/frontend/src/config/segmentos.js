@@ -3,12 +3,11 @@
  * ─────────────────────────────────────────────────────────────────────────────
  * Configuração de nomenclaturas por segmento de negócio.
  *
- * Para adicionar um novo segmento, basta criar uma nova chave com os termos
- * equivalentes. Todos os campos são obrigatórios.
- *
  * Segmentos disponíveis:
  *   - oficina_mecanica  (padrão)
- *   - compressores
+ *
+ * Para adicionar um novo segmento, basta acrescentar uma nova chave abaixo
+ * com todos os termos equivalentes — nenhum outro arquivo precisa mudar.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -47,42 +46,6 @@ export const SEGMENTOS = {
     modelo:     'Modelo',
     aplicacao:  'Aplicação',
     ano:        'Ano',
-  },
-
-  compressores: {
-    label:      'Compressores',
-    emoji:      '⚙️',
-    // Veículo → Equipamento
-    veiculo:    'Equipamento',
-    veiculos:   'Equipamentos',
-    novoVeiculo:'Novo Equipamento',
-    editVeiculo:'Editar Equipamento',
-    // Placa → Nº de Série
-    placa:      'Nº de Série',
-    placaAbrev: 'Série',
-    // KM → Horímetro
-    km:         'Horímetro',
-    kmAbrev:    'HRS',
-    kmUnit:     'h',
-    kmPlaceholder: 'Ex: 1500',
-    // Peças → Componentes
-    peca:       'Componente',
-    pecas:      'Componentes',
-    pecaLabel:  '⚙️ Componentes utilizados',
-    // Ordens
-    os:         'Ordem de Serviço',
-    oss:        'Ordens de Serviço',
-    novaOs:     'Nova OS',
-    // Orçamentos
-    orcamento:  'Orçamento',
-    orcamentos: 'Orçamentos',
-    novoOrcamento: 'Novo Orçamento',
-    editOrcamento: 'Editar Orçamento',
-    // Outros
-    marca:      'Fabricante',
-    modelo:     'Modelo',
-    aplicacao:  'Localização',
-    ano:        'Ano de Fab.',
   },
 };
 
