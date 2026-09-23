@@ -41,10 +41,12 @@ function saudacao() {
   return 'Boa noite';
 }
 
-function loadMeta() {
+// A meta é sincronizada no backend (por oficina). Mantemos o localStorage
+// apenas como cache local para exibir imediatamente enquanto o backend responde.
+function loadMetaCache() {
   try { return parseFloat(localStorage.getItem('c10_meta'))||0; } catch { return 0; }
 }
-function saveMeta(v) { localStorage.setItem('c10_meta', v); }
+function cacheMeta(v) { try { localStorage.setItem('c10_meta', v); } catch {} }
 
 // Card de item do Painel do Dia
 // Usa classes CSS reais (.painel-item*) em vez de estilos inline, garantindo
@@ -91,7 +93,7 @@ export default function DashboardV2() {
   const t = useSegmento();
   const [data, setData]           = useState(null);
   const [loading, setLoading]     = useState(true);
-  const [meta, setMetaState]      = useState(loadMeta);
+  const [meta, setMetaState]      = useState(loadMetaCache);
   const [showMeta, setShowMeta]   = useState(false);
   const [metaInput, setMetaInput] = useState('');
   const { showWelcome, tourActive, currentStep, startTour, skipTour, nextStep, prevStep, endTour } = useOnboarding();
@@ -104,6 +106,19 @@ export default function DashboardV2() {
   useEffect(() => {
     api.app.dashboard().then(setData).catch(()=>setData(null)).finally(()=>setLoading(false));
   }, []);
+
+  // Carrega a meta salva no backend (sincroniza entre dispositivos).
+  // Funcionários não têm acesso ao endpoint, então mantêm só o cache local.
+  useEffect(() => {
+    if (isFuncionario) return;
+    api.app.meta.get()
+      .then(r => {
+        const v = parseFloat(r?.meta_mensal) || 0;
+        setMetaState(v);
+        cacheMeta(v);
+      })
+      .catch(() => {}); // mantém o cache local em caso de falha
+  }, [isFuncionario]);
 
   // ── Novo painel analítico (cards + gráficos por período) ──
   const [periodo, setPeriodo]       = useState(periodoInicial);
@@ -126,10 +141,19 @@ export default function DashboardV2() {
     carregarResumo(periodo);
   }, [periodo, carregarResumo, isFuncionario]);
 
+  async function persistMeta(v) {
+    setMetaState(v);       // atualização otimista da UI
+    cacheMeta(v);
+    try {
+      await api.app.meta.save(v);
+    } catch {
+      // Se falhar no servidor, a meta ainda fica no cache local deste device.
+    }
+  }
+
   function handleSaveMeta() {
     const v = parseFloat(metaInput)||0;
-    setMetaState(v);
-    saveMeta(v);
+    persistMeta(v);
     setShowMeta(false);
   }
 
@@ -165,8 +189,9 @@ export default function DashboardV2() {
   const agendaAmanha       = painel.agendaAmanha||[];
   const osAtrasadas        = painel.osAtrasadas||[];
   const despVencidas       = painel.despesasVencidas||[];
+  const lembretesVencendo  = painel.lembretesVencendo||[];
   const semFatHoje         = painel.semFaturamentoHoje && !isFuncionario;
-  const totalAtencao       = osProntas.length + orcAguardando.length + agendaHoje.length + osAtrasadas.length + despVencidas.length;
+  const totalAtencao       = osProntas.length + orcAguardando.length + agendaHoje.length + osAtrasadas.length + despVencidas.length + lembretesVencendo.length;
 
   // Mensagem de assistente inteligente
   function getMensagemAssistente() {
@@ -175,6 +200,7 @@ export default function DashboardV2() {
     if (orcAguardando.length > 0)    return `${orcAguardando.length} orçamento${orcAguardando.length>1?'s':''} aguardando resposta.`;
     if (agendaHoje.length > 0)       return `${agendaHoje.length} cliente${agendaHoje.length>1?'s':''} agendado${agendaHoje.length>1?'s':''} para hoje.`;
     if (despVencidas.length > 0)     return `${despVencidas.length} conta${despVencidas.length>1?'s':''} vencida${despVencidas.length>1?'s':''} sem pagamento.`;
+    if (lembretesVencendo.length > 0) return `${lembretesVencendo.length} lembrete${lembretesVencendo.length>1?'s':''} de manutenção vencendo. Contate o cliente!`;
     if (semFatHoje)                  return `Você ainda não registrou faturamento hoje.`;
     if (emAndamento > 0)             return `${emAndamento} OS em andamento. Boa produção!`;
     return `Tudo em ordem por aqui. Bom trabalho!`;
@@ -294,6 +320,28 @@ export default function DashboardV2() {
                 )}
               />
             )}
+            <PainelItem
+              color="#0891b2"
+              label="Lembretes de manutenção vencendo"
+              count={lembretesVencendo.length}
+              items={lembretesVencendo}
+              onAction={() => navigate('/app/lembretes')}
+              actionLabel="Ver"
+              renderItem={(lem, i) => (
+                <div key={i} className="painel-row">
+                  <div className="painel-row-info">
+                    <span className="painel-row-name">{lem.cliente_nome || lem.descricao}</span>
+                    <span className="painel-row-sub">
+                      {[lem.veiculo_marca, lem.veiculo_modelo].filter(Boolean).join(' ')}
+                      {lem.placa ? ` · ${lem.placa}` : ''}
+                    </span>
+                  </div>
+                  <span className="painel-row-badge" style={{background:'#ecfeff',color:'#0891b2'}}>
+                    {lem.data_previsao ? fmt.date(lem.data_previsao) : '—'}
+                  </span>
+                </div>
+              )}
+            />
             {agendaAmanha.length > 0 && (
               <PainelItem
                 color="#7c3aed"
@@ -497,7 +545,7 @@ export default function DashboardV2() {
               </div>
               <div className="form-actions">
                 <button className="btn btn-outline" onClick={()=>setShowMeta(false)}>Cancelar</button>
-                {meta>0 && <button className="btn btn-ghost" style={{color:'var(--danger)'}} onClick={()=>{setMetaState(0);saveMeta(0);setShowMeta(false);}}>Remover</button>}
+                {meta>0 && <button className="btn btn-ghost" style={{color:'var(--danger)'}} onClick={()=>{persistMeta(0);setShowMeta(false);}}>Remover</button>}
                 <button className="btn btn-primary" onClick={handleSaveMeta}>Salvar</button>
               </div>
             </div>

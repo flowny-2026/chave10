@@ -109,6 +109,10 @@ export const api = {
       get:     ()                    => get('/app/config'),
       save:    (data)                => put('/app/config', data),
     },
+    meta: {
+      get:     ()                    => get('/app/meta'),
+      save:    (meta)                => put('/app/meta', { meta }),
+    },
     clientes: {
       list:    (q)                   => get('/app/clientes' + (q ? '?q='+encodeURIComponent(q) : '')),
       create:  (data)                => post('/app/clientes', data),
@@ -153,6 +157,7 @@ export const api = {
       list:    ()                    => get('/app/lembretes'),
       create:  (data)                => post('/app/lembretes', data),
       update:  (id, data)            => put('/app/lembretes/'+id, data),
+      marcarContato: (id)            => patch('/app/lembretes/'+id+'/contato'),
       remove:  (id)                  => del('/app/lembretes/'+id),
     },
     estoque: {

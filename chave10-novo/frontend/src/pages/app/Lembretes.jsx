@@ -61,7 +61,7 @@ export default function AppLembretes() {
     load(); showToast('Lembrete excluído');
   }
 
-  function enviarWhatsApp(l) {
+  async function enviarWhatsApp(l) {
     const v = veiculos.find(v=>v.id===l.veiculo_id);
     const c = v ? clientes.find(c=>c.id===v.cliente_id) : null;
     if (!c?.telefone) { showToast('Cliente sem telefone cadastrado','error'); return; }
@@ -70,6 +70,11 @@ export default function AppLembretes() {
     const msg = `Olá, ${c.nome.split(' ')[0]}! 👋\n\n🔧 *Lembrete de ${tipoLabel}*\n\nIdentificamos que o seu *${veiculo}* está com ${l.descricao.toLowerCase()}.\n${l.data_previsao?`\n📅 Data prevista: ${fmt.date(l.data_previsao)}`:''}${l.km_previsao?`\n🛣️ KM prevista: ${parseInt(l.km_previsao).toLocaleString('pt-BR')} km`:''}\n\nAgende agora e evite problemas maiores!`;
     const tel = c.telefone.replace(/\D/g,'');
     window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`, '_blank');
+    // Registra a data do último contato (não bloqueia a abertura do WhatsApp)
+    try {
+      await api.app.lembretes.marcarContato(l.id);
+      setLembretes(prev => prev.map(x => x.id===l.id ? { ...x, ultimo_contato: new Date().toISOString().split('T')[0] } : x));
+    } catch { /* silencioso — o contato foi feito de qualquer forma */ }
   }
 
   const hoje = new Date().toISOString().split('T')[0];
@@ -109,6 +114,11 @@ export default function AppLembretes() {
                 {l.data_previsao && `📅 ${fmt.date(l.data_previsao)}`}
                 {l.km_previsao && ` · 🛣️ ${parseInt(l.km_previsao).toLocaleString('pt-BR')} km`}
               </div>
+              {l.ultimo_contato && (
+                <div className="lembrete-sub" style={{marginTop:2,color:'var(--success)'}}>
+                  ✓ Último contato: {fmt.date(l.ultimo_contato)}
+                </div>
+              )}
             </div>
             <div style={{display:'flex',flexDirection:'column',gap:6,alignItems:'flex-end'}}>
               {l.visto ? <span className="badge badge-gray">✓ Visto</span> : vencido ? <span className="badge badge-red">Vencido</span> : <span className="badge badge-green">OK</span>}

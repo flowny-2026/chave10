@@ -50,6 +50,7 @@ router.get('/dashboard', async (req,res) => {
     const amanhaStr = amanha.toISOString().split('T')[0];
     const seteDiasAtras = new Date(Date.now()-7*86400000).toISOString().split('T')[0];
     const tresDiasAtras = new Date(Date.now()-3*86400000).toISOString().split('T')[0];
+    const seteDiasFrente = new Date(Date.now()+7*86400000).toISOString().split('T')[0];
 
     const [
       osProntas,
@@ -59,6 +60,7 @@ router.get('/dashboard', async (req,res) => {
       osAtrasadas,
       despesasVencidas,
       recentes,
+      lembretesVencendo,
     ] = await Promise.all([
       query(
         "SELECT os.id, os.data, c.nome as cliente_nome, c.telefone as cliente_telefone, v.modelo as veiculo_modelo, v.placa FROM ordens_servico os LEFT JOIN clientes c ON c.id=os.cliente_id LEFT JOIN veiculos v ON v.id=os.veiculo_id WHERE os.oficina_id=$1 AND os.status='finalizado' AND os.data>=$2 ORDER BY os.data ASC LIMIT 10",
@@ -88,6 +90,20 @@ router.get('/dashboard', async (req,res) => {
         "SELECT os.*,c.nome as cliente_nome,v.modelo as veiculo_modelo,v.placa FROM ordens_servico os LEFT JOIN clientes c ON c.id=os.cliente_id LEFT JOIN veiculos v ON v.id=os.veiculo_id WHERE os.oficina_id=$1 ORDER BY os.id DESC LIMIT 5",
         [id]
       ),
+      // Lembretes vencendo: não vistos, com data prevista até 7 dias à frente (ou vencidos)
+      query(
+        `SELECT l.id, l.descricao, l.tipo, l.data_previsao, l.km_previsao,
+                v.marca AS veiculo_marca, v.modelo as veiculo_modelo, v.placa,
+                c.nome as cliente_nome, c.telefone as cliente_telefone
+         FROM lembretes l
+         LEFT JOIN veiculos v ON v.id=l.veiculo_id
+         LEFT JOIN clientes c ON c.id=v.cliente_id
+         WHERE l.oficina_id=$1 AND COALESCE(l.visto,0)=0
+           AND l.data_previsao IS NOT NULL AND l.data_previsao <> ''
+           AND l.data_previsao <= $2
+         ORDER BY l.data_previsao ASC LIMIT 10`,
+        [id, seteDiasFrente]
+      ).catch(()=>[]),
     ]);
 
     // Faturamento hoje (nenhuma OS finalizada hoje)
@@ -100,6 +116,7 @@ router.get('/dashboard', async (req,res) => {
       agendaAmanha,
       osAtrasadas,
       despesasVencidas,
+      lembretesVencendo,
       semFaturamentoHoje,
     };
     // ──────────────────────────────────────────────────────────
@@ -614,6 +631,8 @@ router.patch('/os/:id/status', validateId, checkOwns('ordens_servico'), async (r
     if(!status || !['em_andamento','finalizado','cancelada'].includes(status)) return res.status(400).json({error:'Status inválido'});
     const result = await run('UPDATE ordens_servico SET status=$1 WHERE id=$2 AND oficina_id=$3',[status,req.params.id,oid(req)]);
     if(result.rowCount === 0) return res.status(404).json({error:'OS não encontrada'});
+    // Ao finalizar por status (sem passar por pagamento), também gera lembrete
+    if (status === 'finalizado') await gerarLembreteAutomatico(oid(req), req.params.id);
     audit(req, ACOES.ALTERAR_STATUS_OS, 'ordens_servico', req.params.id, { novo_status: status });
     res.json({ok:true});
   } catch(err){res.status(500).json({error:'Erro interno'});}
@@ -628,6 +647,52 @@ router.delete('/os/:id', validateId, checkOwns('ordens_servico'), async (req,res
     res.json({ok:true});
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
+
+// ── Geração automática de lembrete ao finalizar uma OS ────────
+// Se a OS for de troca de óleo ou revisão (detectado por palavras-chave em
+// descricao/servicos) e tiver veículo, cria um lembrete futuro para o retorno.
+// Idempotente: não duplica se já existe um lembrete com origem_os_id = osId.
+async function gerarLembreteAutomatico(oficinaId, osId) {
+  try {
+    const os = await queryOne(
+      'SELECT id, veiculo_id, descricao, servicos FROM ordens_servico WHERE id=$1 AND oficina_id=$2',
+      [osId, oficinaId]
+    );
+    if (!os || !os.veiculo_id) return;
+
+    // Já existe lembrete originado desta OS? Não duplica.
+    const jaExiste = await queryOne(
+      'SELECT id FROM lembretes WHERE oficina_id=$1 AND origem_os_id=$2',
+      [oficinaId, osId]
+    );
+    if (jaExiste) return;
+
+    const texto = `${os.descricao || ''} ${os.servicos || ''}`.toLowerCase();
+    const ehOleo    = /(óleo|oleo|lubrific)/.test(texto);
+    const ehRevisao = /(revis|revisão|correia|filtro)/.test(texto);
+    if (!ehOleo && !ehRevisao) return; // só gera para manutenções recorrentes
+
+    // Óleo: retorno em ~6 meses; Revisão: ~12 meses
+    const meses = ehOleo ? 6 : 12;
+    const prev = new Date();
+    prev.setMonth(prev.getMonth() + meses);
+    const dataPrevisao = prev.toISOString().split('T')[0];
+
+    const tipo = ehOleo ? 'oleo' : 'revisao';
+    const descricao = ehOleo
+      ? 'Próxima troca de óleo'
+      : 'Próxima revisão';
+
+    await run(
+      `INSERT INTO lembretes(oficina_id, veiculo_id, tipo, descricao, data_previsao, origem_os_id)
+       VALUES($1,$2,$3,$4,$5,$6)`,
+      [oficinaId, os.veiculo_id, tipo, descricao, dataPrevisao, osId]
+    );
+  } catch (e) {
+    // Falha na geração de lembrete nunca deve quebrar a finalização da OS
+    log.warn?.('lembrete_auto_falhou', { osId, erro: e.message });
+  }
+}
 
 // LEMBRETES
 router.get('/lembretes', naoMecanico, async (req,res) => {
@@ -652,6 +717,16 @@ router.put('/lembretes/:id', naoMecanico, validateId, checkOwns('lembretes'), va
     const result = await run("UPDATE lembretes SET veiculo_id=COALESCE($1,veiculo_id),tipo=COALESCE($2,tipo),descricao=COALESCE($3,descricao),data_previsao=COALESCE($4,data_previsao),km_previsao=COALESCE($5,km_previsao),visto=COALESCE($6,visto) WHERE id=$7 AND oficina_id=$8",[veiculo_id||null,tipo||null,descricao||null,data_previsao||null,km_previsao||null,visto!=null?visto:null,req.params.id,oid(req)]);
     if(result.rowCount === 0) return res.status(404).json({error:'Lembrete não encontrado'});
     res.json({ok:true});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// PATCH /lembretes/:id/contato — registra a data do último contato (WhatsApp)
+router.patch('/lembretes/:id/contato', naoMecanico, validateId, checkOwns('lembretes'), async (req,res) => {
+  try {
+    const hoje = new Date().toISOString().split('T')[0];
+    const result = await run('UPDATE lembretes SET ultimo_contato=$1 WHERE id=$2 AND oficina_id=$3', [hoje, req.params.id, oid(req)]);
+    if(result.rowCount === 0) return res.status(404).json({error:'Lembrete não encontrado'});
+    res.json({ ok:true, ultimo_contato: hoje });
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
@@ -936,6 +1011,9 @@ router.post('/os/:id/pagamento', validateId, checkOwns('ordens_servico'), valida
     // Finaliza a OS automaticamente
     await run("UPDATE ordens_servico SET status='finalizado' WHERE id=$1 AND oficina_id=$2", [osId, id]);
 
+    // Gera lembrete de retorno (troca de óleo/revisão), se aplicável
+    await gerarLembreteAutomatico(id, osId);
+
     res.status(201).json({id: r.id, valor_liquido: valorLiquido, parcelas: nParcelas, valor_parcela: valorParcela});
   } catch(err){log.error('app_pagamento_os',err);res.status(500).json({error:'Erro interno'});}
 });
@@ -1032,7 +1110,7 @@ router.delete('/agenda/:id', validateId, checkOwns('agenda'), async (req,res) =>
 router.get('/config', naoFuncionario, async (req,res) => {
   try {
     const of = await queryOne(
-      "SELECT nome, responsavel, telefone, email, endereco, logo, observacoes, whatsapp, segmento FROM oficinas WHERE id=$1",
+      "SELECT nome, responsavel, telefone, email, endereco, logo, observacoes, whatsapp, segmento, meta_mensal FROM oficinas WHERE id=$1",
       [oid(req)]
     );
     if (!of) return res.status(404).json({ error: 'Oficina não encontrada' });
@@ -1046,6 +1124,7 @@ router.get('/config', naoFuncionario, async (req,res) => {
       logo:        of.logo        || null,
       documento:   of.observacoes || '',
       segmento:    of.segmento    || 'oficina_mecanica',
+      meta_mensal: parseFloat(of.meta_mensal) || 0,
     });
   } catch(err){ log.error('app_get_config', err); res.status(500).json({ error: 'Erro interno' }); }
 });
@@ -1128,6 +1207,28 @@ router.put('/config', naoFuncionario, validateLogoUpload, async (req,res) => {
 
     res.json({ ok: true });
   } catch(err){ log.error('app_put_config', err); res.status(500).json({ error: 'Erro interno' }); }
+});
+
+// ── META MENSAL DE FATURAMENTO (por oficina, sincronizada) ────
+// GET  /app/meta  → { meta_mensal }
+// PUT  /app/meta  { meta } → salva a meta mensal da oficina
+router.get('/meta', naoFuncionario, async (req,res) => {
+  try {
+    const of = await queryOne('SELECT meta_mensal FROM oficinas WHERE id=$1', [oid(req)]);
+    res.json({ meta_mensal: parseFloat(of?.meta_mensal) || 0 });
+  } catch(err){ log.error('app_get_meta', err); res.status(500).json({ error: 'Erro interno' }); }
+});
+
+router.put('/meta', naoFuncionario, async (req,res) => {
+  try {
+    const valor = parseFloat(req.body?.meta);
+    if (!Number.isFinite(valor) || valor < 0 || valor > 1e12) {
+      return res.status(400).json({ error: 'Meta inválida' });
+    }
+    const meta = Math.round(valor * 100) / 100;
+    await run('UPDATE oficinas SET meta_mensal=$1 WHERE id=$2', [meta, oid(req)]);
+    res.json({ ok: true, meta_mensal: meta });
+  } catch(err){ log.error('app_put_meta', err); res.status(500).json({ error: 'Erro interno' }); }
 });
 
 // ── NOTIFICAÇÕES ──────────────────────────────────────────────

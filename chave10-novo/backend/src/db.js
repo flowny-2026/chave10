@@ -420,7 +420,11 @@ async function initDB() {
   await pool.query(`ALTER TABLE oficinas ADD COLUMN IF NOT EXISTS endereco TEXT;`).catch(() => {});
   await pool.query(`ALTER TABLE oficinas ADD COLUMN IF NOT EXISTS whatsapp TEXT;`).catch(() => {});
   await pool.query(`ALTER TABLE oficinas ADD COLUMN IF NOT EXISTS segmento TEXT DEFAULT 'oficina_mecanica';`).catch(() => {});
+  await pool.query(`ALTER TABLE oficinas ADD COLUMN IF NOT EXISTS meta_mensal REAL DEFAULT 0;`).catch(() => {});
   await pool.query(`ALTER TABLE clientes ADD COLUMN IF NOT EXISTS data_nascimento TEXT;`).catch(() => {});
+  // Lembretes: data do último contato (WhatsApp) e OS que originou o lembrete (automático)
+  await pool.query(`ALTER TABLE lembretes ADD COLUMN IF NOT EXISTS ultimo_contato TEXT;`).catch(() => {});
+  await pool.query(`ALTER TABLE lembretes ADD COLUMN IF NOT EXISTS origem_os_id INTEGER;`).catch(() => {});
 
   // ── Status 'cancelada' em ordens_servico ──────────────────
   // Recria o CHECK para aceitar em_andamento | finalizado | cancelada.
