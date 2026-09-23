@@ -3170,3 +3170,56 @@ tbody tr:hover td { background: rgba(249,115,22,.04); }
   color: var(--brand);
   font-weight: var(--fw-semibold);
 }
+
+/* ─────────────────────────────────────────────────────────────
+   RELATÓRIOS — barra de filtros
+   ───────────────────────────────────────────────────────────── */
+.rel-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 14px;
+  padding: 16px;
+  background: #fff;
+  border: 1px solid var(--gray-200);
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+.rel-filtro-item { display: flex; flex-direction: column; gap: 6px; min-width: 180px; }
+.rel-filtro-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .5px; color: var(--gray-500);
+}
+.rel-select {
+  padding: 9px 12px;
+  border: 1.5px solid var(--gray-300);
+  border-radius: 8px;
+  font-size: 13px; font-weight: 500;
+  color: var(--gray-700);
+  background: #fff;
+  min-height: 40px;
+  cursor: pointer;
+}
+.rel-select:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgba(30,58,95,.08); }
+.rel-filtro-reset { align-self: flex-end; margin-bottom: 1px; }
+.rel-resumo-chip {
+  font-size: 13px; color: var(--gray-600);
+  margin-bottom: 16px; padding: 8px 12px;
+  background: var(--gray-50); border-radius: 8px;
+  display: inline-block;
+}
+.rel-resumo-chip strong { color: var(--gray-800); }
+
+/* Dark mode (mobile <=768px) — mesma abordagem do resto do app */
+@media (max-width: 768px) {
+  .rel-filtros { background: #161b22; border-color: rgba(255,255,255,.07); flex-direction: column; align-items: stretch; }
+  .rel-filtro-item { min-width: 0; width: 100%; }
+  .rel-filtro-label { color: rgba(255,255,255,.5); }
+  .rel-select {
+    background: #0f141a; border-color: rgba(255,255,255,.14); color: #e6edf3;
+    width: 100%;
+  }
+  .rel-select option { background: #161b22; color: #e6edf3; }
+  .rel-resumo-chip { background: #161b22; color: rgba(255,255,255,.6); }
+  .rel-resumo-chip strong { color: #e6edf3; }
+}

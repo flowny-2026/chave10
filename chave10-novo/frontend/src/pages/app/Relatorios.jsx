@@ -1,11 +1,39 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../api';
 import KPICard from '../../components/KPICard';
+import PeriodFilter from '../../components/PeriodFilter';
 import { exportRelatorioFinanceiro, exportWithFeedback } from '../../utils/pdfExporter';
 
 const fmt = {
   currency: v => 'R$ ' + parseFloat(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.'),
 };
+
+// Período inicial: este mês
+function periodoInicial() {
+  const now = new Date();
+  const iso = d => d.toISOString().split('T')[0];
+  return {
+    preset: 'thisMonth',
+    start: iso(new Date(now.getFullYear(), now.getMonth(), 1)),
+    end: iso(now),
+  };
+}
+
+const PRESET_LABELS = {
+  today: 'Hoje', yesterday: 'Ontem', last7days: 'Últimos 7 dias',
+  last30days: 'Últimos 30 dias', thisMonth: 'Este mês', lastMonth: 'Mês passado',
+  thisYear: 'Este ano', custom: 'Personalizado',
+};
+
+const STATUS_LABELS = {
+  todos: 'Todas', finalizado: 'Finalizadas', em_andamento: 'Em andamento', cancelada: 'Canceladas',
+};
+
+function fmtBR(iso) {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
 
 const CATS = { 'Troca de óleo':0,'Freios':0,'Suspensão':0,'Elétrica':0,'Revisão':0,'Outros':0 };
 const CAT_COLORS = ['#F97316','#1E3A5F','#16a34a','#dc2626','#7c3aed','#9CA3AF'];
@@ -30,6 +58,11 @@ export default function AppRelatorios() {
   const [clientes, setClientes] = useState([]);
   const [loading, setLoading]   = useState(true);
 
+  // ── Filtros ──
+  const [periodo, setPeriodo]   = useState(periodoInicial);
+  const [clienteId, setClienteId] = useState('');   // '' = todos
+  const [statusFiltro, setStatusFiltro] = useState('finalizado');
+
   useEffect(() => {
     Promise.all([api.app.os.list(), api.app.clientes.list()])
       .then(([o,c])=>{ setOrdens(o); setClientes(c); })
@@ -37,15 +70,42 @@ export default function AppRelatorios() {
       .finally(()=>setLoading(false));
   }, []);
 
+  // Aplica os filtros de período, cliente e status sobre as OS
+  const ordensFiltradas = useMemo(() => {
+    return ordens.filter(o => {
+      const d = (o.data || '').slice(0, 10);
+      if (periodo.start && d < periodo.start) return false;
+      if (periodo.end && d > periodo.end) return false;
+      if (clienteId && String(o.cliente_id) !== String(clienteId)) return false;
+      if (statusFiltro !== 'todos' && o.status !== statusFiltro) return false;
+      return true;
+    });
+  }, [ordens, periodo, clienteId, statusFiltro]);
+
   if (loading) return <div style={{padding:40,textAlign:'center',color:'var(--gray-400)'}}>Carregando...</div>;
 
-  const finalizadas = ordens.filter(o=>o.status==='finalizado');
-  const totalFat = finalizadas.reduce((s,o)=>s+parseFloat(o.valor_mo||0)+parseFloat(o.valor_pecas||0)||parseFloat(o.valor||0),0);
-  const ticketMedio = finalizadas.length ? totalFat/finalizadas.length : 0;
+  // "finalizadas" agora reflete o conjunto filtrado (usado nos indicadores).
+  // Quando o status é "todos", os cálculos de faturamento consideram só o valor
+  // realizado (finalizadas), mas a contagem de serviços segue o filtro.
+  const finalizadas = statusFiltro === 'todos'
+    ? ordensFiltradas.filter(o => o.status === 'finalizado')
+    : ordensFiltradas.filter(o => o.status === statusFiltro);
+  const baseCalculo = finalizadas.filter(o => o.status === 'finalizado');
+  const totalFat = baseCalculo.reduce((s,o)=>s+parseFloat(o.valor_mo||0)+parseFloat(o.valor_pecas||0)||parseFloat(o.valor||0),0);
+  const ticketMedio = baseCalculo.length ? totalFat/baseCalculo.length : 0;
 
-  // Top serviços
+  // Rótulos legíveis dos filtros (para tela e PDF)
+  const periodoLabel = periodo.preset === 'custom'
+    ? `${fmtBR(periodo.start)} a ${fmtBR(periodo.end)}`
+    : (PRESET_LABELS[periodo.preset] || `${fmtBR(periodo.start)} a ${fmtBR(periodo.end)}`);
+  const clienteLabel = clienteId
+    ? (clientes.find(c => String(c.id) === String(clienteId))?.nome || '')
+    : 'Todos';
+  const statusLabel = STATUS_LABELS[statusFiltro] || statusFiltro;
+
+  // Top serviços (com base nas finalizadas do período)
   const svcMap = {};
-  finalizadas.forEach(o=>{
+  baseCalculo.forEach(o=>{
     const servs = (o.servicos||'').split(/[,\n]/).map(s=>s.trim()).filter(Boolean);
     servs.forEach(s=>{
       const k = s.toLowerCase().substring(0,30);
@@ -58,28 +118,35 @@ export default function AppRelatorios() {
   const maxQtd = topSvc[0]?.qtd||1;
 
   // Categorias para pizza
-  const cats = buildCategorias(finalizadas);
+  const cats = buildCategorias(baseCalculo);
   const catEntries = Object.entries(cats).filter(([,v])=>v>0);
   const totalCat = catEntries.reduce((s,[,v])=>s+v,0);
+
+  // Nº de clientes distintos atendidos no período filtrado
+  const clientesAtendidos = new Set(baseCalculo.map(o => o.cliente_id).filter(Boolean)).size;
 
   // Prepara dados para export PDF
   function handleExportPDF() {
     const pdfData = {
+      tituloRelatorio: 'Relatório de Desempenho',
+      periodoLabel,
+      clienteLabel,
+      statusLabel,
       totalFaturamento: totalFat,
       totalServicos: finalizadas.length,
       ticketMedio,
-      totalClientes: clientes.length,
+      totalClientes: clienteId ? 1 : clientesAtendidos,
       topServicos: topSvc,
       categorias: catEntries.map(([nome, valor]) => ({ nome, valor })),
     };
-    
+
     exportWithFeedback(exportRelatorioFinanceiro, pdfData);
   }
 
   return (
     <div>
       <div className="page-header">
-        <div><div className="page-title">Relatórios</div><div className="page-subtitle">Visão geral do desempenho da oficina</div></div>
+        <div><div className="page-title">Relatórios</div><div className="page-subtitle">Desempenho da oficina no período selecionado</div></div>
         <div className="page-actions" style={{gap:8}}>
           <button className="btn btn-primary" onClick={handleExportPDF}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -96,6 +163,47 @@ export default function AppRelatorios() {
         </div>
       </div>
 
+      {/* ── Barra de filtros ── */}
+      <div className="rel-filtros">
+        <div className="rel-filtro-item">
+          <label className="rel-filtro-label">Período</label>
+          <PeriodFilter value={periodo} onChange={setPeriodo} />
+        </div>
+        <div className="rel-filtro-item">
+          <label className="rel-filtro-label">Cliente</label>
+          <select className="rel-select" value={clienteId} onChange={e => setClienteId(e.target.value)}>
+            <option value="">Todos os clientes</option>
+            {[...clientes].sort((a,b)=>(a.nome||'').localeCompare(b.nome||'')).map(c => (
+              <option key={c.id} value={c.id}>{c.nome}</option>
+            ))}
+          </select>
+        </div>
+        <div className="rel-filtro-item">
+          <label className="rel-filtro-label">Status da OS</label>
+          <select className="rel-select" value={statusFiltro} onChange={e => setStatusFiltro(e.target.value)}>
+            <option value="finalizado">Finalizadas</option>
+            <option value="em_andamento">Em andamento</option>
+            <option value="cancelada">Canceladas</option>
+            <option value="todos">Todas</option>
+          </select>
+        </div>
+        {(clienteId || statusFiltro !== 'finalizado' || periodo.preset !== 'thisMonth') && (
+          <button
+            className="btn btn-outline btn-sm rel-filtro-reset"
+            onClick={() => { setPeriodo(periodoInicial()); setClienteId(''); setStatusFiltro('finalizado'); }}
+          >
+            Limpar filtros
+          </button>
+        )}
+      </div>
+
+      {/* Resumo do recorte atual */}
+      <div className="rel-resumo-chip">
+        Mostrando <strong>{finalizadas.length}</strong> {statusFiltro === 'todos' ? 'OS' : (STATUS_LABELS[statusFiltro] || 'OS').toLowerCase()} ·
+        Período: <strong>{periodoLabel}</strong>
+        {clienteId && <> · Cliente: <strong>{clienteLabel}</strong></>}
+      </div>
+
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:16,marginBottom:24}}>
         <KPICard
           title="Faturamento Total"
@@ -104,7 +212,7 @@ export default function AppRelatorios() {
           icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>}
         />
         <KPICard
-          title="Serviços Realizados"
+          title={statusFiltro === 'todos' ? 'OS no período' : `OS ${(STATUS_LABELS[statusFiltro]||'').toLowerCase()}`}
           value={finalizadas.length}
           color="var(--brand)"
           icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
@@ -116,8 +224,9 @@ export default function AppRelatorios() {
           icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>}
         />
         <KPICard
-          title="Clientes Cadastrados"
-          value={clientes.length}
+          title="Clientes Atendidos"
+          value={clienteId ? 1 : clientesAtendidos}
+          subvalue={`${clientes.length} cadastrados no total`}
           color="#7c3aed"
           icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>}
         />

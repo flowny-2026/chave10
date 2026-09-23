@@ -72,12 +72,25 @@ export async function exportRelatorioFinanceiro(data) {
     
     doc.setFontSize(14);
     doc.setFont('helvetica', 'normal');
-    doc.text('Relatório Financeiro', 15, 25);
+    doc.text(data.tituloRelatorio || 'Relatório Financeiro', 15, 25);
     
     doc.setFontSize(10);
     doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`, 15, 32);
     
     yPos = 45;
+
+    // Linha de filtros aplicados (período, cliente, status)
+    const filtrosTxt = [];
+    if (data.periodoLabel) filtrosTxt.push(`Período: ${data.periodoLabel}`);
+    if (data.clienteLabel) filtrosTxt.push(`Cliente: ${data.clienteLabel}`);
+    if (data.statusLabel) filtrosTxt.push(`Status: ${data.statusLabel}`);
+    if (filtrosTxt.length) {
+      doc.setTextColor(COLORS.gray);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.text(filtrosTxt.join('   |   '), 15, yPos);
+      yPos += 8;
+    }
     
     // KPIs
     doc.setTextColor(COLORS.darkGray);
