@@ -568,6 +568,44 @@
 
   /* AGENDA */
   :root { --agenda-bg: #1c2128; }
+
+  /* Grade semanal totalmente visível no celular (sem rolagem horizontal).
+     Coluna de hora estreita + 7 colunas iguais que cabem na largura da tela. */
+  .agenda-grid {
+    grid-template-columns: 34px repeat(7, 1fr) !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  .agenda-header-cell {
+    padding: 6px 1px !important;
+    font-size: 9px !important;
+    line-height: 1.15 !important;
+  }
+  .agenda-header-cell strong { font-size: 12px !important; }
+  .agenda-header-cell > div { /* badge de quantidade */
+    padding: 0 4px !important;
+    font-size: 8px !important;
+  }
+  .agenda-time-cell {
+    padding: 4px 2px 0 !important;
+    font-size: 8px !important;
+    height: 46px !important;
+    justify-content: center !important;
+  }
+  .agenda-slot { height: 46px !important; }
+  .agenda-event {
+    font-size: 8px !important;
+    padding: 1px 2px !important;
+    border-left-width: 2px !important;
+    border-radius: 3px !important;
+    line-height: 1.1 !important;
+    white-space: normal !important;      /* deixa quebrar em vez de cortar */
+    overflow: hidden !important;
+  }
+  .agenda-event span { white-space: normal !important; }
+  .agenda-event strong { display: block; }
+  /* Botão de excluir do evento menor no mobile */
+  .agenda-event button { font-size: 11px !important; }
 }
 
 /* ══════════════════════════════════════════
@@ -764,6 +802,25 @@
 
   /* Estoque cards */
   .estoque-alerta { background: rgba(251,191,36,.12) !important; border-color: rgba(251,191,36,.25) !important; color: #fbbf24 !important; }
+
+  /* Estoque: seletor de categoria (Peça/Ferramenta) no modal — dark mode.
+     Sem override, o item selecionado usava accent-light (claro) com texto claro = invisível. */
+  .estoque-radio {
+    background: #0f141a !important;
+    border-color: rgba(255,255,255,.14) !important;
+    color: rgba(255,255,255,.6) !important;
+  }
+  .estoque-radio.active {
+    background: rgba(249,115,22,.20) !important;
+    border-color: #F97316 !important;
+    color: #fb923c !important;
+  }
+
+  /* Estoque: abas de filtro (Todos/Peças/Ferramentas) — dark mode */
+  .estoque-tab-group { background: #0f141a !important; }
+  .estoque-tab { color: rgba(255,255,255,.55) !important; }
+  .estoque-tab.active { background: #1c2128 !important; color: #fb923c !important; box-shadow: none !important; }
+  .estoque-tab:hover:not(.active) { color: rgba(255,255,255,.8) !important; }
 
   /* Financeiro */
   .fin-card-value { color: inherit !important; }

@@ -101,8 +101,9 @@ export default function AppAgenda() {
       .sort((a,b) => (a.hora||'00:00') > (b.hora||'00:00') ? 1 : -1);
   });
 
-  // MOBILE: visualização de lista por dia
-  if (isMobile) {
+  // MOBILE: visualização de lista por dia (mantida, porém desativada —
+  // a grade semanal responsiva abaixo é usada em todas as larguras).
+  if (false && isMobile) {
     const diaAtual = diasSemana[diaSelecionado];
     const eventosHoje = eventosPorDia[diaSelecionado];
     const isToday = diaAtual.toDateString() === hoje.toDateString();
