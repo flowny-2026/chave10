@@ -397,17 +397,26 @@ export default function ApprovalPage() {
           <div className="items-section">
             <h3>Peças</h3>
             <div className="items-list">
-              {budget.pecas.map((peca, idx) => (
-                <div key={idx} className="item-row">
-                  <span className="item-name">
-                    • {peca.nome}
-                    {peca.quantidade > 1 && ` (${peca.quantidade}x)`}
-                  </span>
-                  <span className="item-price">
-                    R$ {(peca.valor || peca.preco || 0).toFixed(2).replace('.', ',')}
-                  </span>
-                </div>
-              ))}
+              {budget.pecas.map((peca, idx) => {
+                // Formato salvo: { nome, qtd, valor_unit, cliente_fornece }.
+                // Mantém fallback para nomes antigos (quantidade/valor/preco) por compatibilidade.
+                const qtd = parseFloat(peca.qtd ?? peca.quantidade) || 1;
+                const unit = parseFloat(peca.valor_unit ?? peca.valor ?? peca.preco) || 0;
+                const subtotal = unit * qtd;
+                return (
+                  <div key={idx} className="item-row">
+                    <span className="item-name">
+                      • {peca.nome}
+                      {qtd > 1 && ` (${qtd}x)`}
+                    </span>
+                    <span className="item-price">
+                      {peca.cliente_fornece
+                        ? 'Cliente fornece'
+                        : `R$ ${subtotal.toFixed(2).replace('.', ',')}`}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

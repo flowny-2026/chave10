@@ -3,6 +3,7 @@ import { api } from '../../api';
 import FotoUploader from '../../components/FotoUploader';
 import { useSegmento, getTermosSegmento } from '../../hooks/useSegmento';
 import { IcoView, IcoEdit, IcoTrash, IcoPrint, IcoWhatsApp } from '../../components/ActionIcons';
+import { printHTML } from '../../utils/printHTML';
 
 const fmt = {
   currency: v => 'R$ ' + parseFloat(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.'),
@@ -215,15 +216,23 @@ export default function AppOrcamentos() {
         pecas_itens: pecasValidas,
       };
 
-      // Se tem fotos pendentes, cria a OS primeiro para hospedar as imagens
+      // Se tem fotos pendentes, cria a OS primeiro para hospedar as imagens.
+      // A OS recebe os MESMOS valores e peças do orçamento, para não ficar zerada.
       let osIdCriado = null;
       if (pendingPhotos.length > 0) {
         try {
+          const totalPecasOrc = pecasValidas.reduce((s,p)=>s+(parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1),0);
+          const valorMoOrc = parseFloat(form.valor_mo)||0;
           const osRes = await api.app.os.create({
             descricao: form.descricao || 'Orçamento com fotos',
+            servicos: form.servicos || null,
             cliente_id: form.cliente_id || null,
             veiculo_id: form.veiculo_id || null,
-            valor_mo: 0,
+            valor_mo: valorMoOrc,
+            valor_pecas: totalPecasOrc,
+            valor: valorMoOrc + totalPecasOrc,
+            pecas_itens: pecasValidas,
+            pecas: pecasValidas.map(p=>`${p.qtd}x ${p.nome} (${fmt.currency(p.valor_unit)})`).join('\n'),
           });
           if (osRes?.id) {
             osIdCriado = osRes.id;
@@ -290,11 +299,7 @@ export default function AppOrcamentos() {
       }
     } catch { /* usa o cache local se a API falhar */ }
     const html = gerarHTMLOrcamento(orc, clientes, veiculos, oficina, t);
-    const win = window.open('', '_blank');
-    win.document.write(html);
-    win.document.close();
-    win.focus();
-    setTimeout(() => win.print(), 600);
+    printHTML(html);
   }
 
   async function enviarLinkAprovacao(orc) {

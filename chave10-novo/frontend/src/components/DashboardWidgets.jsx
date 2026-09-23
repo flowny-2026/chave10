@@ -106,6 +106,23 @@ export function GraficoFaturamento({ serie }) {
   );
 }
 
+/* Tooltip para gráficos de contagem/percentual (rosca) */
+function TooltipContagem({ active, payload, total }) {
+  if (!active || !payload?.length) return null;
+  const p = payload[0];
+  const valor = p.value || 0;
+  const pct = total > 0 ? Math.round((valor / total) * 100) : 0;
+  return (
+    <div className="dw-tooltip">
+      <div className="dw-tooltip-label">{p.name}</div>
+      <div className="dw-tooltip-row">
+        <span className="dw-tooltip-dot" style={{ background: p.payload?.fill || p.color }} />
+        <strong>{valor}</strong>&nbsp;({pct}%)
+      </div>
+    </div>
+  );
+}
+
 /* ── Gráfico 2: OS por status (rosca) ──────────────────────── */
 const CORES_STATUS = { em_andamento: COR.blue, finalizado: COR.green, cancelada: COR.red };
 export function GraficoOSStatus({ dados }) {
@@ -119,6 +136,7 @@ export function GraficoOSStatus({ dados }) {
             <Pie data={dados} dataKey="valor" nameKey="label" cx="50%" cy="50%" innerRadius={52} outerRadius={78} paddingAngle={2} stroke="none">
               {dados.map((d) => <Cell key={d.status} fill={CORES_STATUS[d.status] || COR.gray} />)}
             </Pie>
+            <Tooltip content={<TooltipContagem total={total} />} />
           </PieChart>
         </ResponsiveContainer>
         <div className="dw-rosca-centro">

@@ -5,6 +5,7 @@ import { offlineManager, OPERATION_TYPES, useOfflineManager } from '../../utils/
 import FotoUploader from '../../components/FotoUploader';
 import { useSegmento, getTermosSegmento } from '../../hooks/useSegmento';
 import { IcoView, IcoEdit, IcoTrash, IcoPrint, IcoWhatsApp } from '../../components/ActionIcons';
+import { printHTML } from '../../utils/printHTML';
 
 const fmt = {
   currency: v => 'R$ ' + parseFloat(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.'),
@@ -418,11 +419,7 @@ export default function AppOS() {
       }
     } catch { /* usa o cache local */ }
     const html = gerarHTMLOS(os, clientes, veiculos, oficina, t);
-    const win = window.open('', '_blank');
-    win.document.write(html);
-    win.document.close();
-    win.focus();
-    setTimeout(() => win.print(), 600);
+    printHTML(html);
   }
 
   function enviarWhatsApp(os) {
