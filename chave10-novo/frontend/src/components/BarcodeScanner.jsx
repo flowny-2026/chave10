@@ -34,9 +34,16 @@ export default function BarcodeScanner({ onDetected, onClose }) {
   }
 
   async function iniciar() {
+    setErro('');
+    // Contexto inseguro (HTTP) → câmera bloqueada pelo navegador
+    if (typeof window !== 'undefined' && window.isSecureContext === false) {
+      setErro('A câmera só funciona em conexão segura (https). Acesse o site por https ou use o campo abaixo.');
+      setStatus('manual');
+      return;
+    }
     // Sem suporte a câmera → direto no manual
     if (!navigator.mediaDevices?.getUserMedia) {
-      setErro('Câmera não disponível neste dispositivo. Use o campo abaixo.');
+      setErro('Este navegador não permite acesso à câmera. Use o campo abaixo.');
       setStatus('manual');
       return;
     }
@@ -58,7 +65,23 @@ export default function BarcodeScanner({ onDetected, onClose }) {
         await lerComZxing();
       }
     } catch (err) {
-      setErro('Não foi possível acessar a câmera. Verifique a permissão ou use o campo abaixo.');
+      // Mensagem específica conforme o motivo, para o usuário saber o que fazer
+      const nome = err?.name || '';
+      const standalone = window.matchMedia?.('(display-mode: standalone)')?.matches
+        || window.navigator?.standalone === true;
+      if (nome === 'NotAllowedError' || nome === 'SecurityError') {
+        setErro(
+          standalone
+            ? 'Permissão de câmera negada. Como o Chave 10 está instalado como app, abra o site pelo navegador (Chrome/Safari) e permita a câmera, ou libere a câmera nas configurações do celular para o Chave 10.'
+            : 'Permissão de câmera negada. Toque no cadeado ao lado do endereço do site e permita a Câmera; depois toque em "Tentar novamente".'
+        );
+      } else if (nome === 'NotFoundError' || nome === 'OverconstrainedError') {
+        setErro('Nenhuma câmera encontrada neste dispositivo. Use o campo abaixo.');
+      } else if (nome === 'NotReadableError') {
+        setErro('A câmera está sendo usada por outro app. Feche-o e toque em "Tentar novamente".');
+      } else {
+        setErro('Não foi possível acessar a câmera. Toque em "Tentar novamente" ou use o campo abaixo.');
+      }
       setStatus('manual');
     }
   }
@@ -193,10 +216,18 @@ export default function BarcodeScanner({ onDetected, onClose }) {
           </div>
         )}
 
-        {/* Erro */}
+        {/* Erro + tentar novamente */}
         {erro && (
-          <div style={{ padding:'12px 20px', background:'#fffbeb', fontSize:13, color:'#b45309', borderBottom:'1px solid rgba(217,119,6,.2)' }}>
-            ⚠️ {erro}
+          <div style={{ padding:'12px 20px', background:'#fffbeb', borderBottom:'1px solid rgba(217,119,6,.2)' }}>
+            <div style={{ fontSize:13, color:'#b45309', lineHeight:1.45, marginBottom:10 }}>⚠️ {erro}</div>
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              onClick={() => { detectedRef.current = false; setStatus('iniciando'); iniciar(); }}
+              style={{ borderColor:'#f59e0b', color:'#b45309' }}
+            >
+              📷 Tentar novamente
+            </button>
           </div>
         )}
 
