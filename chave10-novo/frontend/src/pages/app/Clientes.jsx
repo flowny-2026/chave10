@@ -6,6 +6,7 @@ import { maskPhone } from '../../utils/validation';
 import CepInput from '../../components/CepInput';
 import KPICard from '../../components/KPICard';
 import { useSegmento } from '../../hooks/useSegmento';
+import VeiculoFormModal from '../../components/VeiculoFormModal';
 
 const EMPTY = { nome: '', telefone: '', email: '', obs: '', endereco: '', data_nascimento: '' };
 
@@ -22,6 +23,8 @@ export default function AppClientes() {
   const [form, setForm] = useState(EMPTY);
   const [editing, setEditing] = useState(null);
   const [toast, setToast] = useState({ msg: '', type: '' });
+  // Fluxo: após cadastrar cliente, abrir modal de veículo já vinculado
+  const [veiculoModal, setVeiculoModal] = useState(null); // null | { cliente_id, cliente_nome }
 
   // Filtra clientes baseado na busca
   const filteredClientes = allClientes.filter(c => {
@@ -69,11 +72,21 @@ export default function AppClientes() {
     e.preventDefault();
     if (!form.nome.trim()) { showToast('Nome é obrigatório', 'error'); return; }
     try {
-      if (editing) await api.app.clientes.update(editing, form);
-      else await api.app.clientes.create(form);
-      setModal(false);
-      load();
-      showToast(editing ? 'Cliente atualizado!' : 'Cliente salvo com sucesso!');
+      if (editing) {
+        await api.app.clientes.update(editing, form);
+        setModal(false);
+        load();
+        showToast('Cliente atualizado!');
+      } else {
+        const novo = await api.app.clientes.create(form);
+        setModal(false);
+        await load();
+        showToast('Cliente salvo com sucesso!');
+        // Abre em seguida o cadastro de veículo já vinculado ao novo cliente
+        if (novo?.id) {
+          setVeiculoModal({ cliente_id: String(novo.id), cliente_nome: novo.nome || form.nome });
+        }
+      }
     } catch (err) {
       showToast(err.error || 'Erro ao salvar', 'error');
     }
@@ -156,18 +169,18 @@ export default function AppClientes() {
         {clientes.length ? (
           <>
             <div className="table-wrapper">
-              <table>
+              <table className="responsive-cards-table">
                 <thead>
                   <tr><th>Nome</th><th>Telefone</th><th>Email</th><th>{t.veiculos}</th><th>Ações</th></tr>
                 </thead>
                 <tbody>
                   {clientes.map(c => (
                     <tr key={c.id}>
-                      <td><strong>{c.nome}</strong></td>
-                      <td>{c.telefone || '—'}</td>
-                      <td>{c.email || '—'}</td>
-                      <td><span className="badge badge-blue">{c.total_veiculos || 0} {t.veiculo.toLowerCase()}(s)</span></td>
-                      <td>
+                      <td data-label="Nome"><strong>{c.nome}</strong></td>
+                      <td data-label="Telefone">{c.telefone || '—'}</td>
+                      <td data-label="Email">{c.email || '—'}</td>
+                      <td data-label={t.veiculos}><span className="badge badge-blue">{c.total_veiculos || 0} {t.veiculo.toLowerCase()}(s)</span></td>
+                      <td data-label="Ações">
                         <div style={{ display: 'flex', gap: 6 }}>
                           <button className="btn btn-outline btn-sm" onClick={() => openEdit(c)}>✏️ Editar</button>
                           <button className="btn btn-outline btn-sm" onClick={() => remove(c.id)}>🗑️</button>
@@ -241,6 +254,21 @@ export default function AppClientes() {
           </div>
         </div>
       )}
+
+      {/* Cadastro de veículo logo após criar o cliente */}
+      <VeiculoFormModal
+        open={!!veiculoModal}
+        key={veiculoModal?.cliente_id || 'novo-veiculo'}
+        editing={null}
+        initial={{ cliente_id: veiculoModal?.cliente_id || '' }}
+        clientes={veiculoModal ? [{ id: veiculoModal.cliente_id, nome: veiculoModal.cliente_nome }] : []}
+        lockCliente
+        contexto={veiculoModal ? `Cliente ${veiculoModal.cliente_nome} salvo. Cadastre um veículo agora ou pule esta etapa — você pode adicionar veículos depois.` : null}
+        closeLabel="Pular veículo"
+        onClose={() => setVeiculoModal(null)}
+        onToast={showToast}
+        onSaved={() => { setVeiculoModal(null); showToast('Veículo cadastrado!'); }}
+      />
 
       <Toast msg={toast.msg} type={toast.type} />
     </div>

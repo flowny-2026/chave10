@@ -46,7 +46,7 @@ export default function KPICard({
 
       {/* Dados */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+        <div style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', lineHeight: 1.25, wordBreak: 'break-word' }}>
           {title}
         </div>
         <div style={{ fontSize: size === 'large' ? 26 : 22, fontWeight: 800, color: '#111827', lineHeight: 1.1, marginTop: 2 }}>

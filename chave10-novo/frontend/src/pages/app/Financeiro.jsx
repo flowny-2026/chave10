@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { api } from '../../api';
 import KPICard from '../../components/KPICard';
 import { IcoEdit, IcoTrash, IcoCheck } from '../../components/ActionIcons';
+import { GraficoReceitasDespesas, GraficoCategorias } from '../../components/DashboardWidgets';
+import '../../styles/dashboardPremium.css';
 
 const fmt = {
   currency: v => 'R$ ' + parseFloat(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.'),
@@ -118,7 +120,34 @@ export default function AppFinanceiro() {
   // Categorias
   const catMap = {};
   despesas.forEach(d=>{ if(!catMap[d.categoria]) catMap[d.categoria]=0; catMap[d.categoria]+=parseFloat(d.valor||0); });
-  const maxCat = Math.max(...Object.values(catMap),1);
+
+  // ── Série temporal Receitas x Despesas (para gráfico) ──
+  // Agrupa por dia se o período for curto (<= 62 dias), senão por mês.
+  const serieReceitasDespesas = (() => {
+    const diffDias = Math.round((new Date(fimMes) - new Date(inicioMes)) / 86400000) + 1;
+    const porMes = diffDias > 62;
+    const buckets = {};
+    const rotulo = iso => {
+      const s = String(iso).slice(0, 10);
+      if (porMes) return s.slice(5, 7) + '/' + s.slice(2, 4);       // MM/AA
+      return s.slice(8, 10) + '/' + s.slice(5, 7);                   // DD/MM
+    };
+    const chave = iso => (porMes ? String(iso).slice(0, 7) : String(iso).slice(0, 10));
+    const add = (iso, campo, valor) => {
+      if (!iso) return;
+      const k = chave(iso);
+      if (!buckets[k]) buckets[k] = { key: k, label: rotulo(iso), faturamento: 0, despesas: 0 };
+      buckets[k][campo] += valor;
+    };
+    ordensM.forEach(o => add(o.data, 'faturamento', parseFloat(o.valor_mo||0)+parseFloat(o.valor_pecas||0)||parseFloat(o.valor||0)));
+    despesas.forEach(d => add(d.data, 'despesas', parseFloat(d.valor||0)));
+    return Object.values(buckets).sort((a, b) => a.key.localeCompare(b.key));
+  })();
+
+  // ── Despesas por categoria (para gráfico de rosca) ──
+  const dadosCategorias = Object.entries(catMap)
+    .map(([label, valor]) => ({ label, valor }))
+    .sort((a, b) => b.valor - a.valor);
 
   return (
     <div>
@@ -171,6 +200,20 @@ export default function AppFinanceiro() {
             : <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
           }
         />
+      </div>
+
+      {/* Gráficos: Receitas x Despesas + Despesas por categoria */}
+      <div className="dw-grid-2" style={{marginBottom:20}}>
+        <div className="dw-card">
+          <div className="dw-card-head"><div className="dw-card-titulo">Receitas x Despesas</div></div>
+          <div className="dw-card-sub">Evolução no período</div>
+          <GraficoReceitasDespesas serie={serieReceitasDespesas} />
+        </div>
+        <div className="dw-card">
+          <div className="dw-card-head"><div className="dw-card-titulo">Despesas por categoria</div></div>
+          <div className="dw-card-sub">Distribuição no período</div>
+          <GraficoCategorias dados={dadosCategorias} unidadeLabel="categorias" />
+        </div>
       </div>
 
       {/* Gráfico de formas de pagamento */}
@@ -247,33 +290,8 @@ export default function AppFinanceiro() {
         );
       })()}
 
-      {/* Despesas por categoria + Últimas receitas */}
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:20,marginBottom:20}}>
-        <div className="card">
-          <div className="card-header"><div className="card-title">Despesas por categoria</div></div>
-          {Object.keys(catMap).length ? (
-            <div style={{display:'flex',flexDirection:'column',gap:12}}>
-              {Object.entries(catMap).sort((a,b)=>b[1]-a[1]).map(([cat,val])=>{
-                const pct = totalDesp>0?(val/totalDesp*100).toFixed(1):0;
-                return (
-                  <div key={cat}>
-                    <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
-                      <span style={{fontSize:13,fontWeight:600,color:'var(--gray-700)'}}>{CAT_ICONS[cat]||'📦'} {cat}</span>
-                      <span style={{fontSize:13,fontWeight:700,color:'var(--danger)'}}>{fmt.currency(val)}</span>
-                    </div>
-                    <div style={{height:6,background:'var(--gray-100)',borderRadius:99,overflow:'hidden'}}>
-                      <div style={{height:'100%',width:`${pct}%`,background:'var(--danger)',borderRadius:99}} />
-                    </div>
-                    <div style={{fontSize:11,color:'var(--gray-400)',marginTop:2}}>{pct}% do total</div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="empty-state" style={{padding:32}}><div className="empty-icon">📊</div><p>Nenhuma despesa cadastrada</p></div>
-          )}
-        </div>
-
+      {/* Últimas receitas */}
+      <div style={{marginBottom:20}}>
         <div className="card">
           <div className="card-header"><div className="card-title">Últimas receitas</div></div>
           {ordensM.length ? (

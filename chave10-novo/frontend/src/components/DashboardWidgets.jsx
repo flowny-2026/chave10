@@ -142,6 +142,46 @@ export function GraficoOSStatus({ dados }) {
   );
 }
 
+/* ── Gráfico: distribuição por categoria (rosca genérica) ────
+   dados: [{ label, valor, cor? }]. Usado, por ex., em Despesas por categoria. */
+const PALETA_CAT = ['#F97316', '#3b82f6', '#16a34a', '#8b5cf6', '#dc2626', '#0ea5e9', '#eab308', '#ec4899', '#14b8a6', '#64748b'];
+export function GraficoCategorias({ dados, unidadeLabel = 'categorias' }) {
+  const lista = (dados || []).filter(d => (d.valor || 0) > 0);
+  const total = lista.reduce((s, d) => s + (d.valor || 0), 0);
+  if (total === 0) return <Vazio msg="Sem dados no período" />;
+  const cor = (d, i) => d.cor || PALETA_CAT[i % PALETA_CAT.length];
+  return (
+    <div className="dw-rosca-wrap">
+      <div className="dw-rosca-chart">
+        <ResponsiveContainer width="100%" height={180}>
+          <PieChart>
+            <Pie data={lista} dataKey="valor" nameKey="label" cx="50%" cy="50%" innerRadius={52} outerRadius={78} paddingAngle={2} stroke="none">
+              {lista.map((d, i) => <Cell key={d.label} fill={cor(d, i)} />)}
+            </Pie>
+            <Tooltip content={<TooltipMoeda />} />
+          </PieChart>
+        </ResponsiveContainer>
+        <div className="dw-rosca-centro">
+          <div className="dw-rosca-total">{lista.length}</div>
+          <div className="dw-rosca-total-label">{unidadeLabel}</div>
+        </div>
+      </div>
+      <div className="dw-rosca-legenda">
+        {lista.map((d, i) => {
+          const pct = total > 0 ? Math.round((d.valor / total) * 100) : 0;
+          return (
+            <div key={d.label} className="dw-legenda-item">
+              <span className="dw-legenda-dot" style={{ background: cor(d, i) }} />
+              <span className="dw-legenda-label">{d.label}</span>
+              <span className="dw-legenda-val">{fmtMoeda(d.valor)} ({pct}%)</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /* ── Gráfico 3: Receitas x Despesas por período (barras) ───── */
 export function GraficoReceitasDespesas({ serie }) {
   const temDados = serie?.some(d => (d.faturamento || 0) > 0 || (d.despesas || 0) > 0);

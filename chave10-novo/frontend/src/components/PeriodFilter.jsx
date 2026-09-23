@@ -154,29 +154,19 @@ export default function PeriodFilter({ value, onChange }) {
     <div ref={dropdownRef} style={{ position: 'relative' }}>
       {/* Trigger Button */}
       <button
+        className="dw-period-btn"
         onClick={() => setIsOpen(!isOpen)}
         style={{
           display: 'flex',
           alignItems: 'center',
           gap: 8,
           padding: '9px 14px',
-          background: '#fff',
-          border: '1.5px solid var(--gray-300)',
           borderRadius: 8,
           fontSize: 13,
           fontWeight: 600,
-          color: 'var(--gray-700)',
           cursor: 'pointer',
           transition: 'all .15s',
           whiteSpace: 'nowrap',
-        }}
-        onMouseOver={e => {
-          e.currentTarget.style.borderColor = 'var(--brand)';
-          e.currentTarget.style.boxShadow = '0 0 0 3px rgba(30, 58, 95, 0.08)';
-        }}
-        onMouseOut={e => {
-          e.currentTarget.style.borderColor = 'var(--gray-300)';
-          e.currentTarget.style.boxShadow = 'none';
         }}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -206,16 +196,17 @@ export default function PeriodFilter({ value, onChange }) {
 
       {/* Dropdown */}
       {isOpen && (
-        <div style={{
+        <div className="dw-period-dropdown" style={{
           position: 'absolute',
           top: 'calc(100% + 8px)',
-          left: 0,
+          right: 0,
           background: '#fff',
           border: '1px solid var(--gray-200)',
           borderRadius: 12,
           boxShadow: '0 12px 32px rgba(0, 0, 0, 0.15)',
           zIndex: 1000,
-          minWidth: 320,
+          width: 320,
+          maxWidth: 'calc(100vw - 32px)',
           animation: 'slideDown 0.2s ease',
         }}>
           {/* Presets */}
