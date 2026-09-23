@@ -900,7 +900,7 @@ router.put('/config', naoFuncionario, validateLogoUpload, async (req,res) => {
     const whatsapp    = req.body.whatsapp    ? String(req.body.whatsapp).replace(/[^\d\s\-\+\(\)]/g, '').slice(0, 30) || null : null;
     const endereco    = req.body.endereco    ? String(req.body.endereco).replace(/<[^>]*>/g, '').trim().slice(0, 300) || null : null;
     const documento   = req.body.documento   ? String(req.body.documento).replace(/<[^>]*>/g, '').trim().slice(0, 500) || null : null;
-    const segmento    = ['oficina_mecanica'].includes(req.body.segmento) ? req.body.segmento : null;
+    const segmento    = ['carro','moto','caminhao','jetski','barco'].includes(req.body.segmento) ? req.body.segmento : null;
 
     // Valida email se fornecido
     let emailVal = null;

@@ -89,6 +89,7 @@ router.post('/login', validateLogin, async (req, res) => {
         data_vencimento: oficina.data_vencimento,
         status_assinatura: oficina.status_assinatura,
         plano: oficina.plano,
+        segmento: oficina.segmento || 'carro',
       }
     });
   } catch (err) {
@@ -307,6 +308,10 @@ router.post('/complete-oficina', sensitiveOpsLimiter, authMiddleware, validateLo
     }
   }
 
+  // Segmento do negócio — valida contra a lista permitida; default 'carro'
+  const SEGMENTOS_VALIDOS = ['carro', 'moto', 'caminhao', 'jetski', 'barco'];
+  const segmento = SEGMENTOS_VALIDOS.includes(req.body?.segmento) ? req.body.segmento : 'carro';
+
   try {
     const usuario = await queryOne('SELECT * FROM usuarios WHERE id=$1', [req.user.id]);
     if (!usuario)           return res.status(404).json({ error: 'Usuário não encontrado' });
@@ -317,8 +322,8 @@ router.post('/complete-oficina', sensitiveOpsLimiter, authMiddleware, validateLo
     const dataVenc = vencimento.toISOString().split('T')[0];
 
     const oficina = await queryOne(
-      "INSERT INTO oficinas(nome, responsavel, telefone, email, plano, status_assinatura, data_vencimento, observacoes, logo, endereco) VALUES($1, $2, $3, $4, 'trial', 'active', $5, $6, $7, $8) RETURNING id",
-      [nome_oficina, usuario.nome, telefone, usuario.email, dataVenc, cnpj_cpf, logo, endereco]
+      "INSERT INTO oficinas(nome, responsavel, telefone, email, plano, status_assinatura, data_vencimento, observacoes, logo, endereco, segmento) VALUES($1, $2, $3, $4, 'trial', 'active', $5, $6, $7, $8, $9) RETURNING id",
+      [nome_oficina, usuario.nome, telefone, usuario.email, dataVenc, cnpj_cpf, logo, endereco, segmento]
     );
 
     await run('UPDATE usuarios SET oficina_id=$1 WHERE id=$2', [oficina.id, req.user.id]);
@@ -341,6 +346,7 @@ router.post('/complete-oficina', sensitiveOpsLimiter, authMiddleware, validateLo
         oficina_id: oficina.id,
         data_vencimento: dataVenc,
         status_assinatura: 'active',
+        segmento,
       },
     });
   } catch (err) {
@@ -375,6 +381,7 @@ router.get('/me', authMiddleware, async (req, res) => {
       status_assinatura: oficina.status_assinatura,
       plano: oficina.plano,
       responsavel: oficina.responsavel || usuario.nome,
+      segmento: oficina.segmento || 'carro',
     });
   } catch (err) {
     log.error('auth_me', err);

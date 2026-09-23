@@ -14,6 +14,7 @@ import {
   maskPhone,
   maskDocumento,
 } from '../utils/validation';
+import { SEGMENTOS } from '../config/segmentos';
 import '../styles/login.css';
 
 function PasswordStrength({ senha }) {
@@ -83,7 +84,7 @@ export default function Cadastro() {
   );
 
   const formOficina = useForm(
-    { nome_oficina: '', cnpj_cpf: '', telefone: '', endereco: '', logo: '' },
+    { nome_oficina: '', cnpj_cpf: '', telefone: '', endereco: '', logo: '', segmento: 'carro' },
     async (values) => {
       setErro('');
       const { token, usuario } = await api.auth.completeOficina(tempToken, values);
@@ -183,6 +184,39 @@ export default function Cadastro() {
                 <FormInput label="CNPJ ou CPF" name="cnpj_cpf" value={formOficina.values.cnpj_cpf} error={formOficina.errors.cnpj_cpf} touched={formOficina.touched.cnpj_cpf} onChange={formOficina.handleChange} onBlur={formOficina.handleBlur} placeholder="00.000.000/0000-00" mask={maskDocumento} />
                 <FormInput label="Telefone" name="telefone" value={formOficina.values.telefone} error={formOficina.errors.telefone} touched={formOficina.touched.telefone} onChange={formOficina.handleChange} onBlur={formOficina.handleBlur} placeholder="(00) 00000-0000" mask={maskPhone} required />
                 <CepInput value={formOficina.values.endereco} onChange={v => formOficina.handleChange({ target: { name: 'endereco', value: v } })} />
+
+                {/* Segmento do negócio — botões */}
+                <div style={{ marginTop: 4, marginBottom: 8 }}>
+                  <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 8 }}>
+                    Segmento do negócio
+                  </label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {Object.entries(SEGMENTOS).map(([key, seg]) => {
+                      const ativo = formOficina.values.segmento === key;
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => formOficina.handleChange({ target: { name: 'segmento', value: key } })}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 6,
+                            padding: '8px 14px', borderRadius: 10, cursor: 'pointer',
+                            fontSize: 13, fontWeight: 600,
+                            border: ativo ? '2px solid #F97316' : '1.5px solid #e2e8f0',
+                            background: ativo ? '#fff7ed' : '#fff',
+                            color: ativo ? '#ea6c0a' : '#475569',
+                            transition: 'all .15s',
+                          }}
+                        >
+                          <span style={{ fontSize: 16 }}>{seg.emoji}</span>{seg.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <small style={{ fontSize: 11, color: '#94a3b8', marginTop: 6, display: 'block' }}>
+                    Define a nomenclatura do sistema. Você pode alterar depois nas Configurações.
+                  </small>
+                </div>
 
                 {erro && <div className="login-error">{erro}</div>}
 

@@ -7,7 +7,7 @@ import { useOnboarding } from '../../hooks/useOnboarding';
 import { api } from '../../api';
 import { SEGMENTOS } from '../../config/segmentos';
 
-const EMPTY = { nome: '', responsavel: '', documento: '', email: '', endereco: '', telefone: '', whatsapp: '', logo: null, segmento: 'oficina_mecanica' };
+const EMPTY = { nome: '', responsavel: '', documento: '', email: '', endereco: '', telefone: '', whatsapp: '', logo: null, segmento: 'carro' };
 
 function F({ label, type = 'text', placeholder, value, onChange, half }) {
   return (
@@ -42,7 +42,12 @@ export default function AppConfiguracoes() {
   // Carrega dados do servidor ao montar
   useEffect(() => {
     api.app.config.get()
-      .then(data => setOf({ ...EMPTY, ...data }))
+      .then(data => {
+        const merged = { ...EMPTY, ...data };
+        // Normaliza segmentos antigos para os novos (evita nenhum botão ativo)
+        if (!SEGMENTOS[merged.segmento]) merged.segmento = 'carro';
+        setOf(merged);
+      })
       .catch(() => showToast('Erro ao carregar configurações', 'error'))
       .finally(() => setLoading(false));
   }, []);
@@ -167,16 +172,31 @@ export default function AppConfiguracoes() {
 
             <div className="form-group full">
               <label>Segmento do negócio</label>
-              <select
-                value={of.segmento || 'oficina_mecanica'}
-                onChange={e => setOf(o => ({ ...o, segmento: e.target.value }))}
-              >
-                {Object.entries(SEGMENTOS).map(([key, seg]) => (
-                  <option key={key} value={key}>{seg.emoji} {seg.label}</option>
-                ))}
-              </select>
-              <small style={{ fontSize: 12, color: 'var(--gray-400)', marginTop: 4, display: 'block' }}>
-                Define a nomenclatura usada no sistema (Veículo/Equipamento, Placa/Nº Série, KM/Horímetro, etc.)
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+                {Object.entries(SEGMENTOS).map(([key, seg]) => {
+                  const ativo = (of.segmento || 'carro') === key;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setOf(o => ({ ...o, segmento: key }))}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                        padding: '8px 14px', borderRadius: 10, cursor: 'pointer',
+                        fontSize: 13, fontWeight: 600,
+                        border: ativo ? '2px solid var(--accent)' : '1.5px solid var(--gray-200)',
+                        background: ativo ? 'var(--accent-light)' : '#fff',
+                        color: ativo ? 'var(--accent-dark)' : 'var(--gray-600)',
+                        transition: 'all .15s',
+                      }}
+                    >
+                      <span style={{ fontSize: 16 }}>{seg.emoji}</span>{seg.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <small style={{ fontSize: 12, color: 'var(--gray-400)', marginTop: 6, display: 'block' }}>
+                Define a nomenclatura usada no sistema (Veículo/Moto/Embarcação, Placa/Nº Série, KM/Horímetro, etc.)
               </small>
             </div>
           </div>
