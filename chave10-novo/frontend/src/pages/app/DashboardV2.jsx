@@ -472,7 +472,10 @@ export default function DashboardV2() {
       {!isFuncionario && (
         <div className="meta-progress-premium" style={{marginBottom:20}}>
           <div className="meta-header">
-            <div className="meta-title"><span>Meta do mês</span></div>
+            <div className="meta-title">
+              <span>Meta do mês</span>
+              {meta>0 && <strong style={{marginLeft:8,color:'var(--brand)'}}>{fmt.currency(meta)}</strong>}
+            </div>
             <button className="btn btn-ghost btn-sm" onClick={()=>{setMetaInput(meta||'');setShowMeta(true);}}>
               {meta>0?'Editar':'Definir meta'}
             </button>
@@ -480,14 +483,16 @@ export default function DashboardV2() {
           {meta>0 ? (
             <>
               <div className="meta-progress-info" style={{display:'flex',justifyContent:'space-between',fontSize:12,marginBottom:6}}>
-                <span>{fmt.currency(fat)} faturado</span>
+                <span><strong>{fmt.currency(fat)}</strong> de {fmt.currency(meta)}</span>
                 <span style={{fontWeight:700,color:pctMeta>=100?'var(--success)':'var(--accent)'}}>{pctMeta.toFixed(0)}%</span>
               </div>
               <div className="meta-progress-bar">
                 <div className="meta-progress-fill" style={{width:`${pctMeta}%`}}/>
               </div>
               <div className="meta-progress-hint" style={{marginTop:10,fontSize:12,fontWeight:600,textAlign:'center'}}>
-                {pctMeta>=100?'Meta atingida!':`Faturar ${fmt.currency(porDia)}/dia nos próximos ${diasRestantes} dias`}
+                {pctMeta>=100
+                  ? 'Meta atingida!'
+                  : `Faltam ${fmt.currency(faltaMeta)} · ${fmt.currency(porDia)}/dia nos próximos ${diasRestantes} dias`}
               </div>
             </>
           ) : (
