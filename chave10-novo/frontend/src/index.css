@@ -3230,6 +3230,26 @@ tbody tr:hover td { background: rgba(249,115,22,.04); }
 }
 .rel-resumo-chip strong { color: var(--gray-800); }
 
+/* Botões de forma de pagamento (modal "Dar baixa") */
+.pay-method-btn {
+  padding: 14px 12px;
+  border-radius: var(--r-sm);
+  border: 2px solid var(--gray-200);
+  background: #fff;
+  color: var(--gray-700);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  font-size: 14px; font-weight: 500;
+  transition: all .15s;
+}
+.pay-method-btn:hover { border-color: var(--gray-300); }
+.pay-method-btn--active {
+  border-color: var(--accent);
+  background: #FFF7ED;
+  color: var(--accent);
+  font-weight: 700;
+}
+
 /* Grid dos cards de relatório: 2 colunas no desktop, 1 no mobile */
 .rel-cards-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 /* Nome do serviço no Top 5: até 2 linhas, sem sobrepor a barra */

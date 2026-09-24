@@ -840,6 +840,18 @@
   /* Estoque cards */
   .estoque-alerta { background: rgba(251,191,36,.12) !important; border-color: rgba(251,191,36,.25) !important; color: #fbbf24 !important; }
 
+  /* Formas de pagamento (modal Dar baixa) — dark mode */
+  .pay-method-btn {
+    background: #0f141a !important;
+    border-color: rgba(255,255,255,.14) !important;
+    color: rgba(255,255,255,.75) !important;
+  }
+  .pay-method-btn--active {
+    background: rgba(249,115,22,.20) !important;
+    border-color: #F97316 !important;
+    color: #fb923c !important;
+  }
+
   /* Relatórios: Top 5 serviços — legível no dark (o 1º item ficava branco/invisível) */
   .top-item { border-bottom-color: rgba(255,255,255,.08) !important; }
   .top-item:hover { background: rgba(255,255,255,.04) !important; }

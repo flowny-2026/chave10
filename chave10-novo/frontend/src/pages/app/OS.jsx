@@ -986,8 +986,9 @@ export default function AppOS() {
                       {v:'debito',label:'Débito'},
                       {v:'credito',label:'Crédito'},
                     ].map(f=>(
-                      <button key={f.v} type="button" onClick={()=>setPagForm(p=>({...p,forma:f.v,parcelas:1,bandeira:'',taxa_maquininha:''}))}
-                        style={{padding:'14px 12px',borderRadius:'var(--r-sm)',border:pagForm.forma===f.v?'2px solid var(--accent)':'2px solid var(--gray-200)',background:pagForm.forma===f.v?'#FFF7ED':'#fff',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8,fontSize:14,fontWeight:pagForm.forma===f.v?700:500,color:pagForm.forma===f.v?'var(--accent)':'var(--gray-700)',transition:'all .15s'}}>
+                      <button key={f.v} type="button"
+                        className={`pay-method-btn${pagForm.forma===f.v?' pay-method-btn--active':''}`}
+                        onClick={()=>setPagForm(p=>({...p,forma:f.v,parcelas:1,bandeira:'',taxa_maquininha:''}))}>
                         {f.label}
                       </button>
                     ))}
