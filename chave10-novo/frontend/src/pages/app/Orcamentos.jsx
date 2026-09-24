@@ -135,6 +135,7 @@ export default function AppOrcamentos() {
   const [lista, setLista]       = useState([]);
   const [clientes, setClientes] = useState([]);
   const [veiculos, setVeiculos] = useState([]);
+  const [estoquePecas, setEstoquePecas] = useState([]); // peças do estoque p/ autocompletar
   const [search, setSearch]     = useState('');
   const [statusFiltro, setStatusFiltro] = useState('');
   const [modal, setModal]       = useState(null);
@@ -172,8 +173,8 @@ export default function AppOrcamentos() {
   }
 
   useEffect(() => {
-    Promise.all([api.app.clientes.list(), api.app.veiculos.list()])
-      .then(([c,v])=>{ setClientes(c); setVeiculos(v); }).catch(()=>{});
+    Promise.all([api.app.clientes.list(), api.app.veiculos.list(), api.app.estoque.list('peca').catch(()=>[])])
+      .then(([c,v,e])=>{ setClientes(c); setVeiculos(v); setEstoquePecas(Array.isArray(e)?e:[]); }).catch(()=>{});
     load();
   }, []);
 
@@ -200,6 +201,22 @@ export default function AppOrcamentos() {
   }
 
   function setPeca(id, field, val) { setForm(f=>({...f, pecas_itens: f.pecas_itens.map(p=>p.id===id?{...p,[field]:val}:p)})); }
+  // Autocompleta o valor unitário a partir do estoque quando o nome casa
+  function setPecaNome(id, nome) {
+    setForm(f=>({
+      ...f,
+      pecas_itens: f.pecas_itens.map(p=>{
+        if (p.id !== id) return p;
+        const match = estoquePecas.find(e => (e.nome||'').toLowerCase() === (nome||'').toLowerCase());
+        const semValor = !p.valor_unit || parseFloat(p.valor_unit) === 0;
+        return {
+          ...p,
+          nome,
+          valor_unit: (match && semValor && !p.cliente_fornece) ? String(match.preco ?? '') : p.valor_unit,
+        };
+      }),
+    }));
+  }
   function addPeca() { setForm(f=>({...f, pecas_itens:[...f.pecas_itens, novaPeca()]})); }
   function removePeca(id) { setForm(f=>({...f, pecas_itens: f.pecas_itens.filter(p=>p.id!==id)})); }
 
@@ -504,6 +521,10 @@ export default function AppOrcamentos() {
                 {/* Peças */}
                 {!isFuncionario && (
                 <div style={{marginTop:16,marginBottom:16}}>
+                  {/* Sugestões do estoque para autocompletar o nome da peça */}
+                  <datalist id="estoque-pecas-orc">
+                    {estoquePecas.map(e => <option key={e.id} value={e.nome} />)}
+                  </datalist>
                   <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
                     <label style={{fontWeight:700,fontSize:13,color:'var(--gray-700)'}}>{t.pecaLabel}</label>
                     <button type="button" className="btn btn-outline btn-sm" onClick={addPeca}>+ Adicionar {t.peca.toLowerCase()}</button>
@@ -511,8 +532,8 @@ export default function AppOrcamentos() {
                   <div style={{background:'var(--gray-50)',borderRadius:'var(--r-sm)',overflow:'hidden',border:'1px solid var(--gray-200)'}}>
                     {form.pecas_itens.map((p)=>(
                       <div key={p.id} style={{padding:'10px',borderBottom:'1px solid var(--gray-200)'}}>
-                        {/* Linha 1: Descrição */}
-                        <input value={p.nome} onChange={e=>setPeca(p.id,'nome',e.target.value)} placeholder="Ex: Filtro de óleo Bosch" style={{padding:'7px 10px',fontSize:13,width:'100%',marginBottom:8}} />
+                        {/* Linha 1: Descrição (autocompletar do estoque) */}
+                        <input list="estoque-pecas-orc" value={p.nome} onChange={e=>setPecaNome(p.id,e.target.value)} placeholder="Ex: Filtro de óleo Bosch" style={{padding:'7px 10px',fontSize:13,width:'100%',marginBottom:8}} />
                         {/* Linha 2: Qtd + Valor + checkbox + remover */}
                         <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
                           <div style={{display:'flex',alignItems:'center',gap:4}}>
