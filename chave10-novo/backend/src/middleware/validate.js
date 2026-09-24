@@ -310,6 +310,12 @@ function validateOS(req, res, next) {
     ...(cliente_id  !== undefined  && { cliente_id }),
     ...(veiculo_id  !== undefined  && { veiculo_id }),
     ...(data        !== undefined  && { data }),
+    // mecanico_id: validado e incluído explicitamente (era descartado antes)
+    ...(req.body.mecanico_id !== undefined && {
+      mecanico_id: req.body.mecanico_id ? (positiveInt(req.body.mecanico_id) || null) : null,
+    }),
+    // status (PUT /os/:id pode incluir status)
+    ...(req.body.status !== undefined && { status: req.body.status }),
   };
   next();
 }
