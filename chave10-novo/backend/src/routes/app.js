@@ -631,8 +631,11 @@ router.patch('/os/:id/status', validateId, checkOwns('ordens_servico'), async (r
     if(!status || !['em_andamento','finalizado','cancelada'].includes(status)) return res.status(400).json({error:'Status inválido'});
     const result = await run('UPDATE ordens_servico SET status=$1 WHERE id=$2 AND oficina_id=$3',[status,req.params.id,oid(req)]);
     if(result.rowCount === 0) return res.status(404).json({error:'OS não encontrada'});
-    // Ao finalizar por status (sem passar por pagamento), também gera lembrete
-    if (status === 'finalizado') await gerarLembreteAutomatico(oid(req), req.params.id);
+    // Ao finalizar por status (sem passar por pagamento), garante comissão e gera lembrete
+    if (status === 'finalizado') {
+      await garantirComissaoOS(oid(req), req.params.id);
+      await gerarLembreteAutomatico(oid(req), req.params.id);
+    }
     audit(req, ACOES.ALTERAR_STATUS_OS, 'ordens_servico', req.params.id, { novo_status: status });
     res.json({ok:true});
   } catch(err){res.status(500).json({error:'Erro interno'});}
@@ -647,6 +650,60 @@ router.delete('/os/:id', validateId, checkOwns('ordens_servico'), async (req,res
     res.json({ok:true});
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
+
+// ── Garante a comissão do mecânico ao finalizar a OS ──────────
+// Lê a OS (mecânico atribuído + valores atuais) e a config de percentuais,
+// calcula a comissão e faz upsert na tabela `comissoes`. Também atualiza os
+// snapshots de comissão na própria OS. Idempotente: se já existe comissão para
+// (os_id, mecanico_id), atualiza os valores enquanto ela ainda estiver 'pendente'.
+async function garantirComissaoOS(oficinaId, osId) {
+  try {
+    const os = await queryOne(
+      'SELECT id, mecanico_id, valor_mo, valor_pecas FROM ordens_servico WHERE id=$1 AND oficina_id=$2',
+      [osId, oficinaId]
+    );
+    if (!os || !os.mecanico_id) return; // sem mecânico → sem comissão
+
+    const cfg = await queryOne('SELECT * FROM mecanico_comissao_config WHERE mecanico_id=$1', [os.mecanico_id]);
+    if (!cfg) return; // mecânico sem config de comissão
+
+    const vMO    = parseFloat(os.valor_mo)    || 0;
+    const vPecas = parseFloat(os.valor_pecas) || 0;
+    const pctSvc = cfg.recebe_servicos ? parseFloat(cfg.pct_servicos) : 0;
+    const pctPec = cfg.recebe_pecas    ? parseFloat(cfg.pct_pecas)    : 0;
+    const comSvc   = parseFloat((vMO    * pctSvc / 100).toFixed(2));
+    const comPec   = parseFloat((vPecas * pctPec / 100).toFixed(2));
+    const comTotal = parseFloat((comSvc + comPec).toFixed(2));
+    if (comTotal <= 0) return; // nada a pagar
+
+    // Atualiza snapshots na OS (histórico)
+    await run(
+      `UPDATE ordens_servico SET
+         mecanico_pct_servicos=$1, mecanico_pct_pecas=$2,
+         mecanico_comissao_servicos=$3, mecanico_comissao_pecas=$4, mecanico_comissao_total=$5
+       WHERE id=$6 AND oficina_id=$7`,
+      [pctSvc, pctPec, comSvc, comPec, comTotal, osId, oficinaId]
+    );
+
+    // Upsert na tabela de comissões (só recalcula enquanto pendente)
+    await run(`
+      INSERT INTO comissoes
+        (oficina_id,mecanico_id,os_id,pct_servicos,pct_pecas,base_servicos,base_pecas,valor_servicos,valor_pecas,valor_total,status)
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'pendente')
+      ON CONFLICT (os_id, mecanico_id) DO UPDATE SET
+        pct_servicos  = EXCLUDED.pct_servicos,
+        pct_pecas     = EXCLUDED.pct_pecas,
+        base_servicos = EXCLUDED.base_servicos,
+        base_pecas    = EXCLUDED.base_pecas,
+        valor_servicos= EXCLUDED.valor_servicos,
+        valor_pecas   = EXCLUDED.valor_pecas,
+        valor_total   = EXCLUDED.valor_total
+      WHERE comissoes.status = 'pendente'
+    `, [oficinaId, os.mecanico_id, osId, pctSvc, pctPec, vMO, vPecas, comSvc, comPec, comTotal]);
+  } catch (e) {
+    log.warn?.('comissao_finalizar_falhou', { osId, erro: e.message });
+  }
+}
 
 // ── Geração automática de lembrete ao finalizar uma OS ────────
 // Se a OS for de troca de óleo ou revisão (detectado por palavras-chave em
@@ -1010,6 +1067,9 @@ router.post('/os/:id/pagamento', validateId, checkOwns('ordens_servico'), valida
 
     // Finaliza a OS automaticamente
     await run("UPDATE ordens_servico SET status='finalizado' WHERE id=$1 AND oficina_id=$2", [osId, id]);
+
+    // Garante a comissão do mecânico (se houver mecânico + config)
+    await garantirComissaoOS(id, osId);
 
     // Gera lembrete de retorno (troca de óleo/revisão), se aplicável
     await gerarLembreteAutomatico(id, osId);
