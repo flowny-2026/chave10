@@ -583,10 +583,9 @@ export default function Layout({ area }) {
     if (area !== 'app') return;
     api.auth.me()
       .then(userData => {
-        // Sincroniza em ambos os storages para garantir consistência
+        // Persiste apenas no localStorage (sessionStorage é limpo ao fechar o app)
         const serialized = JSON.stringify(userData);
         localStorage.setItem('c10_user', serialized);
-        sessionStorage.setItem('c10_user', serialized);
       })
       .catch(() => {
         // Silencioso — se falhar, usa os dados do localStorage mesmo
@@ -600,7 +599,6 @@ export default function Layout({ area }) {
     sessionStorage.removeItem('c10_user');
     navigate(area === 'admin' ? '/admin/login' : '/login');
   }
-
   const NavItem = ({ item }) => (
     <NavLink to={item.to}
       className={({ isActive }) => 'nav-item' + (isActive ? ' active' : '')}

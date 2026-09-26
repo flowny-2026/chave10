@@ -94,7 +94,6 @@ export default function AppConfiguracoes() {
           // Sincroniza o segmento para que useSegmento reflita imediatamente
           if (of.segmento) u.segmento = of.segmento;
           localStorage.setItem('c10_user', JSON.stringify(u));
-          sessionStorage.setItem('c10_user', JSON.stringify(u));
         } catch {}
       }
     } catch (err) {

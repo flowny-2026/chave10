@@ -67,7 +67,6 @@ function getToken() {
 function clearSession() {
   ['c10_token', 'c10_user', 'c10_token_temp'].forEach(k => {
     localStorage.removeItem(k);
-    sessionStorage.removeItem(k);
   });
 }
 

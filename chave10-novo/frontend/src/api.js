@@ -1,11 +1,11 @@
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
-// Funções auxiliares para persistência robusta em mobile
+// Persistência do token e dados do usuário — apenas localStorage (persistente entre sessões).
+// sessionStorage era usado como redundância mas é limpo ao fechar a aba/app,
+// causando pedidos de login desnecessários.
 function saveToStorage(key, value) {
   try {
     localStorage.setItem(key, value);
-    sessionStorage.setItem(key, value);
-    // Nota: cookie removido — token JWT nunca deve ficar em cookie JS-acessível
   } catch (error) {
     console.error(`Erro ao salvar ${key}:`, error);
   }
@@ -13,16 +13,7 @@ function saveToStorage(key, value) {
 
 function getFromStorage(key) {
   try {
-    let value = localStorage.getItem(key);
-    if (value) return value;
-
-    value = sessionStorage.getItem(key);
-    if (value) {
-      localStorage.setItem(key, value);
-      return value;
-    }
-
-    return null;
+    return localStorage.getItem(key);
   } catch (error) {
     console.error(`Erro ao recuperar ${key}:`, error);
     return null;
@@ -74,7 +65,8 @@ export const api = {
     register: (data) => post('/auth/register', data),
     googleRegister: (credential) => post('/auth/google-register', { credential }),
     completeOficina: (token, data) => req('POST', '/auth/complete-oficina', data, token),
-    me: () => get('/auth/me'), // busca dados atualizados do usuário logado
+    me: () => get('/auth/me'),
+    refresh: () => post('/auth/refresh', {}), // silent refresh — renova token sem pedir senha
   },
   admin: {
     dashboard: ()                    => get('/admin/dashboard'),
