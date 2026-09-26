@@ -2,8 +2,8 @@
 // Network-first para HTML/JS/API, cache-first para assets estáticos
 // Background Sync para operações offline
 
-const CACHE_NAME = 'chave10-v53';
-const RUNTIME_CACHE = 'chave10-runtime-v53';
+const CACHE_NAME = 'chave10-v54';
+const RUNTIME_CACHE = 'chave10-runtime-v54';
 const STATIC_ASSETS = [
   '/',
   '/favicon.jpeg',
@@ -69,7 +69,8 @@ self.addEventListener('activate', (event) => {
       })
       .then(() => {
         console.log('[SW] Service worker ativado e pronto');
-        return self.clients.claim();
+        // Limpa RUNTIME_CACHE para forçar download dos JS/CSS mais recentes
+        return caches.delete(RUNTIME_CACHE).then(() => self.clients.claim());
       })
   );
 });
@@ -161,23 +162,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 3. JS e CSS: Network-first com cache runtime
+  // 3. JS e CSS: Network-first SEM cache no SW
+  // Os assets já têm hash no nome e são servidos com Cache-Control: immutable pelo Vercel.
+  // O cache do browser já cuida disso — o SW não precisa cachear, e não cachear
+  // garante que versões novas do app sejam usadas imediatamente.
   if (request.destination === 'script' || request.destination === 'style') {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(RUNTIME_CACHE).then((cache) => {
-              cache.put(request, clone);
-            });
-          }
-          return response;
-        })
-        .catch(() => {
-          return caches.match(request);
-        })
-    );
+    event.respondWith(fetch(request));
     return;
   }
 
