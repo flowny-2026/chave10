@@ -100,45 +100,57 @@ function isTokenValid() {
  */
 function PrivateRoute({ children, adminOnly = false, noFuncionario = false, noMecanico = false }) {
   const [checking, setChecking] = useState(true);
-  const [authed, setAuthed]     = useState(false);
-  const navigate = useNavigate();
-
+  const [user, setUser]         = useState(null);
   useEffect(() => {
     async function check() {
       const token = getToken();
 
-      // Sem token algum → login direto (nunca teve sessão)
+      // 1. Sem token → login
       if (!token) { setChecking(false); return; }
 
-      // Token válido → entra direto, sem esperar rede
-      if (isTokenValid()) { setAuthed(true); setChecking(false); return; }
+      // 2. Token válido → tenta usar o user do cache, ou busca da API se ausente
+      if (isTokenValid()) {
+        const cached = getUser();
+        if (cached) {
+          setUser(cached);
+          setChecking(false);
+          return;
+        }
+        // Token válido mas c10_user ausente → busca da API
+        try {
+          const userData = await api.auth.me();
+          if (userData) {
+            localStorage.setItem('c10_user', JSON.stringify(userData));
+            setUser(userData);
+          }
+        } catch { /* continua com user null */ }
+        setChecking(false);
+        return;
+      }
 
-      // Token expirado → tenta refresh (o /auth/refresh aceita tokens expirados)
-      // IMPORTANTE: só redireciona para login em 401/403 explícito do servidor.
-      // Erros de rede, cold start do servidor, etc. → entra no app mesmo assim
-      // (o token ainda está no localStorage para a próxima tentativa)
+      // 3. Token expirado → tenta refresh
       try {
         const result = await api.auth.refresh();
         if (result?.token) {
           localStorage.setItem('c10_token', result.token);
-          setAuthed(true);
-          setChecking(false);
-          return;
         }
-        // refresh retornou 200 mas sem token — situação anômala, entra mesmo assim
-        setAuthed(true);
+        // Após refresh, busca o user atualizado
+        const userData = await api.auth.me();
+        if (userData) {
+          localStorage.setItem('c10_user', JSON.stringify(userData));
+          setUser(userData);
+        }
         setChecking(false);
       } catch (err) {
         const status = err?.status;
         if (status === 401 || status === 403) {
-          // Servidor disse explicitamente que a sessão não é válida
           clearSession();
           setChecking(false);
           return;
         }
-        // Qualquer outro erro (rede, 500, timeout) → entra no app sem apagar token
-        // O token ainda existe no localStorage — na próxima abertura tenta de novo
-        setAuthed(true);
+        // Erro de rede/5xx → usa user do cache se disponível, senão deixa null
+        const cached = getUser();
+        if (cached) setUser(cached);
         setChecking(false);
       }
     }
@@ -147,12 +159,6 @@ function PrivateRoute({ children, adminOnly = false, noFuncionario = false, noMe
 
   if (checking) return <PageLoader />;
 
-  if (!authed) {
-    if (adminOnly) return <Navigate to="/admin/login" replace />;
-    return <Navigate to="/login" replace />;
-  }
-
-  const user = getUser();
   if (!user) {
     if (adminOnly) return <Navigate to="/admin/login" replace />;
     return <Navigate to="/login" replace />;

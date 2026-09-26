@@ -2,8 +2,8 @@
 // Network-first para HTML/JS/API, cache-first para assets estáticos
 // Background Sync para operações offline
 
-const CACHE_NAME = 'chave10-v51';
-const RUNTIME_CACHE = 'chave10-runtime-v51';
+const CACHE_NAME = 'chave10-v53';
+const RUNTIME_CACHE = 'chave10-runtime-v53';
 const STATIC_ASSETS = [
   '/',
   '/favicon.jpeg',
@@ -181,29 +181,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 4. Navegação (HTML): Network-first
+  // 4. Navegação (HTML): Network-first, NUNCA serve do cache (garante JS/CSS novos)
   if (request.mode === 'navigate' || request.destination === 'document') {
     event.respondWith(
-      fetch(request)
-        .then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(RUNTIME_CACHE).then((cache) => {
-              cache.put(request, clone);
-            });
-          }
-          return response;
-        })
-        .catch(() => {
-          return caches.match(request)
-            .then((cached) => {
-              if (cached) {
-                return cached;
-              }
-              // Fallback para index.html (SPA)
-              return caches.match('/');
-            });
-        })
+      fetch(request, { cache: 'no-store' })
+        .then((response) => response)
+        .catch(() => caches.match('/'))
     );
     return;
   }
