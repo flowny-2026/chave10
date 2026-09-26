@@ -121,10 +121,18 @@ function PrivateRoute({ children, adminOnly = false, noFuncionario = false, noMe
           setChecking(false);
           return;
         }
-      } catch { /* refresh falhou — sessão encerrada */ }
+      } catch (err) {
+        // Só limpa a sessão se o servidor recusou explicitamente (401/403)
+        // Erros de rede, timeout ou 5xx NÃO apagam o token — o usuário tenta de novo depois
+        if (err?.status === 401 || err?.status === 403) {
+          clearSession();
+        }
+        // Em qualquer caso: vai para o login sem apagar se não for 401/403
+        setChecking(false);
+        return;
+      }
 
-      // Refresh falhou → limpa e redireciona
-      clearSession();
+      // refresh retornou sem token (não deveria acontecer)
       setChecking(false);
     }
     check();
@@ -180,9 +188,12 @@ function AppRedirect() {
           setChecking(false);
           return;
         }
-      } catch { /* falhou */ }
+      } catch (err) {
+        if (err?.status === 401 || err?.status === 403) {
+          clearSession();
+        }
+      }
 
-      clearSession();
       setDest('login');
       setChecking(false);
     }

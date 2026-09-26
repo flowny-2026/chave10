@@ -389,27 +389,39 @@ router.get('/me', authMiddleware, async (req, res) => {
   }
 });
 
-// POST /auth/refresh — renova o token se ainda válido (silent refresh)
-// O token atual é verificado pelo authMiddleware. Se válido, devolve um novo
-// token com 30 dias a partir de agora — sem pedir senha novamente.
-// Rate-limited: no máximo 10 renovações por minuto por IP (mesmo limite do login).
-router.post('/refresh', authMiddleware, async (req, res) => {
+// POST /auth/refresh — renova o token mesmo que já tenha expirado.
+// Aceita tokens expirados (ignoreExpiration: true) mas verifica a assinatura.
+// Isso permite renovar a sessão ao reabrir o app sem pedir login novamente.
+// Só rejeita se o token for inválido/adulterado ou se o usuário estiver inativo.
+router.post('/refresh', async (req, res) => {
+  const header = req.headers['authorization'] || '';
+  const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+  if (!token) return res.status(401).json({ error: 'Token ausente' });
+
+  let payload;
+  try {
+    // ignoreExpiration: aceita tokens vencidos — só recusa assinatura inválida
+    payload = jwt.verify(token, SECRET, { ignoreExpiration: true });
+  } catch {
+    return res.status(401).json({ error: 'Token inválido' });
+  }
+
   try {
     const usuario = await queryOne(
       'SELECT id, nome, email, perfil, oficina_id, ativo FROM usuarios WHERE id=$1 AND ativo=1',
-      [req.user.id]
+      [payload.id]
     );
-    if (!usuario) return res.status(401).json({ error: 'Usuário não encontrado' });
+    if (!usuario) return res.status(401).json({ error: 'Usuário não encontrado ou inativo' });
 
     // Monta o payload igual ao login original
-    const payload = usuario.perfil === 'master_admin'
+    const novoPayload = usuario.perfil === 'master_admin'
       ? { id: usuario.id, perfil: 'master_admin', nome: usuario.nome }
       : { id: usuario.id, perfil: usuario.perfil, oficina_id: usuario.oficina_id, nome: usuario.nome };
 
-    const token = jwt.sign(payload, SECRET, { expiresIn: '30d' });
+    const novoToken = jwt.sign(novoPayload, SECRET, { expiresIn: '30d' });
 
     log.info('auth_refresh', { usuario_id: usuario.id, perfil: usuario.perfil });
-    res.json({ token });
+    res.json({ token: novoToken });
   } catch (err) {
     log.error('auth_refresh', err);
     res.status(500).json({ error: 'Erro interno' });

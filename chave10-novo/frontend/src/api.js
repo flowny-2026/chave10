@@ -43,7 +43,7 @@ async function req(method, url, body, customToken) {
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw data;
+  if (!res.ok) throw { ...data, status: res.status };
   return data;
 }
 
