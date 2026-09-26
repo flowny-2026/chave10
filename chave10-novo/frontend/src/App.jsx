@@ -7,6 +7,7 @@ import PWAInstallBanner from './components/PWAInstallBanner';
 // Páginas públicas — carregadas imediatamente
 import Landing from './pages/Landing';
 import Login from './pages/Login';
+import Diag from './pages/Diag';
 import Cadastro from './pages/Cadastro';
 import EsqueciSenha from './pages/EsqueciSenha';
 import AdminLogin from './pages/AdminLogin';
@@ -213,6 +214,7 @@ export default function App() {
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={<Landing />} />
+          <Route path="/diag" element={<Diag />} />
           <Route path="/politica-privacidade" element={<PoliticaPrivacidade />} />
           <Route path="/termos-uso" element={<TermosUso />} />
           <Route path="/app-redirect" element={<AppRedirect />} />
