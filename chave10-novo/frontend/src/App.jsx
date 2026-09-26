@@ -107,13 +107,16 @@ function PrivateRoute({ children, adminOnly = false, noFuncionario = false, noMe
     async function check() {
       const token = getToken();
 
-      // Sem token algum → login direto
+      // Sem token algum → login direto (nunca teve sessão)
       if (!token) { setChecking(false); return; }
 
-      // Token ainda válido → ok
+      // Token válido → entra direto, sem esperar rede
       if (isTokenValid()) { setAuthed(true); setChecking(false); return; }
 
-      // Token expirado → tenta refresh silencioso
+      // Token expirado → tenta refresh (o /auth/refresh aceita tokens expirados)
+      // IMPORTANTE: só redireciona para login em 401/403 explícito do servidor.
+      // Erros de rede, cold start do servidor, etc. → entra no app mesmo assim
+      // (o token ainda está no localStorage para a próxima tentativa)
       try {
         const result = await api.auth.refresh();
         if (result?.token) {
@@ -122,19 +125,22 @@ function PrivateRoute({ children, adminOnly = false, noFuncionario = false, noMe
           setChecking(false);
           return;
         }
-      } catch (err) {
-        // Só limpa a sessão se o servidor recusou explicitamente (401/403)
-        // Erros de rede, timeout ou 5xx NÃO apagam o token — o usuário tenta de novo depois
-        if (err?.status === 401 || err?.status === 403) {
-          clearSession();
-        }
-        // Em qualquer caso: vai para o login sem apagar se não for 401/403
+        // refresh retornou 200 mas sem token — situação anômala, entra mesmo assim
+        setAuthed(true);
         setChecking(false);
-        return;
+      } catch (err) {
+        const status = err?.status;
+        if (status === 401 || status === 403) {
+          // Servidor disse explicitamente que a sessão não é válida
+          clearSession();
+          setChecking(false);
+          return;
+        }
+        // Qualquer outro erro (rede, 500, timeout) → entra no app sem apagar token
+        // O token ainda existe no localStorage — na próxima abertura tenta de novo
+        setAuthed(true);
+        setChecking(false);
       }
-
-      // refresh retornou sem token (não deveria acontecer)
-      setChecking(false);
     }
     check();
   }, []); // eslint-disable-line
