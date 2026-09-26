@@ -1,7 +1,7 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { lazy, Suspense, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import Layout from './components/Layout';
-import { getFromStorage } from './api';
+import { getFromStorage, api } from './api';
 import PWAInstallBanner from './components/PWAInstallBanner';
 
 // Páginas públicas — carregadas imediatamente
@@ -70,38 +70,74 @@ function clearSession() {
   });
 }
 
+// Decodifica exp do JWT localmente (ms) sem verificar assinatura
+function getTokenExp(token) {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return 0;
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64 + '=='.slice(0, (4 - base64.length % 4) % 4);
+    const payload = JSON.parse(atob(padded));
+    return payload.exp ? payload.exp * 1000 : Infinity;
+  } catch { return 0; }
+}
+
 // Verifica se o token JWT ainda é válido (decodificação local — rápido, sem rede)
 function isTokenValid() {
   const token = getToken();
   if (!token) return false;
-
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return false;
-
-    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-    const padded = base64 + '=='.slice(0, (4 - base64.length % 4) % 4);
-    const payload = JSON.parse(atob(padded));
-
-    if (!payload.exp) return true; // sem expiração = sempre válido
-    return payload.exp * 1000 > Date.now();
-  } catch {
-    return false;
-  }
+  const exp = getTokenExp(token);
+  if (exp === 0) return false;
+  return exp > Date.now();
 }
 
+/**
+ * PrivateRoute — tenta renovar o token silenciosamente antes de redirecionar
+ * para o login. Isso resolve o caso de token expirado ao reabrir o app:
+ * em vez de jogar para o login imediatamente, tenta um POST /auth/refresh
+ * e só redireciona se realmente não houver como renovar.
+ */
 function PrivateRoute({ children, adminOnly = false, noFuncionario = false, noMecanico = false }) {
-  const user = getUser();
-  const tokenOk = isTokenValid();
+  const [checking, setChecking] = useState(true);
+  const [authed, setAuthed]     = useState(false);
+  const navigate = useNavigate();
 
-  // Sem token válido → limpa sessão e redireciona (via useEffect para evitar
-  // side effects dentro do render)
-  if (!tokenOk) {
-    // Não chamamos clearSession() aqui — fazemos via efeito abaixo
+  useEffect(() => {
+    async function check() {
+      const token = getToken();
+
+      // Sem token algum → login direto
+      if (!token) { setChecking(false); return; }
+
+      // Token ainda válido → ok
+      if (isTokenValid()) { setAuthed(true); setChecking(false); return; }
+
+      // Token expirado → tenta refresh silencioso
+      try {
+        const result = await api.auth.refresh();
+        if (result?.token) {
+          localStorage.setItem('c10_token', result.token);
+          setAuthed(true);
+          setChecking(false);
+          return;
+        }
+      } catch { /* refresh falhou — sessão encerrada */ }
+
+      // Refresh falhou → limpa e redireciona
+      clearSession();
+      setChecking(false);
+    }
+    check();
+  }, []); // eslint-disable-line
+
+  if (checking) return <PageLoader />;
+
+  if (!authed) {
     if (adminOnly) return <Navigate to="/admin/login" replace />;
     return <Navigate to="/login" replace />;
   }
 
+  const user = getUser();
   if (!user) {
     if (adminOnly) return <Navigate to="/admin/login" replace />;
     return <Navigate to="/login" replace />;
@@ -114,23 +150,49 @@ function PrivateRoute({ children, adminOnly = false, noFuncionario = false, noMe
   return children;
 }
 
-// Limpa a sessão quando o token expira (executado fora do render)
-function SessionCleaner() {
-  const tokenOk = isTokenValid();
-  const hasToken = !!getToken();
-  useEffect(() => {
-    if (!tokenOk && hasToken) {
-      clearSession();
-    }
-  }, []); // eslint-disable-line
-  return null;
-}
+// SessionCleaner já não é necessário — PrivateRoute cuida da renovação/limpeza.
+// Mantido como stub para não quebrar o JSX abaixo.
+function SessionCleaner() { return null; }
 
 function AppRedirect() {
-  const user = getUser();
-  if (!user || !isTokenValid()) return <Navigate to="/login" replace />;
-  if (user.perfil === 'master_admin') return <Navigate to="/admin/dashboard" replace />;
-  return <Navigate to="/app/dashboard" replace />;
+  const [checking, setChecking] = useState(true);
+  const [dest, setDest] = useState(null);
+
+  useEffect(() => {
+    async function check() {
+      const token = getToken();
+      if (!token) { setDest('login'); setChecking(false); return; }
+
+      if (isTokenValid()) {
+        const user = getUser();
+        setDest(user?.perfil === 'master_admin' ? 'admin' : 'app');
+        setChecking(false);
+        return;
+      }
+
+      // Tenta refresh
+      try {
+        const result = await api.auth.refresh();
+        if (result?.token) {
+          localStorage.setItem('c10_token', result.token);
+          const user = getUser();
+          setDest(user?.perfil === 'master_admin' ? 'admin' : 'app');
+          setChecking(false);
+          return;
+        }
+      } catch { /* falhou */ }
+
+      clearSession();
+      setDest('login');
+      setChecking(false);
+    }
+    check();
+  }, []);
+
+  if (checking) return <PageLoader />;
+  if (dest === 'admin') return <Navigate to="/admin/dashboard" replace />;
+  if (dest === 'app')   return <Navigate to="/app/dashboard" replace />;
+  return <Navigate to="/login" replace />;
 }
 
 export default function App() {
