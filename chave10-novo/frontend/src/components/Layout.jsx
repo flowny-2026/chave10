@@ -857,20 +857,33 @@ export default function Layout({ area }) {
               ]
             : [
                 { to: '/app/dashboard', label: 'Dashboard',  icon: IC.dashboard },
-                { to: '/app/os',        label: 'OS',         icon: IC.os },
-                { to: '/app/financeiro',label: 'Financeiro', icon: IC.financeiro },
                 { to: '/app/clientes',  label: 'Clientes',   icon: IC.clientes },
+                { to: '/app/os',        label: 'OS',         icon: IC.os,         central: true },
+                { to: '/app/financeiro',label: 'Financeiro', icon: IC.financeiro },
                 { to: '/app/veiculos',  label: t.veiculos,   icon: IC.veiculos },
               ]
           ).map(item => (
             <NavLink
               key={item.to}
               to={item.to}
-              className={({ isActive }) => 'mbn-item' + (isActive ? ' mbn-item--active' : '')}
+              className={({ isActive }) =>
+                'mbn-item' +
+                (item.central ? ' mbn-item--central' : '') +
+                (isActive ? ' mbn-item--active' : '')
+              }
               onClick={item.onClick}
             >
-              <span className="mbn-icon">{item.icon}</span>
-              <span className="mbn-label">{item.label}</span>
+              {item.central ? (
+                <>
+                  <span className="mbn-fab">{item.icon}</span>
+                  <span className="mbn-label">{item.label}</span>
+                </>
+              ) : (
+                <>
+                  <span className="mbn-icon">{item.icon}</span>
+                  <span className="mbn-label">{item.label}</span>
+                </>
+              )}
             </NavLink>
           ))}
         </nav>

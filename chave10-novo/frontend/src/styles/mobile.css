@@ -52,6 +52,7 @@
   /* MAIN CONTENT */
   .main-content {
     padding: 12px !important;
+    padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px)) !important;
     overflow-x: hidden;
     min-width: 0;
   }
@@ -518,49 +519,84 @@
   .notif-msg { color: rgba(255,255,255,.6) !important; }
   .notif-time { color: rgba(255,255,255,.4) !important; }
 
-  /* BOTTOM NAV — moderno: barra escura translúcida com item ativo em pílula */
+  /* BOTTOM NAV — design com botão central elevado (FAB central) */
   .mobile-bottom-nav {
     display: flex !important;
-    align-items: stretch;
+    align-items: flex-end;
     position: fixed;
     bottom: 0; left: 0; right: 0;
     height: 66px;
-    background: rgba(18, 22, 28, 0.92);
+    background: rgba(18, 22, 28, 0.96);
     -webkit-backdrop-filter: saturate(160%) blur(14px);
     backdrop-filter: saturate(160%) blur(14px);
     border-top: 1px solid rgba(255,255,255,.07);
     z-index: 150;
-    padding: 8px 8px;
-    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
-    box-shadow: 0 -8px 28px rgba(0,0,0,.45);
-    gap: 2px;
+    padding: 0 4px;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-shadow: 0 -4px 24px rgba(0,0,0,.5);
   }
+
+  /* Itens normais (2 da esquerda + 2 da direita) */
   .mbn-item {
     flex: 1; display: flex; flex-direction: column;
     align-items: center; justify-content: center; gap: 4px;
     text-decoration: none; color: rgba(255,255,255,.5);
-    padding: 6px 2px; border-radius: 14px;
+    padding: 8px 2px;
+    border-radius: 14px;
     transition: color .2s ease, background .2s ease, transform .12s ease;
     position: relative;
     -webkit-tap-highlight-color: transparent;
+    min-height: 66px;
   }
-  .mbn-item:active { transform: scale(.94); }
+  .mbn-item:active { transform: scale(.93); }
   .mbn-item:hover { color: rgba(255,255,255,.8); }
   .mbn-item--active {
     color: #fb923c !important;
-    background: linear-gradient(180deg, rgba(249,115,22,.20), rgba(249,115,22,.08));
+    background: linear-gradient(180deg, rgba(249,115,22,.18), transparent);
   }
   .mbn-icon {
-    width: 100%; height: 24px;
+    width: 100%; height: 22px;
     display: flex; align-items: center; justify-content: center;
     transition: transform .2s ease;
   }
   .mbn-item--active .mbn-icon { transform: translateY(-1px); }
   .mbn-label {
-    font-size: 10.5px; font-weight: 600; letter-spacing: .2px; line-height: 1;
+    font-size: 10px; font-weight: 600; letter-spacing: .2px; line-height: 1;
     max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .mbn-item--active .mbn-label { font-weight: 700; }
+
+  /* Botão central elevado — espaço reservado na barra */
+  .mbn-item--central {
+    flex: 1.1;
+    padding: 0;
+    background: none !important;
+    position: relative;
+    /* sobe o item acima da barra */
+    margin-top: -24px;
+    justify-content: flex-start;
+  }
+  /* O próprio NavLink fica transparente; o visual é o ::before */
+  .mbn-item--central .mbn-fab {
+    width: 58px; height: 58px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #F97316, #ea580c);
+    box-shadow: 0 4px 20px rgba(249,115,22,.55), 0 1px 4px rgba(0,0,0,.4);
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .15s ease, box-shadow .15s ease;
+    border: 3px solid rgba(18,22,28,.96);
+    color: #fff;
+  }
+  .mbn-item--central:active .mbn-fab { transform: scale(.9); box-shadow: 0 2px 10px rgba(249,115,22,.4); }
+  .mbn-item--central.mbn-item--active .mbn-fab {
+    background: linear-gradient(135deg, #16a34a, #15803d);
+    box-shadow: 0 4px 20px rgba(22,163,74,.55), 0 1px 4px rgba(0,0,0,.4);
+  }
+  .mbn-item--central .mbn-label {
+    font-size: 10px; font-weight: 700; color: rgba(255,255,255,.6);
+    margin-top: 4px;
+  }
+  .mbn-item--central.mbn-item--active .mbn-label { color: #fb923c; }
 
   /* SIDEBAR OVERLAY */
   .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 199; }
