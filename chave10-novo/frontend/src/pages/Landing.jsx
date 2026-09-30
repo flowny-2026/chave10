@@ -1,11 +1,36 @@
 ﻿import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+import { getFromStorage } from '../api';
 import '../styles/landing.css';
+
+function getTokenExp(token) {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return 0;
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64 + '=='.slice(0, (4 - base64.length % 4) % 4);
+    const payload = JSON.parse(atob(padded));
+    return payload.exp ? payload.exp * 1000 : Infinity;
+  } catch { return 0; }
+}
 
 export default function Landing() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Se há sessão válida, redireciona para o dashboard sem mostrar a landing
+    const token = getFromStorage('c10_token');
+    if (token) {
+      const exp = getTokenExp(token);
+      if (exp === 0 || exp > Date.now()) {
+        // Token válido (ou sem exp) → vai para o app
+        const raw = getFromStorage('c10_user');
+        let perfil = 'admin_oficina';
+        try { perfil = JSON.parse(raw)?.perfil || perfil; } catch {}
+        navigate(perfil === 'master_admin' ? '/admin/dashboard' : '/app/dashboard', { replace: true });
+        return;
+      }
+    }
     window.scrollTo(0, 0);
     const observer = new IntersectionObserver(
       (entries) => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }),

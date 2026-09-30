@@ -2,7 +2,7 @@
   "name": "Chave 10 - Gestão de Oficinas",
   "short_name": "Chave 10",
   "description": "Sistema completo de gestão para oficinas mecânicas",
-  "start_url": "/",
+  "start_url": "/app/dashboard",
   "scope": "/",
   "display": "standalone",
   "background_color": "#0d1117",
