@@ -113,20 +113,35 @@ function PrivateRoute({ children, adminOnly = false, noFuncionario = false, noMe
 
   const [checking, setChecking] = useState(!startReady);
   const [user, setUser]         = useState(startReady ? userInit : null);
+  const [diagMsg, setDiagMsg]   = useState(() => {
+    // Log síncrono para diagnóstico — mostra o estado exato na abertura
+    const t = !!tokenInit;
+    const u = !!userInit;
+    const v = validInit;
+    return `[DIAG] token=${t} user=${u} valid=${v} startReady=${startReady}`;
+  });
 
   useEffect(() => {
     // Se já está pronto desde o início, não precisa fazer nada
-    if (startReady) return;
+    if (startReady) {
+      setDiagMsg(p => p + ' | JÁ PRONTO (sem async)');
+      return;
+    }
 
     async function check() {
       const token = getToken();
+      setDiagMsg(p => p + ` | ASYNC: token=${!!token}`);
 
       // Sem token → login
-      if (!token) { setChecking(false); return; }
+      if (!token) {
+        setDiagMsg(p => p + ' | SEM TOKEN → LOGIN');
+        setChecking(false); return;
+      }
 
       // Token válido → garante que temos o user
       if (isTokenValid()) {
         const cached = getUser();
+        setDiagMsg(p => p + ` | TOKEN VÁLIDO, cached=${!!cached}`);
         if (cached) {
           setUser(cached);
           setChecking(false);
@@ -138,20 +153,22 @@ function PrivateRoute({ children, adminOnly = false, noFuncionario = false, noMe
           if (userData) {
             localStorage.setItem('c10_user', JSON.stringify(userData));
             setUser(userData);
+            setDiagMsg(p => p + ' | /me OK');
           }
-        } catch {
-          // Erro de rede: user fica null → vai para login
-          // (token preservado para próxima tentativa)
+        } catch (e) {
+          setDiagMsg(p => p + ` | /me ERRO:${e?.status||e?.message||'rede'}`);
         }
         setChecking(false);
         return;
       }
 
       // Token expirado → tenta refresh
+      setDiagMsg(p => p + ' | TOKEN EXPIRADO → REFRESH');
       try {
         const result = await api.auth.refresh();
         if (result?.token) {
           localStorage.setItem('c10_token', result.token);
+          setDiagMsg(p => p + ' | REFRESH OK');
         }
         const userData = await api.auth.me();
         if (userData) {
@@ -160,10 +177,10 @@ function PrivateRoute({ children, adminOnly = false, noFuncionario = false, noMe
         }
       } catch (err) {
         const status = err?.status;
+        setDiagMsg(p => p + ` | REFRESH ERRO:${status||'rede'}`);
         if (status === 401 || status === 403) {
           clearSession();
         } else {
-          // Erro de rede/5xx → usa cache se disponível
           const cached = getUser();
           if (cached) setUser(cached);
         }
@@ -175,13 +192,23 @@ function PrivateRoute({ children, adminOnly = false, noFuncionario = false, noMe
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Mostra diagnóstico em overlay fixo por 10 segundos
+  useEffect(() => {
+    const div = document.createElement('div');
+    div.id = 'pr-diag';
+    div.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#000;color:#0f0;font-family:monospace;font-size:11px;padding:8px;z-index:99999;word-break:break-all;';
+    div.textContent = diagMsg;
+    document.body.appendChild(div);
+    const t = setTimeout(() => div.remove(), 15000);
+    return () => { clearTimeout(t); div.remove(); };
+  }, [diagMsg]);
+
   if (checking) return <PageLoader />;
 
   if (!user) {
     if (adminOnly) return <Navigate to="/admin/login" replace />;
     return <Navigate to="/login" replace />;
   }
-
   if (adminOnly && user.perfil !== 'master_admin') return <Navigate to="/app/dashboard" replace />;
   if (noFuncionario && (user.perfil === 'funcionario' || user.perfil === 'mecanico')) return <Navigate to="/app/dashboard" replace />;
   if (noMecanico && user.perfil === 'mecanico') return <Navigate to="/app/dashboard" replace />;
