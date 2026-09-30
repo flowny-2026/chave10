@@ -93,22 +93,38 @@ function isTokenValid() {
 }
 
 /**
- * PrivateRoute — tenta renovar o token silenciosamente antes de redirecionar
- * para o login. Isso resolve o caso de token expirado ao reabrir o app:
- * em vez de jogar para o login imediatamente, tenta um POST /auth/refresh
- * e só redireciona se realmente não houver como renovar.
+ * PrivateRoute — Proteção de rotas com restauração de sessão.
+ *
+ * Lógica de decisão:
+ * 1. Token válido + user no localStorage → renderiza imediatamente (sem rede)
+ * 2. Token válido + user ausente → busca /auth/me, renderiza após
+ * 3. Token expirado → /auth/refresh → /auth/me → renderiza
+ * 4. Sem token → login
+ * 5. Erro 401/403 → limpa sessão → login
+ * 6. Erro de rede → tenta usar cache, renderiza se possível
  */
 function PrivateRoute({ children, adminOnly = false, noFuncionario = false, noMecanico = false }) {
-  const [checking, setChecking] = useState(true);
-  const [user, setUser]         = useState(null);
+  // Leitura síncrona inicial — evita flash de tela de login quando há sessão válida
+  const tokenInit  = getToken();
+  const userInit   = getUser();
+  const validInit  = tokenInit ? isTokenValid() : false;
+  // Se token válido e user no cache: estado inicial já autenticado (sem loader)
+  const startReady = validInit && !!userInit;
+
+  const [checking, setChecking] = useState(!startReady);
+  const [user, setUser]         = useState(startReady ? userInit : null);
+
   useEffect(() => {
+    // Se já está pronto desde o início, não precisa fazer nada
+    if (startReady) return;
+
     async function check() {
       const token = getToken();
 
-      // 1. Sem token → login
+      // Sem token → login
       if (!token) { setChecking(false); return; }
 
-      // 2. Token válido → tenta usar o user do cache, ou busca da API se ausente
+      // Token válido → garante que temos o user
       if (isTokenValid()) {
         const cached = getUser();
         if (cached) {
@@ -116,46 +132,48 @@ function PrivateRoute({ children, adminOnly = false, noFuncionario = false, noMe
           setChecking(false);
           return;
         }
-        // Token válido mas c10_user ausente → busca da API
+        // Token válido mas user ausente → busca /auth/me
         try {
           const userData = await api.auth.me();
           if (userData) {
             localStorage.setItem('c10_user', JSON.stringify(userData));
             setUser(userData);
           }
-        } catch { /* continua com user null */ }
+        } catch {
+          // Erro de rede: user fica null → vai para login
+          // (token preservado para próxima tentativa)
+        }
         setChecking(false);
         return;
       }
 
-      // 3. Token expirado → tenta refresh
+      // Token expirado → tenta refresh
       try {
         const result = await api.auth.refresh();
         if (result?.token) {
           localStorage.setItem('c10_token', result.token);
         }
-        // Após refresh, busca o user atualizado
         const userData = await api.auth.me();
         if (userData) {
           localStorage.setItem('c10_user', JSON.stringify(userData));
           setUser(userData);
         }
-        setChecking(false);
       } catch (err) {
         const status = err?.status;
         if (status === 401 || status === 403) {
           clearSession();
-          setChecking(false);
-          return;
+        } else {
+          // Erro de rede/5xx → usa cache se disponível
+          const cached = getUser();
+          if (cached) setUser(cached);
         }
-        // Erro de rede/5xx → usa user do cache se disponível, senão deixa null
-        const cached = getUser();
-        if (cached) setUser(cached);
-        setChecking(false);
       }
+      setChecking(false);
     }
+
     check();
-  }, []); // eslint-disable-line
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (checking) return <PageLoader />;
 
@@ -176,29 +194,37 @@ function PrivateRoute({ children, adminOnly = false, noFuncionario = false, noMe
 function SessionCleaner() { return null; }
 
 function AppRedirect() {
-  const [checking, setChecking] = useState(true);
+  const tokenInit = getToken();
+  const userInit  = getUser();
+  const validInit = tokenInit ? isTokenValid() : false;
+
+  // Se já tem sessão válida, redireciona imediatamente sem esperar rede
+  if (validInit && userInit) {
+    if (userInit.perfil === 'master_admin') return <Navigate to="/admin/dashboard" replace />;
+    return <Navigate to="/app/dashboard" replace />;
+  }
+
+  // Sem token → login imediato
+  if (!tokenInit) return <Navigate to="/login" replace />;
+
+  // Token expirado → precisa tentar refresh (assíncrono)
+  return <AppRedirectAsync />;
+}
+
+function AppRedirectAsync() {
   const [dest, setDest] = useState(null);
 
   useEffect(() => {
     async function check() {
-      const token = getToken();
-      if (!token) { setDest('login'); setChecking(false); return; }
-
-      if (isTokenValid()) {
-        const user = getUser();
-        setDest(user?.perfil === 'master_admin' ? 'admin' : 'app');
-        setChecking(false);
-        return;
-      }
-
-      // Tenta refresh
       try {
         const result = await api.auth.refresh();
         if (result?.token) {
           localStorage.setItem('c10_token', result.token);
-          const user = getUser();
-          setDest(user?.perfil === 'master_admin' ? 'admin' : 'app');
-          setChecking(false);
+        }
+        const userData = await api.auth.me();
+        if (userData) {
+          localStorage.setItem('c10_user', JSON.stringify(userData));
+          setDest(userData.perfil === 'master_admin' ? 'admin' : 'app');
           return;
         }
       } catch (err) {
@@ -206,14 +232,12 @@ function AppRedirect() {
           clearSession();
         }
       }
-
       setDest('login');
-      setChecking(false);
     }
     check();
   }, []);
 
-  if (checking) return <PageLoader />;
+  if (!dest) return <PageLoader />;
   if (dest === 'admin') return <Navigate to="/admin/dashboard" replace />;
   if (dest === 'app')   return <Navigate to="/app/dashboard" replace />;
   return <Navigate to="/login" replace />;
