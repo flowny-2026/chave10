@@ -6,6 +6,7 @@ import FotoUploader from '../../components/FotoUploader';
 import { useSegmento, getTermosSegmento } from '../../hooks/useSegmento';
 import { IcoView, IcoEdit, IcoTrash, IcoPrint, IcoWhatsApp } from '../../components/ActionIcons';
 import { printHTML } from '../../utils/printHTML';
+import { gerarComprovanteHTML, montarMsgWhatsApp, downloadComprovanteOSPDF } from '../../utils/comprovanteOS';
 
 const fmt = {
   currency: v => 'R$ ' + parseFloat(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.'),
@@ -131,6 +132,49 @@ function gerarHTMLOS(os, clientes, veiculos, oficina, t) {
     Documento gerado em ${new Date().toLocaleDateString('pt-BR')}
   </div>
   </body></html>`;
+}
+
+/** Formulário inline para configurar garantia de uma OS específica */
+function GarantiaForm({ osId, os, oficina, onSave }) {
+  const [prazo, setPrazo] = useState(String(os.garantia_prazo_dias ?? oficina.garantia_padrao_dias ?? 90));
+  const [cond, setCond]   = useState(os.garantia_condicoes ?? oficina.garantia_padrao_condicoes ?? '');
+  const [loading, setLoading] = useState(false);
+
+  async function salvar(e) {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await api.app.os.garantia(osId, {
+        garantia_prazo_dias: parseInt(prazo) || 0,
+        garantia_condicoes:  cond || null,
+      });
+      if (onSave) await onSave();
+    } catch {
+      // falha silenciosa — o toast é disparado pelo pai
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <form onSubmit={salvar} style={{padding:'12px 14px 14px'}}>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 2fr',gap:10,marginBottom:10}}>
+        <div className="form-group">
+          <label style={{fontSize:12}}>Prazo (dias)</label>
+          <input type="number" min="0" max="3650" value={prazo} onChange={e=>setPrazo(e.target.value)} style={{height:36}} />
+        </div>
+        <div className="form-group" style={{display:'flex',alignItems:'flex-end',gap:6}}>
+          <div style={{flex:1}}>
+            <label style={{fontSize:12}}>Condições (opcional)</label>
+            <input type="text" placeholder="Ex: peças e mão de obra" value={cond} onChange={e=>setCond(e.target.value)} maxLength={200} style={{height:36}} />
+          </div>
+          <button className="btn btn-primary" type="submit" disabled={loading} style={{height:36,padding:'0 14px',flexShrink:0}}>
+            {loading ? '…' : 'Salvar'}
+          </button>
+        </div>
+      </div>
+    </form>
+  );
 }
 
 export default function AppOS() {
@@ -399,17 +443,61 @@ export default function AppOS() {
     e.preventDefault();
     if (!pagForm.forma) { showToast('Selecione a forma de pagamento','error'); return; }
     try {
-      const res = await api.app.os.pagamento(pagForm.os_id, pagForm);
+      await api.app.os.pagamento(pagForm.os_id, pagForm);
       await load(statusFiltro);
-      // Atualiza o viewing com o novo status para refletir imediatamente no modal
+      // Atualiza o viewing com o novo status
       setViewing(v => v ? { ...v, status: 'finalizado' } : v);
-      // Volta para o modal de detalhes se estava aberto, senão fecha tudo
-      setModal(prev => prev === 'pagamento' && viewing ? 'view' : null);
-      const msg = pagForm.forma === 'credito' && pagForm.parcelas > 1
-        ? `OS finalizada! ${pagForm.parcelas}x de ${fmt.currency(res.valor_parcela)} — Líquido: ${fmt.currency(res.valor_liquido)}`
-        : `OS finalizada! Recebimento: ${fmt.currency(res.valor_liquido)}`;
-      showToast(msg);
+      // Fecha modal de pagamento e abre modal de comprovante
+      setModal('comprovante');
+      // Carrega dados completos do comprovante em background
+      abrirComprovante(pagForm.os_id);
     } catch (err) { showToast(err.error||'Erro ao registrar pagamento','error'); }
+  }
+
+  /**
+   * Carrega dados completos da OS do endpoint /comprovante
+   * e exibe o modal de comprovante.
+   */
+  async function abrirComprovante(osId) {
+    setComprovanteLoading(true);
+    try {
+      const dados = await api.app.os.comprovante(osId);
+      setComprovante(dados);
+    } catch (err) {
+      showToast('Não foi possível carregar o comprovante', 'error');
+      setModal(viewing ? 'view' : null);
+    } finally {
+      setComprovanteLoading(false);
+    }
+  }
+
+  function imprimirComprovante() {
+    if (!comprovante) return;
+    const { os, oficina, pagamentos: pags } = comprovante;
+    const html = gerarComprovanteHTML(os, oficina, pags);
+    printHTML(html);
+  }
+
+  async function baixarComprovanteOSPDF() {
+    if (!comprovante) return;
+    const { os, oficina, pagamentos: pags } = comprovante;
+    showToast('⏳ Gerando PDF…');
+    const result = await downloadComprovanteOSPDF(os, oficina, pags);
+    if (result.success) {
+      showToast(`✅ PDF salvo: ${result.filename}`);
+    } else {
+      // Fallback: usa impressão via browser se jsPDF falhar
+      imprimirComprovante();
+      showToast('PDF gerado via impressão do navegador');
+    }
+  }
+
+  function enviarComprovanteWhatsApp() {
+    if (!comprovante) return;
+    const { os, oficina, pagamentos: pags } = comprovante;
+    const { tel, msg } = montarMsgWhatsApp(os, oficina, pags);
+    if (!tel) { showToast('Cliente sem telefone cadastrado', 'error'); return; }
+    window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`, '_blank');
   }
 
   const taxaCalculada = pagForm.taxa_maquininha && pagForm.valor_total
@@ -475,6 +563,9 @@ export default function AppOS() {
   }
   const [viewPagamentos, setViewPagamentos] = useState([]);
   const [viewFotos, setViewFotos] = useState([]);
+  // Estado do modal de comprovante (pós-finalização ou visualização avulsa)
+  const [comprovante, setComprovante] = useState(null); // { os, oficina, pagamentos } | null
+  const [comprovanteLoading, setComprovanteLoading] = useState(false);
 
   const veiculosFiltrados = form.cliente_id ? veiculos.filter(v=>String(v.cliente_id)===String(form.cliente_id)) : veiculos;
   const listaFiltrada = search
@@ -537,6 +628,9 @@ export default function AppOS() {
                             <button className="btn btn-outline btn-sm" onClick={()=>openView(os)} title="Ver"><IcoView /></button>
                             <button className="btn btn-outline btn-sm" onClick={()=>imprimir(os)} title="Imprimir"><IcoPrint /></button>
                             <button className="btn btn-outline btn-sm" onClick={()=>enviarWhatsApp(os)} title="WhatsApp"><IcoWhatsApp /></button>
+                            {os.status==='finalizado'&&!isFuncionario&&(
+                              <button className="btn btn-outline btn-sm" onClick={()=>{setModal('comprovante');abrirComprovante(os.id);}} title="Comprovante">📄</button>
+                            )}
                             <button className="btn btn-outline btn-sm" onClick={()=>openEdit(os)} title="Editar"><IcoEdit /></button>
                             <button className="btn btn-outline btn-sm" onClick={()=>remove(os.id)} title="Excluir"><IcoTrash /></button>
                           </div>
@@ -948,6 +1042,9 @@ export default function AppOS() {
                   <button className="btn btn-outline" onClick={()=>setModal(null)}>Fechar</button>
                   <button className="btn btn-outline" onClick={()=>imprimir(viewing)}><IcoPrint /> Imprimir</button>
                   <button className="btn btn-outline" onClick={()=>enviarWhatsApp(viewing)}><IcoWhatsApp /> WhatsApp</button>
+                  {viewing.status==='finalizado'&&!isFuncionario&&(
+                    <button className="btn btn-outline" onClick={()=>{setModal('comprovante');abrirComprovante(viewing.id);}}>📄 Comprovante</button>
+                  )}
                   <button className="btn btn-primary" onClick={()=>openEdit(viewing)}><IcoEdit /> Editar</button>
                   {viewing.status==='em_andamento'&&<button className="btn btn-success" onClick={()=>finalizar(viewing.id)}>Finalizar</button>}
                   {viewing.status==='finalizado'&&<button className="btn btn-outline" onClick={()=>reabrir(viewing.id)}>↩ Reabrir</button>}
@@ -959,6 +1056,107 @@ export default function AppOS() {
       })()}
 
       <Toast msg={toast.msg} type={toast.type} />
+
+      {/* ══ Modal Comprovante de Serviço ══════════════════════════ */}
+      {modal==='comprovante' && (
+        <div className="modal-overlay open" style={{zIndex:400}}>
+          <div className="modal" style={{maxWidth:560}}>
+            <div className="modal-header">
+              <h2>📄 Comprovante de Serviço</h2>
+              <button className="modal-close" onClick={()=>{setModal(null);setComprovante(null);}}>✕</button>
+            </div>
+            <div className="modal-body">
+              {comprovanteLoading ? (
+                <div style={{textAlign:'center',padding:'40px 0',color:'var(--gray-400)'}}>
+                  <div style={{fontSize:32,marginBottom:12}}>⏳</div>
+                  <div style={{fontSize:14}}>Carregando comprovante…</div>
+                </div>
+              ) : comprovante ? (
+                <>
+                  {/* Resumo da OS */}
+                  <div style={{background:'var(--brand-light,#f0f6ff)',border:'1px solid var(--brand-200,#c7d9f0)',borderRadius:'var(--r-md,8px)',padding:'16px 18px',marginBottom:20}}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+                      <span style={{fontSize:12,fontWeight:700,color:'var(--brand)',textTransform:'uppercase',letterSpacing:'.5px'}}>
+                        OS Nº {comprovante.os.numero || String(comprovante.os.id).padStart(4,'0')}
+                      </span>
+                      <span style={{display:'inline-block',padding:'2px 10px',borderRadius:20,fontSize:11,fontWeight:700,background:'#f0fdf4',color:'#16a34a',border:'1px solid #bbf7d0'}}>✓ Finalizado</span>
+                    </div>
+                    <div style={{fontSize:14,fontWeight:600,color:'var(--gray-800)',marginBottom:4}}>
+                      {comprovante.os.cliente_nome || '—'}
+                    </div>
+                    <div style={{fontSize:12,color:'var(--gray-500)'}}>
+                      {[comprovante.os.veiculo_marca, comprovante.os.veiculo_modelo].filter(Boolean).join(' ')}
+                      {(comprovante.os.veiculo_placa||comprovante.os.placa) ? ` · ${comprovante.os.veiculo_placa||comprovante.os.placa}` : ''}
+                    </div>
+                    {(() => {
+                      const totalMO    = parseFloat(comprovante.os.valor_mo)    || 0;
+                      const totalPecas = parseFloat(comprovante.os.valor_pecas) || 0;
+                      const total      = totalMO + totalPecas;
+                      const garantiaDias = comprovante.os.garantia_prazo_dias || comprovante.oficina.garantia_padrao_dias || 0;
+                      return (
+                        <div style={{marginTop:10,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                          <span style={{fontSize:12,color:'var(--gray-500)'}}>
+                            {garantiaDias > 0 ? `🛡️ Garantia: ${garantiaDias} dias` : ''}
+                          </span>
+                          <span style={{fontFamily:'Poppins,sans-serif',fontSize:20,fontWeight:800,color:'var(--accent,#F97316)'}}>
+                            {(() => { const v = total; return 'R$\u00a0' + v.toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.'); })()}
+                          </span>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Configuração de garantia */}
+                  {!isFuncionario && !isMecanico && (
+                    <details style={{marginBottom:16,background:'var(--gray-50)',borderRadius:'var(--r-sm,6px)',border:'1px solid var(--gray-200)'}}>
+                      <summary style={{padding:'10px 14px',cursor:'pointer',fontSize:12,fontWeight:600,color:'var(--gray-700)',userSelect:'none'}}>
+                        🛡️ Configurar garantia desta OS (opcional)
+                      </summary>
+                      <GarantiaForm osId={comprovante.os.id} os={comprovante.os} oficina={comprovante.oficina} onSave={async()=>{
+                        const d = await api.app.os.comprovante(comprovante.os.id);
+                        setComprovante(d);
+                        showToast('Garantia salva');
+                      }} />
+                    </details>
+                  )}
+
+                  {/* Botões de ação */}
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}}>
+                    <button className="btn btn-outline" style={{display:'flex',alignItems:'center',justifyContent:'center',gap:6}} onClick={imprimirComprovante}>
+                      <IcoPrint /> Visualizar / Imprimir
+                    </button>
+                    <button className="btn btn-outline" style={{display:'flex',alignItems:'center',justifyContent:'center',gap:6}} onClick={baixarComprovanteOSPDF}>
+                      📥 Baixar PDF
+                    </button>
+                    <button className="btn btn-success" style={{display:'flex',alignItems:'center',justifyContent:'center',gap:6}} onClick={enviarComprovanteWhatsApp}
+                      disabled={!comprovante.os.cliente_telefone}
+                      title={!comprovante.os.cliente_telefone ? 'Cliente sem telefone cadastrado' : undefined}>
+                      <IcoWhatsApp /> Enviar pelo WhatsApp
+                    </button>
+                    <button className="btn btn-primary" onClick={()=>{setModal(null);setComprovante(null);}}>
+                      ✓ Voltar para OS
+                    </button>
+                  </div>
+                  {!comprovante.os.cliente_telefone && (
+                    <p style={{fontSize:11,color:'var(--gray-400)',textAlign:'center',marginTop:4}}>
+                      ⚠️ WhatsApp indisponível — cliente sem telefone cadastrado
+                    </p>
+                  )}
+                  <p style={{fontSize:11,color:'var(--gray-400)',textAlign:'center',marginTop:8,fontStyle:'italic'}}>
+                    Para enviar pelo WhatsApp, baixe o PDF primeiro e depois anexe na conversa que será aberta.
+                  </p>
+                </>
+              ) : (
+                <div style={{textAlign:'center',padding:'40px 0',color:'var(--gray-400)'}}>
+                  <div style={{fontSize:32,marginBottom:12}}>⚠️</div>
+                  <div style={{fontSize:14}}>Não foi possível carregar o comprovante.</div>
+                  <button className="btn btn-outline" style={{marginTop:12}} onClick={()=>{setModal(null);setComprovante(null);}}>Fechar</button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal Pagamento */}
       {modal==='pagamento' && (

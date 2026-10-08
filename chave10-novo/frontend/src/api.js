@@ -126,6 +126,8 @@ export const api = {
       remove:  (id)                  => del('/app/os/'+id),
       pagamento:(id, data)           => post('/app/os/'+id+'/pagamento', data),
       pagamentos:(id)                => get('/app/os/'+id+'/pagamentos'),
+      comprovante: (id)              => get('/app/os/'+id+'/comprovante'),
+      garantia: (id, data)           => patch('/app/os/'+id+'/garantia', data),
       fotos: {
         list:   (osId)              => get('/app/os-fotos/'+osId+'/fotos'),
         get:    (osId, fotoId)      => get('/app/os-fotos/'+osId+'/fotos/'+fotoId),

@@ -426,6 +426,19 @@ async function initDB() {
   await pool.query(`ALTER TABLE lembretes ADD COLUMN IF NOT EXISTS ultimo_contato TEXT;`).catch(() => {});
   await pool.query(`ALTER TABLE lembretes ADD COLUMN IF NOT EXISTS origem_os_id INTEGER;`).catch(() => {});
 
+  // ── Comprovante de OS: garantia e data de conclusão ──────
+  // garantia_prazo_dias: prazo padrão em dias (0 = sem garantia explícita)
+  // garantia_condicoes: texto livre com condições da garantia
+  // garantia_data_inicio: data de início da garantia (= data_conclusao por padrão)
+  // data_conclusao: timestamp exato da finalização da OS
+  await pool.query(`ALTER TABLE ordens_servico ADD COLUMN IF NOT EXISTS garantia_prazo_dias INTEGER DEFAULT 0;`).catch(() => {});
+  await pool.query(`ALTER TABLE ordens_servico ADD COLUMN IF NOT EXISTS garantia_condicoes TEXT;`).catch(() => {});
+  await pool.query(`ALTER TABLE ordens_servico ADD COLUMN IF NOT EXISTS garantia_data_inicio TEXT;`).catch(() => {});
+  await pool.query(`ALTER TABLE ordens_servico ADD COLUMN IF NOT EXISTS data_conclusao TIMESTAMPTZ;`).catch(() => {});
+  // Configuração padrão de garantia da oficina (dias)
+  await pool.query(`ALTER TABLE oficinas ADD COLUMN IF NOT EXISTS garantia_padrao_dias INTEGER DEFAULT 90;`).catch(() => {});
+  await pool.query(`ALTER TABLE oficinas ADD COLUMN IF NOT EXISTS garantia_padrao_condicoes TEXT;`).catch(() => {});
+
   // ── Status 'cancelada' em ordens_servico ──────────────────
   // Recria o CHECK para aceitar em_andamento | finalizado | cancelada.
   // Idempotente: dropa o constraint antigo (qualquer nome) e cria o novo.

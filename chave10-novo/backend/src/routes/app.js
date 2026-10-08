@@ -629,7 +629,10 @@ router.patch('/os/:id/status', validateId, checkOwns('ordens_servico'), async (r
   try {
     const status = req.body?.status;
     if(!status || !['em_andamento','finalizado','cancelada'].includes(status)) return res.status(400).json({error:'Status inválido'});
-    const result = await run('UPDATE ordens_servico SET status=$1 WHERE id=$2 AND oficina_id=$3',[status,req.params.id,oid(req)]);
+    const result = await run(
+      "UPDATE ordens_servico SET status=$1, data_conclusao=CASE WHEN $1='finalizado' AND data_conclusao IS NULL THEN NOW() ELSE data_conclusao END WHERE id=$2 AND oficina_id=$3",
+      [status, req.params.id, oid(req)]
+    );
     if(result.rowCount === 0) return res.status(404).json({error:'OS não encontrada'});
     // Ao finalizar por status (sem passar por pagamento), garante comissão e gera lembrete
     if (status === 'finalizado') {
@@ -1065,8 +1068,11 @@ router.post('/os/:id/pagamento', validateId, checkOwns('ordens_servico'), valida
       );
     }
 
-    // Finaliza a OS automaticamente
-    await run("UPDATE ordens_servico SET status='finalizado' WHERE id=$1 AND oficina_id=$2", [osId, id]);
+    // Finaliza a OS automaticamente, gravando timestamp de conclusão
+    await run(
+      "UPDATE ordens_servico SET status='finalizado', data_conclusao=NOW() WHERE id=$1 AND oficina_id=$2",
+      [osId, id]
+    );
 
     // Garante a comissão do mecânico (se houver mecânico + config)
     await garantirComissaoOS(id, osId);
@@ -1105,6 +1111,119 @@ router.get('/os/:id/pagamentos', validateId, checkOwns('ordens_servico'), async 
     const rows = await query('SELECT * FROM pagamentos_os WHERE os_id=$1 AND oficina_id=$2 ORDER BY criado_em DESC', [req.params.id, oid(req)]);
     res.json(rows);
   } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// GET /os/:id/comprovante — retorna dados completos para geração do comprovante PDF
+// Inclui OS, cliente, veículo, pagamentos e dados da oficina (com logo e garantia)
+// Protegido: checkOwns garante isolamento entre oficinas (evita IDOR)
+router.get('/os/:id/comprovante', validateId, checkOwns('ordens_servico'), async (req,res) => {
+  try {
+    const osId = req.params.id;
+    const id   = oid(req);
+
+    // Busca OS com join completo (cliente + veículo + mecânico)
+    const os = await queryOne(
+      `SELECT os.*,
+              c.nome     AS cliente_nome,    c.telefone AS cliente_telefone,
+              c.email    AS cliente_email,   c.endereco AS cliente_endereco,
+              v.modelo   AS veiculo_modelo,  v.marca    AS veiculo_marca,
+              v.placa    AS veiculo_placa,   v.ano      AS veiculo_ano,
+              v.km       AS veiculo_km,      u.nome     AS mecanico_nome
+       FROM ordens_servico os
+       LEFT JOIN clientes  c ON c.id = os.cliente_id
+       LEFT JOIN veiculos  v ON v.id = os.veiculo_id
+       LEFT JOIN usuarios  u ON u.id = os.mecanico_id
+       WHERE os.id=$1 AND os.oficina_id=$2`,
+      [osId, id]
+    );
+    if (!os) return res.status(404).json({ error: 'OS não encontrada' });
+
+    // Parse de pecas_itens (JSON armazenado como TEXT)
+    if (os.pecas_itens && typeof os.pecas_itens === 'string') {
+      try { os.pecas_itens = JSON.parse(os.pecas_itens); } catch { os.pecas_itens = []; }
+    }
+    if (!Array.isArray(os.pecas_itens)) os.pecas_itens = [];
+
+    // Busca todos os pagamentos desta OS
+    const pagamentos = await query(
+      'SELECT * FROM pagamentos_os WHERE os_id=$1 AND oficina_id=$2 ORDER BY data_pagamento ASC, criado_em ASC',
+      [osId, id]
+    );
+
+    // Busca dados da oficina (logo, CNPJ, garantia padrão etc.)
+    const oficina = await queryOne(
+      `SELECT nome, responsavel, telefone, whatsapp, email, endereco, logo,
+              observacoes AS documento, segmento,
+              garantia_padrao_dias, garantia_padrao_condicoes
+       FROM oficinas WHERE id=$1`,
+      [id]
+    );
+    if (!oficina) return res.status(404).json({ error: 'Oficina não encontrada' });
+
+    // Não expõe logo para perfis não autorizados (funcionário/mecânico podem ver o comprovante)
+    // mas filtramos campos financeiros internos da OS
+    const perfil = req.user?.perfil;
+    const isFuncionario = perfil === 'funcionario';
+    const isMecanico    = perfil === 'mecanico';
+    if (isFuncionario || isMecanico) {
+      // Remove campos financeiros sensíveis para funcionário/mecânico
+      delete os.valor; delete os.valor_mo; delete os.valor_pecas;
+      delete os.mecanico_comissao_servicos; delete os.mecanico_comissao_pecas;
+      delete os.mecanico_comissao_total; delete os.mecanico_pct_servicos;
+      delete os.mecanico_pct_pecas;
+      for (const p of pagamentos) { delete p.taxa_maquininha; delete p.valor_liquido; }
+    }
+
+    res.json({ os, pagamentos, oficina });
+  } catch(err){ log.error('app_get_comprovante', err); res.status(500).json({ error: 'Erro interno' }); }
+});
+
+// PATCH /os/:id/garantia — atualiza dados de garantia de uma OS (antes ou após finalizar)
+// Requer perfil admin_oficina ou superior (não funcionário/mecânico)
+router.patch('/os/:id/garantia', validateId, naoFuncionario, naoMecanico, checkOwns('ordens_servico'), async (req,res) => {
+  try {
+    const { garantia_prazo_dias, garantia_condicoes, garantia_data_inicio } = req.body;
+
+    // Valida prazo (0 a 3650 dias = 10 anos)
+    if (garantia_prazo_dias !== undefined) {
+      const dias = parseInt(garantia_prazo_dias, 10);
+      if (!Number.isInteger(dias) || dias < 0 || dias > 3650) {
+        return res.status(400).json({ error: 'Prazo de garantia inválido (0 a 3650 dias)' });
+      }
+    }
+
+    // Valida data_inicio se fornecida
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (garantia_data_inicio && !dateRegex.test(garantia_data_inicio)) {
+      return res.status(400).json({ error: 'Data de início da garantia inválida (YYYY-MM-DD)' });
+    }
+
+    // Sanitiza condições (max 1000 chars, sem HTML)
+    const condicoes = garantia_condicoes
+      ? String(garantia_condicoes).replace(/<[^>]*>/g, '').trim().slice(0, 1000) || null
+      : undefined;
+
+    const result = await run(
+      `UPDATE ordens_servico SET
+         garantia_prazo_dias  = COALESCE($1, garantia_prazo_dias),
+         garantia_condicoes   = COALESCE($2, garantia_condicoes),
+         garantia_data_inicio = COALESCE($3, garantia_data_inicio)
+       WHERE id=$4 AND oficina_id=$5`,
+      [
+        garantia_prazo_dias !== undefined ? parseInt(garantia_prazo_dias, 10) : null,
+        condicoes !== undefined           ? condicoes                          : null,
+        garantia_data_inicio              || null,
+        req.params.id,
+        oid(req),
+      ]
+    );
+    if (result.rowCount === 0) return res.status(404).json({ error: 'OS não encontrada' });
+
+    audit(req, 'ATUALIZAR_GARANTIA_OS', 'ordens_servico', req.params.id, {
+      garantia_prazo_dias, garantia_data_inicio,
+    });
+    res.json({ ok: true });
+  } catch(err){ log.error('app_patch_garantia', err); res.status(500).json({ error: 'Erro interno' }); }
 });
 
 // Todos os pagamentos de OS da oficina (para gráficos)
