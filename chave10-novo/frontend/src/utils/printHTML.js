@@ -65,8 +65,27 @@ function printViaIframe(html, timeout) {
       // Se falhar aqui, tenta o fallback de janela
       printViaWindow(html, timeout);
     }
-    // Remove o iframe depois que a caixa de impressão foi tratada
-    setTimeout(() => { try { iframe.remove(); } catch (_) {} }, 60000);
+    // Devolve o foco para a janela principal assim que o dialog de impressão
+    // for disparado — sem isso, o foco fica preso no iframe invisível e a
+    // aplicação React fica sem responder até um F5.
+    // afterprint dispara ao fechar o dialog; o fallback de 500ms cobre browsers
+    // que não suportam o evento mas ainda assim retornam o foco.
+    const aoFecharDialog = () => {
+      try { window.focus(); document.body.focus(); } catch (_) {}
+    };
+    const removerIframe = () => {
+      try { iframe.remove(); } catch (_) {}
+    };
+    try {
+      iframe.contentWindow.addEventListener('afterprint', () => {
+        aoFecharDialog();
+        setTimeout(removerIframe, 500);
+      }, { once: true });
+    } catch (_) {}
+    // Fallback: devolve o foco após 500ms sem remover o iframe (o afterprint cuida disso)
+    setTimeout(aoFecharDialog, 500);
+    // Limpeza de segurança: remove o iframe após 2 minutos caso afterprint não dispare
+    setTimeout(removerIframe, 120_000);
   };
 
   // Imprime quando o conteúdo carregar; com timeout de segurança
