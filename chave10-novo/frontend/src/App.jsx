@@ -53,6 +53,79 @@ function PageLoader() {
   );
 }
 
+/**
+ * Monitora o Service Worker e força reload quando uma nova versão está esperando.
+ * Resolve o problema de tela preta após deploy: o SW antigo tem hashes de assets
+ * velhos no cache; ao detectar um SW novo esperando, limpa todos os caches e
+ * recarrega a página para pegar os arquivos corretos.
+ */
+function SWUpdateManager() {
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+
+    // Captura erros de módulos dinâmicos que falharam por SW desatualizado
+    // e força um reload limpando caches
+    const handleModuleError = (e) => {
+      const msg = e?.message || e?.reason?.message || '';
+      const isFetchError = msg.includes('Failed to fetch dynamically imported module')
+        || msg.includes('Importing a module script failed');
+      if (!isFetchError) return;
+
+      console.warn('[SW] Módulo não encontrado — provavelmente SW desatualizado. Limpando caches e recarregando...');
+      // Limpa todos os caches do SW antes de recarregar
+      caches.keys().then(names => Promise.all(names.map(n => caches.delete(n)))).finally(() => {
+        window.location.reload();
+      });
+    };
+
+    // Ouve erros de módulos não capturados
+    window.addEventListener('error', handleModuleError);
+    window.addEventListener('unhandledrejection', handleModuleError);
+
+    // Quando SW novo estiver esperando para ativar, manda ele tomar o controle
+    navigator.serviceWorker.ready.then(reg => {
+      const handleUpdate = (worker) => {
+        worker.addEventListener('statechange', () => {
+          if (worker.state === 'activated') {
+            console.log('[SW] Nova versão ativada — recarregando para aplicar');
+            caches.keys().then(names => Promise.all(names.map(n => caches.delete(n)))).finally(() => {
+              window.location.reload();
+            });
+          }
+        });
+        // Pede para o SW em espera pular a fila e ativar
+        worker.postMessage({ type: 'SKIP_WAITING' });
+      };
+
+      if (reg.waiting) {
+        handleUpdate(reg.waiting);
+      }
+
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        if (newWorker) {
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              handleUpdate(newWorker);
+            }
+          });
+        }
+      });
+
+      // Verifica por atualizações a cada 5 minutos
+      const interval = setInterval(() => reg.update(), 5 * 60 * 1000);
+      return () => clearInterval(interval);
+    }).catch(() => {});
+
+    return () => {
+      window.removeEventListener('error', handleModuleError);
+      window.removeEventListener('unhandledrejection', handleModuleError);
+    };
+  }, []);
+
+  return null;
+}
+
 function getUser() {
   try {
     const user = getFromStorage('c10_user');
@@ -245,6 +318,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <SessionCleaner />
+      <SWUpdateManager />
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={<Landing />} />
