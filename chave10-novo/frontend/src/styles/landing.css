@@ -120,11 +120,11 @@
 
 /* ===== HERO ===== */
 .lp-hero {
-  min-height: 100vh;
+  min-height: calc(100vh - 68px);
   display: flex;
   align-items: center;
   background: linear-gradient(160deg, var(--lp-navy-dark) 0%, var(--lp-navy) 50%, #243f6a 100%);
-  padding: 120px 0 80px;
+  padding: 100px 0 80px;
   position: relative;
   overflow: hidden;
 }
@@ -297,7 +297,7 @@
 
 /* ===== PAIN POINTS ===== */
 .lp-pain {
-  padding: 100px 0;
+  padding: 72px 0;
   background: var(--lp-light);
 }
 
@@ -396,7 +396,7 @@
 
 /* ===== BENEFITS (Editorial) ===== */
 .lp-benefits {
-  padding: 120px 0;
+  padding: 80px 0;
   background: var(--lp-navy);
   position: relative;
   overflow: hidden;
@@ -448,7 +448,7 @@
 
 /* ===== MOBILE ===== */
 .lp-mobile {
-  padding: 100px 0;
+  padding: 72px 0;
   background: var(--lp-white);
 }
 
@@ -547,7 +547,7 @@
 
 /* ===== HOW IT WORKS ===== */
 .lp-how {
-  padding: 100px 0;
+  padding: 72px 0;
   background: var(--lp-light);
 }
 
@@ -618,7 +618,7 @@
 
 /* ===== COMPARISON ===== */
 .lp-compare {
-  padding: 100px 0;
+  padding: 72px 0;
   background: var(--lp-white);
 }
 
@@ -695,7 +695,7 @@
 
 /* ===== PRICING ===== */
 .lp-pricing {
-  padding: 100px 0;
+  padding: 72px 0;
   background: var(--lp-light);
 }
 
@@ -785,7 +785,7 @@
 
 /* ===== FAQ ===== */
 .lp-faq {
-  padding: 100px 0;
+  padding: 72px 0;
   background: var(--lp-white);
 }
 
@@ -852,7 +852,7 @@
 
 /* ===== FINAL CTA ===== */
 .lp-final-cta {
-  padding: 120px 0;
+  padding: 80px 0;
   background: linear-gradient(160deg, var(--lp-navy-dark) 0%, var(--lp-navy) 100%);
   text-align: center;
   position: relative;

@@ -98,6 +98,35 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ── MÉTRICAS / SOCIAL PROOF ── */}
+      <section style={{
+        background:'var(--lp-navy-dark,#152d4a)',
+        borderTop:'1px solid rgba(255,255,255,0.07)',
+        borderBottom:'1px solid rgba(255,255,255,0.07)',
+        padding:'36px 0',
+      }}>
+        <div className="lp-container">
+          <div style={{
+            display:'grid',
+            gridTemplateColumns:'repeat(auto-fit, minmax(180px, 1fr))',
+            gap:'32px 24px',
+            textAlign:'center',
+          }}>
+            {[
+              { num:'500+',  label:'Oficinas usando' },
+              { num:'98%',   label:'Satisfação dos clientes' },
+              { num:'2 min', label:'Para criar sua primeira OS' },
+              { num:'24/7',  label:'Acesso de qualquer lugar' },
+            ].map((m, i) => (
+              <div key={i}>
+                <div style={{fontFamily:'Poppins,sans-serif',fontSize:'2rem',fontWeight:800,color:'var(--lp-orange,#F97316)',lineHeight:1}}>{m.num}</div>
+                <div style={{fontSize:'0.875rem',color:'rgba(255,255,255,0.6)',marginTop:6}}>{m.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── DOR ── */}
       <section className="lp-pain">
         <div className="lp-container">
