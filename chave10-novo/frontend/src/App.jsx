@@ -66,7 +66,7 @@ function getToken() {
 
 // Limpa toda a sessão de forma segura
 function clearSession() {
-  ['c10_token', 'c10_user', 'c10_token_temp'].forEach(k => {
+  ['c10_token', 'c10_user', 'c10_token_temp', 'c10_oficina'].forEach(k => {
     localStorage.removeItem(k);
   });
 }
@@ -180,6 +180,7 @@ function PrivateRoute({ children, adminOnly = false, noFuncionario = false, noMe
     return <Navigate to="/login" replace />;
   }
   if (adminOnly && user.perfil !== 'master_admin') return <Navigate to="/app/dashboard" replace />;
+  if (!adminOnly && user.perfil === 'master_admin') return <Navigate to="/admin/dashboard" replace />;
   if (noFuncionario && (user.perfil === 'funcionario' || user.perfil === 'mecanico')) return <Navigate to="/app/dashboard" replace />;
   if (noMecanico && user.perfil === 'mecanico') return <Navigate to="/app/dashboard" replace />;
 

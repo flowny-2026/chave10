@@ -54,6 +54,7 @@ export function useAuth() {
         if (status === 401 || status === 403) {
           localStorage.removeItem('c10_token');
           localStorage.removeItem('c10_user');
+          localStorage.removeItem('c10_oficina');
           navigate('/login');
         }
         // qualquer outro erro: silencioso, tenta de novo no próximo ciclo
