@@ -113,10 +113,10 @@ export default function Landing() {
             textAlign:'center',
           }}>
             {[
-              { num:'500+',  label:'Oficinas usando' },
-              { num:'98%',   label:'Satisfação dos clientes' },
-              { num:'2 min', label:'Para criar sua primeira OS' },
-              { num:'24/7',  label:'Acesso de qualquer lugar' },
+              { num:'7 dias', label:'Teste grátis, sem cartão' },
+              { num:'2 min',  label:'Para criar sua primeira OS' },
+              { num:'100%',   label:'Na nuvem, sem instalar nada' },
+              { num:'24/7',   label:'Acesso de qualquer dispositivo' },
             ].map((m, i) => (
               <div key={i}>
                 <div style={{fontFamily:'Poppins,sans-serif',fontSize:'2rem',fontWeight:800,color:'var(--lp-orange,#F97316)',lineHeight:1}}>{m.num}</div>
