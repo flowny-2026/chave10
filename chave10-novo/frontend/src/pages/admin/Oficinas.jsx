@@ -137,10 +137,10 @@ export default function AdminOficinas() {
     <div>
       <div className="page-header">
         <div><div className="page-title">Oficinas</div><div className="page-subtitle">{listaFiltrada.length} oficina(s)</div></div>
-        <div className="page-actions">
+        <div className="page-actions" style={{flexWrap:'wrap',gap:8}}>
           {selected.size > 0 && (
             <button className="btn btn-secondary btn-sm" onClick={()=>setModal('lote')}>
-              <IcoRefresh /> Renovar {selected.size} selecionada(s)
+              <IcoRefresh /> Renovar {selected.size}
             </button>
           )}
           <select className="dash-select" value={filterStatus} onChange={e=>setFilterStatus(e.target.value)}>
@@ -163,64 +163,117 @@ export default function AdminOficinas() {
       </div>
 
       <div className="card">
-        <div className="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th style={{width:36}}>
-                  <input type="checkbox" checked={selected.size===listaFiltrada.length&&listaFiltrada.length>0} onChange={toggleAll} />
-                </th>
-                <th>Nome</th>
-                <th>Responsável</th>
-                <th>Plano</th>
-                <th>Vencimento</th>
-                <th>Último acesso</th>
-                <th>Status</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {listaFiltrada.length === 0 && (
-                <tr><td colSpan={8} style={{textAlign:'center',color:'var(--gray-400)',padding:32}}>Nenhuma oficina encontrada</td></tr>
-              )}
-              {listaFiltrada.map(o => {
-                const vencendo = o.data_vencimento && o.data_vencimento >= hoje && o.data_vencimento <= em7str;
-                const vencido  = o.data_vencimento && o.data_vencimento < hoje;
-                return (
-                  <tr key={o.id} style={selected.has(o.id)?{background:'var(--brand-light)'}:{}}>
-                    <td><input type="checkbox" checked={selected.has(o.id)} onChange={()=>toggleSelect(o.id)} /></td>
-                    <td>
-                      <div style={{fontWeight:600}}>{o.nome}</div>
-                      <div style={{fontSize:12,color:'var(--gray-400)'}}>{o.email}</div>
-                    </td>
-                    <td>{o.responsavel||'—'}</td>
-                    <td><span className="badge badge-blue">{o.plano}</span></td>
-                    <td>
-                      <span style={{color:vencido?'var(--danger)':vencendo?'var(--warning)':'var(--gray-700)',fontWeight:vencido||vencendo?700:400}}>
-                        {fmt.date(o.data_vencimento)}
-                      </span>
-                    </td>
-                    <td style={{fontSize:12,color:'var(--gray-400)'}}>
-                      {o.ultimo_acesso ? fmt.date(o.ultimo_acesso.split('T')[0]) : 'Nunca acessado'}
-                    </td>
-                    <td><span className={`badge ${STATUS_CLASS[o.status_assinatura]}`}>{STATUS_LABEL[o.status_assinatura]}</span></td>
-                    <td>
-                      <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
-                        <button className="btn btn-outline btn-sm" onClick={()=>abrirDetalhes(o)} title="Ver detalhes"><IcoSearch /></button>
-                        <button className="btn btn-outline btn-sm" onClick={()=>{setForm({...o});setEditing(o.id);setModal('oficina');}} title="Editar"><IcoEdit /></button>
-                        <button className="btn btn-outline btn-sm" onClick={()=>{setSelectedOf(o);setUserForm(EMPTY_USR);setShowSenhaUser(false);setModal('usuario');}}>+ Login</button>
-                        <button className="btn btn-success btn-sm" onClick={()=>{setSelectedOf(o);setPagForm({...EMPTY_PAG});setModal('pagamento');}} title="Registrar pagamento"><IcoCard /></button>
-                        {o.status_assinatura!=='blocked'
-                          ? <button className="btn btn-danger btn-sm" onClick={()=>setStatus(o.id,'blocked')} title="Bloquear"><IcoLock /></button>
-                          : <button className="btn btn-success btn-sm" onClick={()=>setStatus(o.id,'active')} title="Ativar"><IcoCheck /></button>}
-                        <button className="btn btn-ghost btn-sm" style={{color:'var(--danger)'}} onClick={()=>removeOficina(o.id)} title="Excluir"><IcoTrash /></button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        {/* ── Tabela desktop ── */}
+        <div className="os-table-desktop">
+          <div className="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th style={{width:36}}>
+                    <input type="checkbox" checked={selected.size===listaFiltrada.length&&listaFiltrada.length>0} onChange={toggleAll} />
+                  </th>
+                  <th>Nome</th>
+                  <th>Responsável</th>
+                  <th>Plano</th>
+                  <th>Vencimento</th>
+                  <th>Último acesso</th>
+                  <th>Status</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {listaFiltrada.length === 0 && (
+                  <tr><td colSpan={8} style={{textAlign:'center',color:'var(--gray-400)',padding:32}}>Nenhuma oficina encontrada</td></tr>
+                )}
+                {listaFiltrada.map(o => {
+                  const vencendo = o.data_vencimento && o.data_vencimento >= hoje && o.data_vencimento <= em7str;
+                  const vencido  = o.data_vencimento && o.data_vencimento < hoje;
+                  return (
+                    <tr key={o.id} style={selected.has(o.id)?{background:'var(--brand-light)'}:{}}>
+                      <td><input type="checkbox" checked={selected.has(o.id)} onChange={()=>toggleSelect(o.id)} /></td>
+                      <td>
+                        <div style={{fontWeight:600}}>{o.nome}</div>
+                        <div style={{fontSize:12,color:'var(--gray-400)'}}>{o.email}</div>
+                      </td>
+                      <td>{o.responsavel||'—'}</td>
+                      <td><span className="badge badge-blue">{o.plano}</span></td>
+                      <td>
+                        <span style={{color:vencido?'var(--danger)':vencendo?'var(--warning)':'var(--gray-700)',fontWeight:vencido||vencendo?700:400}}>
+                          {fmt.date(o.data_vencimento)}
+                        </span>
+                      </td>
+                      <td style={{fontSize:12,color:'var(--gray-400)'}}>
+                        {o.ultimo_acesso ? fmt.date(o.ultimo_acesso.split('T')[0]) : 'Nunca acessado'}
+                      </td>
+                      <td><span className={`badge ${STATUS_CLASS[o.status_assinatura]}`}>{STATUS_LABEL[o.status_assinatura]}</span></td>
+                      <td>
+                        <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
+                          <button className="btn btn-outline btn-sm" onClick={()=>abrirDetalhes(o)} title="Ver detalhes"><IcoSearch /></button>
+                          <button className="btn btn-outline btn-sm" onClick={()=>{setForm({...o});setEditing(o.id);setModal('oficina');}} title="Editar"><IcoEdit /></button>
+                          <button className="btn btn-outline btn-sm" onClick={()=>{setSelectedOf(o);setUserForm(EMPTY_USR);setShowSenhaUser(false);setModal('usuario');}}>+ Login</button>
+                          <button className="btn btn-success btn-sm" onClick={()=>{setSelectedOf(o);setPagForm({...EMPTY_PAG});setModal('pagamento');}} title="Registrar pagamento"><IcoCard /></button>
+                          {o.status_assinatura!=='blocked'
+                            ? <button className="btn btn-danger btn-sm" onClick={()=>setStatus(o.id,'blocked')} title="Bloquear"><IcoLock /></button>
+                            : <button className="btn btn-success btn-sm" onClick={()=>setStatus(o.id,'active')} title="Ativar"><IcoCheck /></button>}
+                          <button className="btn btn-ghost btn-sm" style={{color:'var(--danger)'}} onClick={()=>removeOficina(o.id)} title="Excluir"><IcoTrash /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* ── Cards mobile ── */}
+        <div className="os-cards-mobile">
+          {listaFiltrada.length === 0 && (
+            <div className="empty-state"><div className="empty-icon">🏪</div><p>Nenhuma oficina encontrada</p></div>
+          )}
+          {listaFiltrada.map(o => {
+            const vencendo = o.data_vencimento && o.data_vencimento >= hoje && o.data_vencimento <= em7str;
+            const vencido  = o.data_vencimento && o.data_vencimento < hoje;
+            return (
+              <div key={o.id} className="os-card-mobile" style={selected.has(o.id)?{borderColor:'var(--brand)',background:'var(--brand-light)'}:{}} onClick={()=>abrirDetalhes(o)}>
+                <div className="os-card-top">
+                  <div style={{display:'flex',alignItems:'center',gap:8}}>
+                    <input type="checkbox" checked={selected.has(o.id)} onClick={e=>e.stopPropagation()} onChange={()=>toggleSelect(o.id)} />
+                    <span style={{fontWeight:700,fontSize:14,color:'var(--gray-900)'}}>{o.nome}</span>
+                  </div>
+                  <span className={`badge ${STATUS_CLASS[o.status_assinatura]}`}>{STATUS_LABEL[o.status_assinatura]}</span>
+                </div>
+
+                <div style={{fontSize:12,color:'var(--gray-400)',marginTop:2,marginBottom:6}}>{o.email}</div>
+
+                <div style={{display:'flex',flexWrap:'wrap',gap:'6px 16px',fontSize:12,color:'var(--gray-600)',marginBottom:8}}>
+                  {o.responsavel && <span>👤 {o.responsavel}</span>}
+                  <span>📋 {o.plano}</span>
+                  <span style={{color:vencido?'var(--danger)':vencendo?'var(--warning)':'inherit',fontWeight:vencido||vencendo?700:400}}>
+                    📅 {fmt.date(o.data_vencimento)}
+                  </span>
+                </div>
+
+                <div className="os-card-bottom" onClick={e=>e.stopPropagation()}>
+                  <span style={{fontSize:11,color:'var(--gray-400)'}}>
+                    {o.ultimo_acesso ? `Acesso: ${fmt.date(o.ultimo_acesso.split('T')[0])}` : 'Nunca acessou'}
+                  </span>
+                  <div className="os-card-actions">
+                    <button className="btn btn-outline btn-sm" onClick={()=>abrirDetalhes(o)} title="Detalhes"><IcoSearch /></button>
+                    <button className="btn btn-outline btn-sm" onClick={()=>{setForm({...o});setEditing(o.id);setModal('oficina');}} title="Editar"><IcoEdit /></button>
+                    <button className="btn btn-success btn-sm" onClick={()=>{setSelectedOf(o);setPagForm({...EMPTY_PAG});setModal('pagamento');}} title="Pagamento"><IcoCard /></button>
+                    {o.status_assinatura!=='blocked'
+                      ? <button className="btn btn-danger btn-sm" onClick={()=>setStatus(o.id,'blocked')} title="Bloquear"><IcoLock /></button>
+                      : <button className="btn btn-success btn-sm" onClick={()=>setStatus(o.id,'active')} title="Ativar"><IcoCheck /></button>}
+                  </div>
+                </div>
+                <div className="os-card-tap-hint">
+                  <span>Toque para ver detalhes</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
