@@ -2,8 +2,8 @@
 // Network-first para HTML/JS/API, cache-first para assets estáticos
 // Background Sync para operações offline
 
-const CACHE_NAME = 'chave10-v59';
-const RUNTIME_CACHE = 'chave10-runtime-v59';
+const CACHE_NAME = 'chave10-v60';
+const RUNTIME_CACHE = 'chave10-runtime-v60';
 const STATIC_ASSETS = [
   '/',
   '/favicon.jpeg',
@@ -348,7 +348,7 @@ self.addEventListener('notificationclose', (event) => {
 // ===============================
 // LOGGING & DEBUG
 // ===============================
-console.log('[SW] Service Worker v9 carregado');
+console.log('[SW] Service Worker v10 carregado');
 console.log('[SW] Cache principal:', CACHE_NAME);
 console.log('[SW] Cache runtime:', RUNTIME_CACHE);
 console.log('[SW] Assets estáticos:', STATIC_ASSETS.length);

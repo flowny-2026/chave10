@@ -81,7 +81,7 @@ export default function Landing() {
             {/* Laptop com screenshot real */}
             <div className="lp-mockup-laptop">
               <img
-                src="/mockup pc .jpg"
+                src="/mockup pc.jpg"
                 alt="Dashboard Chave 10"
                 style={{ width:'100%', height:'100%', objectFit:'cover', borderRadius:6, display:'block' }}
               />
@@ -89,7 +89,7 @@ export default function Landing() {
             {/* Celular com screenshot real */}
             <div className="lp-mockup-phone-real">
               <img
-                src="/mockup celular.jpg"
+                src="/mockup celular.jpeg"
                 alt="Chave 10 mobile"
                 style={{ width:'100%', height:'100%', objectFit:'cover', borderRadius:16, display:'block' }}
               />
@@ -151,7 +151,7 @@ export default function Landing() {
             <div className="lp-phone-frame">
               <div className="lp-phone-screen" style={{padding:0,overflow:'hidden'}}>
                 <img
-                  src="/mockup celular.jpg"
+                  src="/mockup celular.jpeg"
                   alt="Chave 10 no celular"
                   style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:'top',display:'block'}}
                 />
