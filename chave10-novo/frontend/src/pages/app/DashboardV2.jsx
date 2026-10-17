@@ -225,6 +225,81 @@ export default function DashboardV2() {
         </button>
       </div>
 
+      {/* ═══ PAINEL ANALÍTICO (cards + gráficos por período) ═══ */}
+      {!isFuncionario && (
+        <>
+          <div className="dw-header">
+            <div className="dw-header-titulo">Visão geral</div>
+            <PeriodFilter value={periodo} onChange={setPeriodo} />
+          </div>
+
+          {resumoErro ? (
+            <div className="dw-card"><div className="dw-vazio">Não foi possível carregar os indicadores. Tente novamente.</div></div>
+          ) : resumoLoading ? (
+            <div className="dw-card"><div className="dw-vazio"><div className="spinner" /></div></div>
+          ) : resumo ? (
+            <>
+              {/* Cards de indicadores */}
+              <div className="dw-stats-grid">
+                <StatCard titulo="Faturamento" valor={resumo.cards.faturamento.valor} moeda variacao={resumo.cards.faturamento.variacao} cor="var(--blue, #3b82f6)" />
+                <StatCard titulo="Despesas" valor={resumo.cards.despesas.valor} moeda variacao={resumo.cards.despesas.variacao} cor="var(--accent)" invertido />
+                <StatCard titulo="Lucro" valor={resumo.cards.lucro.valor} moeda variacao={resumo.cards.lucro.variacao} cor="var(--success)" />
+                <StatCard titulo="OS em andamento" valor={resumo.cards.osEmAndamento.valor} cor="#3b82f6" />
+                <StatCard titulo="OS concluídas" valor={resumo.cards.osConcluidas.valor} variacao={resumo.cards.osConcluidas.variacao} cor="var(--success)" />
+                <StatCard titulo="Orçamentos pendentes" valor={resumo.cards.orcamentosPendentes.valor} cor="var(--accent)" />
+              </div>
+
+              {/* Linha 1: Faturamento x Despesas | OS por status | Top clientes */}
+              <div className="dw-grid">
+                <div className="dw-card">
+                  <div className="dw-card-head"><div className="dw-card-titulo">Faturamento e Despesas</div></div>
+                  <div className="dw-card-sub">Evolução no período ({resumo.periodo.agrupamento === 'diario' ? 'diária' : 'mensal'})</div>
+                  <GraficoFaturamento serie={resumo.serie} />
+                </div>
+                <div className="dw-card">
+                  <div className="dw-card-head"><div className="dw-card-titulo">Status das OS</div></div>
+                  <div className="dw-card-sub">Quantidade por status</div>
+                  <GraficoOSStatus dados={resumo.osPorStatus} />
+                </div>
+                <div className="dw-card">
+                  <div className="dw-card-head">
+                    <div className="dw-card-titulo">Top clientes</div>
+                    <button className="dw-card-link" onClick={() => navigate('/app/clientes')}>Ver todos</button>
+                  </div>
+                  <div className="dw-card-sub">Por faturamento no período</div>
+                  <TopClientes clientes={resumo.topClientes} />
+                </div>
+              </div>
+
+              {/* Linha 2: Receitas x Despesas | Últimas OS | Resumo */}
+              <div className="dw-grid-2">
+                <div className="dw-card">
+                  <div className="dw-card-head"><div className="dw-card-titulo">Receitas x Despesas</div></div>
+                  <div className="dw-card-sub">Comparativo por período</div>
+                  <GraficoReceitasDespesas serie={resumo.serie} />
+                </div>
+                <div className="dw-card">
+                  <div className="dw-card-head">
+                    <div className="dw-card-titulo">Últimas OS</div>
+                    <button className="dw-card-link" onClick={() => navigate('/app/os')}>Ver todas</button>
+                  </div>
+                  <UltimasOS lista={resumo.ultimasOS} />
+                </div>
+                <div className="dw-card">
+                  <div className="dw-card-head"><div className="dw-card-titulo">Resumo do período</div></div>
+                  <div className="dw-card-sub">&nbsp;</div>
+                  <ResumoLinha label="Serviços (mão de obra)" valor={resumo.resumo.servicos} />
+                  <ResumoLinha label={`${t.pecas} vendidas`} valor={resumo.resumo.pecas} />
+                  <ResumoLinha label="Total de receitas" valor={resumo.resumo.receitas} />
+                  <ResumoLinha label="Total de despesas" valor={resumo.resumo.despesas} />
+                  <ResumoLinha label="Lucro do período" valor={resumo.resumo.lucro} destaque />
+                </div>
+              </div>
+            </>
+          ) : null}
+        </>
+      )}
+
       {/* ── PAINEL DO DIA ───────────────────────────────────── */}
       {(totalAtencao > 0 || semFatHoje) && (
         <div className="painel-do-dia">
@@ -376,81 +451,6 @@ export default function DashboardV2() {
             )}
           </div>
         </div>
-      )}
-
-      {/* ═══ PAINEL ANALÍTICO (cards + gráficos por período) ═══ */}
-      {!isFuncionario && (
-        <>
-          <div className="dw-header">
-            <div className="dw-header-titulo">Visão geral</div>
-            <PeriodFilter value={periodo} onChange={setPeriodo} />
-          </div>
-
-          {resumoErro ? (
-            <div className="dw-card"><div className="dw-vazio">Não foi possível carregar os indicadores. Tente novamente.</div></div>
-          ) : resumoLoading ? (
-            <div className="dw-card"><div className="dw-vazio"><div className="spinner" /></div></div>
-          ) : resumo ? (
-            <>
-              {/* Cards de indicadores */}
-              <div className="dw-stats-grid">
-                <StatCard titulo="Faturamento" valor={resumo.cards.faturamento.valor} moeda variacao={resumo.cards.faturamento.variacao} cor="var(--blue, #3b82f6)" />
-                <StatCard titulo="Despesas" valor={resumo.cards.despesas.valor} moeda variacao={resumo.cards.despesas.variacao} cor="var(--accent)" invertido />
-                <StatCard titulo="Lucro" valor={resumo.cards.lucro.valor} moeda variacao={resumo.cards.lucro.variacao} cor="var(--success)" />
-                <StatCard titulo="OS em andamento" valor={resumo.cards.osEmAndamento.valor} cor="#3b82f6" />
-                <StatCard titulo="OS concluídas" valor={resumo.cards.osConcluidas.valor} variacao={resumo.cards.osConcluidas.variacao} cor="var(--success)" />
-                <StatCard titulo="Orçamentos pendentes" valor={resumo.cards.orcamentosPendentes.valor} cor="var(--accent)" />
-              </div>
-
-              {/* Linha 1: Faturamento x Despesas | OS por status | Top clientes */}
-              <div className="dw-grid">
-                <div className="dw-card">
-                  <div className="dw-card-head"><div className="dw-card-titulo">Faturamento e Despesas</div></div>
-                  <div className="dw-card-sub">Evolução no período ({resumo.periodo.agrupamento === 'diario' ? 'diária' : 'mensal'})</div>
-                  <GraficoFaturamento serie={resumo.serie} />
-                </div>
-                <div className="dw-card">
-                  <div className="dw-card-head"><div className="dw-card-titulo">Status das OS</div></div>
-                  <div className="dw-card-sub">Quantidade por status</div>
-                  <GraficoOSStatus dados={resumo.osPorStatus} />
-                </div>
-                <div className="dw-card">
-                  <div className="dw-card-head">
-                    <div className="dw-card-titulo">Top clientes</div>
-                    <button className="dw-card-link" onClick={() => navigate('/app/clientes')}>Ver todos</button>
-                  </div>
-                  <div className="dw-card-sub">Por faturamento no período</div>
-                  <TopClientes clientes={resumo.topClientes} />
-                </div>
-              </div>
-
-              {/* Linha 2: Receitas x Despesas | Últimas OS | Resumo */}
-              <div className="dw-grid-2">
-                <div className="dw-card">
-                  <div className="dw-card-head"><div className="dw-card-titulo">Receitas x Despesas</div></div>
-                  <div className="dw-card-sub">Comparativo por período</div>
-                  <GraficoReceitasDespesas serie={resumo.serie} />
-                </div>
-                <div className="dw-card">
-                  <div className="dw-card-head">
-                    <div className="dw-card-titulo">Últimas OS</div>
-                    <button className="dw-card-link" onClick={() => navigate('/app/os')}>Ver todas</button>
-                  </div>
-                  <UltimasOS lista={resumo.ultimasOS} />
-                </div>
-                <div className="dw-card">
-                  <div className="dw-card-head"><div className="dw-card-titulo">Resumo do período</div></div>
-                  <div className="dw-card-sub">&nbsp;</div>
-                  <ResumoLinha label="Serviços (mão de obra)" valor={resumo.resumo.servicos} />
-                  <ResumoLinha label={`${t.pecas} vendidas`} valor={resumo.resumo.pecas} />
-                  <ResumoLinha label="Total de receitas" valor={resumo.resumo.receitas} />
-                  <ResumoLinha label="Total de despesas" valor={resumo.resumo.despesas} />
-                  <ResumoLinha label="Lucro do período" valor={resumo.resumo.lucro} destaque />
-                </div>
-              </div>
-            </>
-          ) : null}
-        </>
       )}
 
       {/* ── KPIs COMPACTOS (apenas funcionários — não veem o painel analítico) ── */}
