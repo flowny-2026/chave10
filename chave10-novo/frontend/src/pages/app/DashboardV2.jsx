@@ -159,6 +159,12 @@ export default function DashboardV2() {
     }
   }, [data]);
 
+  // Trava o scroll do body enquanto o popup estiver aberto (impede rolagem do fundo)
+  useEffect(() => {
+    document.body.style.overflow = showAtencaoPopup ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [showAtencaoPopup]);
+
   async function persistMeta(v) {
     setMetaState(v);       // atualização otimista da UI
     cacheMeta(v);
@@ -211,7 +217,6 @@ export default function DashboardV2() {
   const semFatHoje         = painel.semFaturamentoHoje && !isFuncionario;
   const totalAtencao       = osProntas.length + orcAguardando.length + agendaHoje.length + osAtrasadas.length + despVencidas.length + lembretesVencendo.length;
 
-  // Popup "Atenção hoje"
   function fecharAtencaoPopup() {
     sessionStorage.setItem('c10_atencao_fechado', '1');
     setShowAtencaoPopup(false);
