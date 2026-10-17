@@ -193,6 +193,19 @@ export default function DashboardV2() {
   const semFatHoje         = painel.semFaturamentoHoje && !isFuncionario;
   const totalAtencao       = osProntas.length + orcAguardando.length + agendaHoje.length + osAtrasadas.length + despVencidas.length + lembretesVencendo.length;
 
+  // Popup "Atenção hoje" — abre automaticamente se houver itens, fecha ao clicar em X
+  // Usa sessionStorage para não reabrir se o usuário já fechou nesta sessão
+  const [showAtencaoPopup, setShowAtencaoPopup] = useState(false);
+  useEffect(() => {
+    if (totalAtencao > 0 && !sessionStorage.getItem('c10_atencao_fechado')) {
+      setShowAtencaoPopup(true);
+    }
+  }, [totalAtencao]);
+  function fecharAtencaoPopup() {
+    sessionStorage.setItem('c10_atencao_fechado', '1');
+    setShowAtencaoPopup(false);
+  }
+
   // Mensagem de assistente inteligente
   function getMensagemAssistente() {
     if (osAtrasadas.length > 0)      return `${osAtrasadas.length} OS com mais de 3 dias em aberto.`;
@@ -224,6 +237,117 @@ export default function DashboardV2() {
           {t.novaOs}
         </button>
       </div>
+
+      {/* ── POPUP ATENÇÃO HOJE ─────────────────────────────── */}
+      {showAtencaoPopup && (
+        <div style={{
+          position:'fixed',inset:0,zIndex:500,
+          display:'flex',alignItems:'flex-end',justifyContent:'center',
+          background:'rgba(0,0,0,.45)',
+          animation:'fadeIn .18s ease',
+        }} onClick={fecharAtencaoPopup}>
+          <style>{`
+            @keyframes slideUp { from { transform:translateY(100%); opacity:0; } to { transform:translateY(0); opacity:1; } }
+            @keyframes fadeIn  { from { opacity:0; } to { opacity:1; } }
+          `}</style>
+          <div style={{
+            width:'100%',maxWidth:520,
+            background:'var(--bg-card,#1a2535)',
+            borderRadius:'18px 18px 0 0',
+            maxHeight:'85vh',overflowY:'auto',
+            animation:'slideUp .22s cubic-bezier(.22,1,.36,1)',
+            boxShadow:'0 -8px 40px rgba(0,0,0,.4)',
+          }} onClick={e=>e.stopPropagation()}>
+
+            {/* Header */}
+            <div style={{
+              display:'flex',alignItems:'center',justifyContent:'space-between',
+              padding:'18px 18px 0',marginBottom:10,
+              position:'sticky',top:0,
+              background:'var(--bg-card,#1a2535)',
+              borderBottom:'1px solid var(--gray-800,#2d3748)',
+              paddingBottom:12,
+            }}>
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <span style={{fontSize:18}}>⚠️</span>
+                <span style={{fontWeight:700,fontSize:16,color:'var(--gray-100,#f1f5f9)'}}>Atenção hoje</span>
+                <span style={{
+                  background:'#f97316',color:'#fff',
+                  borderRadius:20,padding:'1px 9px',
+                  fontSize:12,fontWeight:700,
+                }}>{totalAtencao}</span>
+              </div>
+              <button onClick={fecharAtencaoPopup} style={{
+                background:'none',border:'none',cursor:'pointer',
+                color:'var(--gray-400,#9ca3af)',fontSize:20,lineHeight:1,
+                padding:'4px 8px',borderRadius:6,
+              }} aria-label="Fechar">✕</button>
+            </div>
+
+            {/* Conteúdo — reusa os PainelItems existentes */}
+            <div style={{padding:'8px 12px 24px',display:'flex',flexDirection:'column',gap:6}}>
+              <PainelItem color="#16a34a" label={`${t.veiculos} prontos para entrega`} count={osProntas.length} items={osProntas} onAction={()=>{fecharAtencaoPopup();navigate('/app/os');}} actionLabel="Ver OS"
+                renderItem={(os,i)=>(
+                  <div key={i} className="painel-row">
+                    <div className="painel-row-info"><span className="painel-row-name">{os.cliente_nome||'—'}</span><span className="painel-row-sub">{os.veiculo_modelo||'—'}{os.placa?` · ${os.placa}`:''}</span></div>
+                    <span className="painel-row-badge" style={{background:'#f0fdf4',color:'#16a34a'}}>Finalizada {fmt.date(os.data)}</span>
+                  </div>
+                )}
+              />
+              <PainelItem color="#f97316" label="Orçamentos aguardando aprovação" count={orcAguardando.length} items={orcAguardando} onAction={()=>{fecharAtencaoPopup();navigate('/app/orcamentos');}} actionLabel="Ver"
+                renderItem={(orc,i)=>(
+                  <div key={i} className="painel-row"><span className="painel-row-name">{orc.cliente_nome||'—'}</span><span className="painel-row-badge" style={{background:'#fff7ed',color:'#f97316'}}>{fmt.currency(orc.total)}</span></div>
+                )}
+              />
+              <PainelItem color="#0284c7" label="Agendamentos de hoje" count={agendaHoje.length} items={agendaHoje} onAction={()=>{fecharAtencaoPopup();navigate('/app/agenda');}} actionLabel="Agenda"
+                renderItem={(ag,i)=>(
+                  <div key={i} className="painel-row">
+                    <div className="painel-row-info"><span className="painel-row-name">{ag.cliente_nome||'—'}</span><span className="painel-row-sub">{ag.descricao||''}</span></div>
+                    {ag.hora&&<span className="painel-row-badge" style={{background:'#f0f9ff',color:'#0284c7'}}>{ag.hora}</span>}
+                  </div>
+                )}
+              />
+              <PainelItem color="#dc2626" label="OS atrasadas (+ 3 dias)" count={osAtrasadas.length} items={osAtrasadas} onAction={()=>{fecharAtencaoPopup();navigate('/app/os');}} actionLabel="Ver OS"
+                renderItem={(os,i)=>(
+                  <div key={i} className="painel-row">
+                    <div className="painel-row-info"><span className="painel-row-name">{os.cliente_nome||'—'}</span><span className="painel-row-sub">{os.veiculo_modelo||'—'}</span></div>
+                    <span className="painel-row-badge" style={{background:'#fef2f2',color:'#dc2626'}}>{fmt.diasAtras(os.data)}d atrás</span>
+                  </div>
+                )}
+              />
+              {!isFuncionario&&(
+                <PainelItem color="#dc2626" label="Contas vencidas sem pagamento" count={despVencidas.length} items={despVencidas} onAction={()=>{fecharAtencaoPopup();navigate('/app/financeiro');}} actionLabel="Financeiro"
+                  renderItem={(d,i)=>(
+                    <div key={i} className="painel-row"><span className="painel-row-name">{d.descricao}</span><span className="painel-row-badge" style={{background:'#fef2f2',color:'#dc2626'}}>{fmt.currency(d.valor)}</span></div>
+                  )}
+                />
+              )}
+              <PainelItem color="#0891b2" label="Lembretes de manutenção vencendo" count={lembretesVencendo.length} items={lembretesVencendo} onAction={()=>{fecharAtencaoPopup();navigate('/app/lembretes');}} actionLabel="Ver"
+                renderItem={(lem,i)=>(
+                  <div key={i} className="painel-row">
+                    <div className="painel-row-info"><span className="painel-row-name">{lem.cliente_nome||lem.descricao}</span><span className="painel-row-sub">{[lem.veiculo_marca,lem.veiculo_modelo].filter(Boolean).join(' ')}{lem.placa?` · ${lem.placa}`:''}</span></div>
+                    <span className="painel-row-badge" style={{background:'#ecfeff',color:'#0891b2'}}>{lem.data_previsao?fmt.date(lem.data_previsao):'—'}</span>
+                  </div>
+                )}
+              />
+              {semFatHoje&&(
+                <div className="painel-item">
+                  <div className="painel-item-header" style={{cursor:'default'}}>
+                    <div className="painel-item-label">Você ainda não registrou faturamento hoje</div>
+                    <button className="painel-item-action" style={{'--pi-color':'#6b7280',background:'#6b7280'}} onClick={()=>{fecharAtencaoPopup();navigate('/app/os');}}>+ OS</button>
+                  </div>
+                </div>
+              )}
+
+              <button onClick={fecharAtencaoPopup} style={{
+                marginTop:8,width:'100%',padding:'12px',
+                background:'var(--gray-800,#2d3748)',border:'none',borderRadius:10,
+                color:'var(--gray-300,#d1d5db)',fontSize:14,fontWeight:600,cursor:'pointer',
+              }}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ═══ PAINEL ANALÍTICO (cards + gráficos por período) ═══ */}
       {!isFuncionario && (
