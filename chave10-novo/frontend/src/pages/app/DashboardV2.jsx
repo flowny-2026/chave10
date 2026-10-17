@@ -143,6 +143,22 @@ export default function DashboardV2() {
     carregarResumo(periodo);
   }, [periodo, carregarResumo, isFuncionario]);
 
+  // Popup "Atenção hoje" — abre quando dados carregam e há itens de atenção
+  // Usa sessionStorage para não reabrir se o usuário já fechou nesta sessão
+  useEffect(() => {
+    const painel = data?.painelDoDia || {};
+    const total =
+      (painel.osProntas?.length||0) +
+      (painel.orcamentosAguardando?.length||0) +
+      (painel.agendaHoje?.length||0) +
+      (painel.osAtrasadas?.length||0) +
+      (painel.despesasVencidas?.length||0) +
+      (painel.lembretesVencendo?.length||0);
+    if (total > 0 && !sessionStorage.getItem('c10_atencao_fechado')) {
+      setShowAtencaoPopup(true);
+    }
+  }, [data]);
+
   async function persistMeta(v) {
     setMetaState(v);       // atualização otimista da UI
     cacheMeta(v);
@@ -195,13 +211,7 @@ export default function DashboardV2() {
   const semFatHoje         = painel.semFaturamentoHoje && !isFuncionario;
   const totalAtencao       = osProntas.length + orcAguardando.length + agendaHoje.length + osAtrasadas.length + despVencidas.length + lembretesVencendo.length;
 
-  // Popup "Atenção hoje" — abre automaticamente se houver itens, fecha ao clicar em X
-  // Usa sessionStorage para não reabrir se o usuário já fechou nesta sessão
-  useEffect(() => {
-    if (totalAtencao > 0 && !sessionStorage.getItem('c10_atencao_fechado')) {
-      setShowAtencaoPopup(true);
-    }
-  }, [totalAtencao]);
+  // Popup "Atenção hoje"
   function fecharAtencaoPopup() {
     sessionStorage.setItem('c10_atencao_fechado', '1');
     setShowAtencaoPopup(false);
