@@ -96,6 +96,8 @@ export default function DashboardV2() {
   const [meta, setMetaState]      = useState(loadMetaCache);
   const [showMeta, setShowMeta]   = useState(false);
   const [metaInput, setMetaInput] = useState('');
+  // Popup "Atenção hoje" — declarado aqui para obedecer a regra dos Hooks (antes de qualquer return)
+  const [showAtencaoPopup, setShowAtencaoPopup] = useState(false);
   const { showWelcome, tourActive, currentStep, startTour, skipTour, nextStep, prevStep, endTour } = useOnboarding();
   const navigate = useNavigate();
   const user = getUser();
@@ -195,7 +197,6 @@ export default function DashboardV2() {
 
   // Popup "Atenção hoje" — abre automaticamente se houver itens, fecha ao clicar em X
   // Usa sessionStorage para não reabrir se o usuário já fechou nesta sessão
-  const [showAtencaoPopup, setShowAtencaoPopup] = useState(false);
   useEffect(() => {
     if (totalAtencao > 0 && !sessionStorage.getItem('c10_atencao_fechado')) {
       setShowAtencaoPopup(true);
