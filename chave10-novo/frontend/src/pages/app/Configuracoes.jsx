@@ -195,33 +195,67 @@ export default function AppConfiguracoes() {
             </div>
 
             <div className="form-group full">
-              <label>Segmento do negócio</label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
-                {Object.entries(SEGMENTOS).map(([key, seg]) => {
+              <label>Segmento de atuação</label>
+              <p style={{ fontSize: 12, color: 'var(--gray-400)', marginBottom: 10, lineHeight: 1.5 }}>
+                Define a nomenclatura do sistema (Veículo/Equipamento, Placa/Nº de Série, KM/Horas de Operação, etc.).
+              </p>
+
+              {/* Grupo Automotivo */}
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray-400)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>
+                  Automotivo
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {['carro', 'moto', 'caminhao', 'jetski', 'barco'].map(key => {
+                    const seg = SEGMENTOS[key];
+                    const ativo = (of.segmento || 'carro') === key;
+                    return (
+                      <button key={key} type="button"
+                        onClick={() => setOf(o => ({ ...o, segmento: key }))}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 6,
+                          padding: '8px 14px', borderRadius: 10, cursor: 'pointer',
+                          fontSize: 13, fontWeight: 600,
+                          border: ativo ? '2px solid var(--accent)' : '1.5px solid var(--gray-200)',
+                          background: ativo ? 'var(--accent-light)' : '#fff',
+                          color: ativo ? 'var(--accent-dark)' : 'var(--gray-600)',
+                          transition: 'all .15s',
+                        }}>
+                        {seg.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Grupo Industrial */}
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray-400)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>
+                  Industrial
+                </div>
+                {['industrial'].map(key => {
+                  const seg = SEGMENTOS[key];
                   const ativo = (of.segmento || 'carro') === key;
                   return (
-                    <button
-                      key={key}
-                      type="button"
+                    <button key={key} type="button"
                       onClick={() => setOf(o => ({ ...o, segmento: key }))}
                       style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 6,
-                        padding: '8px 14px', borderRadius: 10, cursor: 'pointer',
-                        fontSize: 13, fontWeight: 600,
+                        display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3,
+                        padding: '10px 16px', borderRadius: 10, cursor: 'pointer',
+                        textAlign: 'left', width: '100%', maxWidth: 480,
                         border: ativo ? '2px solid var(--accent)' : '1.5px solid var(--gray-200)',
                         background: ativo ? 'var(--accent-light)' : '#fff',
                         color: ativo ? 'var(--accent-dark)' : 'var(--gray-600)',
                         transition: 'all .15s',
-                      }}
-                    >
-                      {seg.label}
+                      }}>
+                      <span style={{ fontSize: 13, fontWeight: 700 }}>{seg.label}</span>
+                      <span style={{ fontSize: 12, color: ativo ? 'var(--accent-dark)' : 'var(--gray-400)', fontWeight: 400 }}>
+                        Manutenção de máquinas, compressores, geradores e equipamentos. Usa "Equipamento", "Nº de Série" e "Horas de Operação".
+                      </span>
                     </button>
                   );
                 })}
               </div>
-              <small style={{ fontSize: 12, color: 'var(--gray-400)', marginTop: 6, display: 'block' }}>
-                Define a nomenclatura usada no sistema (Veículo/Moto/Embarcação, Placa/Nº Série, KM/Horímetro, etc.)
-              </small>
             </div>
           </div>
 

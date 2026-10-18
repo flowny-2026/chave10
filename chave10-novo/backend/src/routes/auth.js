@@ -309,7 +309,7 @@ router.post('/complete-oficina', sensitiveOpsLimiter, authMiddleware, validateLo
   }
 
   // Segmento do neg�cio � valida contra a lista permitida; default 'carro'
-  const SEGMENTOS_VALIDOS = ['carro', 'moto', 'caminhao', 'jetski', 'barco'];
+  const SEGMENTOS_VALIDOS = ['carro', 'moto', 'caminhao', 'jetski', 'barco', 'industrial'];
   const segmento = SEGMENTOS_VALIDOS.includes(req.body?.segmento) ? req.body.segmento : 'carro';
 
   try {

@@ -176,46 +176,78 @@ export default function Cadastro() {
 
           {step === 2 && (
             <>
-              <h1 className="login-title">Dados da sua oficina</h1>
-              <p className="login-sub">Quase lá! Complete com as informações da sua oficina.</p>
+              <h1 className="login-title">Dados da sua empresa</h1>
+              <p className="login-sub">Quase lá! Complete com as informações da sua empresa.</p>
 
               <form onSubmit={handleOficinaSubmit}>
-                <FormInput label="Nome da oficina" name="nome_oficina" value={formOficina.values.nome_oficina} error={formOficina.errors.nome_oficina} touched={formOficina.touched.nome_oficina} onChange={formOficina.handleChange} onBlur={formOficina.handleBlur} placeholder="Ex: Oficina do João" required />
+                <FormInput label="Nome da empresa" name="nome_oficina" value={formOficina.values.nome_oficina} error={formOficina.errors.nome_oficina} touched={formOficina.touched.nome_oficina} onChange={formOficina.handleChange} onBlur={formOficina.handleBlur} placeholder="Ex: Oficina do João" required />
                 <FormInput label="CNPJ ou CPF" name="cnpj_cpf" value={formOficina.values.cnpj_cpf} error={formOficina.errors.cnpj_cpf} touched={formOficina.touched.cnpj_cpf} onChange={formOficina.handleChange} onBlur={formOficina.handleBlur} placeholder="00.000.000/0000-00" mask={maskDocumento} />
                 <FormInput label="Telefone" name="telefone" value={formOficina.values.telefone} error={formOficina.errors.telefone} touched={formOficina.touched.telefone} onChange={formOficina.handleChange} onBlur={formOficina.handleBlur} placeholder="(00) 00000-0000" mask={maskPhone} required />
                 <CepInput value={formOficina.values.endereco} onChange={v => formOficina.handleChange({ target: { name: 'endereco', value: v } })} />
 
-                {/* Segmento do negócio — botões */}
-                <div style={{ marginTop: 4, marginBottom: 8 }}>
-                  <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 8 }}>
-                    Segmento do negócio
+                {/* ── Segmento do negócio ── */}
+                <div style={{ marginTop: 8, marginBottom: 8 }}>
+                  <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>
+                    Segmento de atuação *
                   </label>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                    {Object.entries(SEGMENTOS).map(([key, seg]) => {
+                  <p style={{ fontSize: 12, color: '#6b7280', marginBottom: 12, lineHeight: 1.5 }}>
+                    Define a linguagem do sistema (veículo, equipamento, placa, série, etc.). Pode ser alterado depois nas Configurações.
+                  </p>
+
+                  {/* Grupo Automotivo */}
+                  <div style={{ marginBottom: 8 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>
+                      Automotivo
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {['carro', 'moto', 'caminhao', 'jetski', 'barco'].map(key => {
+                        const seg = SEGMENTOS[key];
+                        const ativo = formOficina.values.segmento === key;
+                        return (
+                          <button key={key} type="button"
+                            onClick={() => formOficina.handleChange({ target: { name: 'segmento', value: key } })}
+                            style={{
+                              padding: '7px 14px', borderRadius: 8, cursor: 'pointer',
+                              fontSize: 13, fontWeight: 600,
+                              border: ativo ? '2px solid #F97316' : '1.5px solid #e2e8f0',
+                              background: ativo ? '#fff7ed' : '#fff',
+                              color: ativo ? '#ea6c0a' : '#475569',
+                              transition: 'all .15s',
+                            }}>
+                            {seg.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Grupo Industrial */}
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>
+                      Industrial
+                    </div>
+                    {['industrial'].map(key => {
+                      const seg = SEGMENTOS[key];
                       const ativo = formOficina.values.segmento === key;
                       return (
-                        <button
-                          key={key}
-                          type="button"
+                        <button key={key} type="button"
                           onClick={() => formOficina.handleChange({ target: { name: 'segmento', value: key } })}
                           style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 6,
-                            padding: '8px 14px', borderRadius: 10, cursor: 'pointer',
-                            fontSize: 13, fontWeight: 600,
+                            display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2,
+                            padding: '10px 16px', borderRadius: 10, cursor: 'pointer', width: '100%', textAlign: 'left',
                             border: ativo ? '2px solid #F97316' : '1.5px solid #e2e8f0',
                             background: ativo ? '#fff7ed' : '#fff',
                             color: ativo ? '#ea6c0a' : '#475569',
                             transition: 'all .15s',
-                          }}
-                        >
-                          {seg.label}
+                          }}>
+                          <span style={{ fontSize: 13, fontWeight: 700 }}>{seg.label}</span>
+                          <span style={{ fontSize: 11, color: ativo ? '#c05c0a' : '#9ca3af', fontWeight: 400 }}>
+                            Manutenção de máquinas, compressores, geradores e equipamentos industriais. Usa "Equipamento", "Nº de Série" e "Horas de Operação".
+                          </span>
                         </button>
                       );
                     })}
                   </div>
-                  <small style={{ fontSize: 11, color: '#94a3b8', marginTop: 6, display: 'block' }}>
-                    Define a nomenclatura do sistema. Você pode alterar depois nas Configurações.
-                  </small>
                 </div>
 
                 {erro && <div className="login-error">{erro}</div>}

@@ -9,6 +9,7 @@
  *   - caminhao
  *   - jetski
  *   - barco
+ *   - industrial  (manutenção de equipamentos industriais)
  *
  * Para adicionar um novo segmento, basta acrescentar uma nova chave abaixo
  * com todos os termos equivalentes — nenhuma tela precisa mudar.
@@ -113,6 +114,35 @@ export const SEGMENTOS = {
     placa:      'Registro',
     placaAbrev: 'Registro',
   },
+
+  industrial: {
+    label:      'Manutenção Industrial',
+    // Identificador de patrimônio, Horímetro como métrica
+    placa:      'Nº de Série / Patrimônio',
+    placaAbrev: 'Patrimônio',
+    km:         'Horas de Operação',
+    kmAbrev:    'HRS',
+    kmUnit:     'h',
+    kmPlaceholder: 'Ex: 2500',
+    peca:       'Peça / Componente',
+    pecas:      'Peças e Componentes',
+    pecaLabel:  'Peças e componentes utilizados',
+    os:         'Ordem de Serviço',
+    oss:        'Ordens de Serviço',
+    novaOs:     'Nova OS',
+    orcamento:  'Orçamento',
+    orcamentos: 'Orçamentos',
+    novoOrcamento: 'Novo Orçamento',
+    editOrcamento: 'Editar Orçamento',
+    veiculo:    'Equipamento',
+    veiculos:   'Equipamentos',
+    novoVeiculo:'Novo Equipamento',
+    editVeiculo:'Editar Equipamento',
+    marca:      'Fabricante',
+    modelo:     'Modelo do Equipamento',
+    aplicacao:  'Localização / Setor',
+    ano:        'Ano de Fabricação',
+  },
 };
 
 /** Segmento padrão — usado quando o campo não está definido */
@@ -123,8 +153,9 @@ export const SEGMENTO_PADRAO = 'carro';
  * Oficinas cadastradas antes desta mudança continuam funcionando.
  */
 const ALIAS_SEGMENTOS = {
-  oficina_mecanica: 'carro',
-  compressores:     'carro',
+  oficina_mecanica:    'carro',
+  compressores:        'carro',
+  manutencao_industrial: 'industrial',
 };
 
 /**
