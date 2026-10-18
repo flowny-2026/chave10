@@ -235,7 +235,12 @@
 
 /* ═══ PAIN ═══════════════════════════════════════════════════ */
 .lp-pain { padding:96px 0; background:#fff; }
-.lp-pain-header { max-width:640px; margin-bottom:64px; }
+.lp-pain-header      { max-width:640px; margin-bottom:64px; }
+.lp-features-header  { max-width:640px; margin-bottom:56px; }
+.lp-how-header       { max-width:600px; margin-bottom:64px; }
+.lp-compare-header   { max-width:600px; margin-bottom:56px; }
+.lp-faq-header       { max-width:600px; margin-bottom:52px; }
+.lp-faq-list         { max-width:720px; }
 .lp-section-lead {
   font-size:16px; color:var(--lp-gray-600); margin-top:12px; line-height:1.7;
 }
@@ -295,7 +300,6 @@
 
 /* ═══ FEATURES ═══════════════════════════════════════════════ */
 .lp-features { padding:96px 0; background:var(--lp-light); }
-.lp-features-header { max-width:640px; margin-bottom:56px; }
 .lp-features-grid {
   display:grid; grid-template-columns:repeat(3,1fr); gap:20px;
 }
@@ -332,7 +336,6 @@
 
 /* ═══ HOW IT WORKS ══════════════════════════════════════════ */
 .lp-how { padding:96px 0; background:#fff; }
-.lp-how-header { max-width:600px; margin-bottom:64px; }
 .lp-timeline {
   display:grid; grid-template-columns:repeat(4,1fr);
   gap:0; position:relative;
@@ -360,10 +363,10 @@
 
 /* ═══ COMPARE ═══════════════════════════════════════════════ */
 .lp-compare { padding:96px 0; background:var(--lp-light); }
-.lp-compare-header { max-width:600px; margin-bottom:56px; }
 .lp-compare-grid {
   display:grid; grid-template-columns:1fr 1fr;
   gap:20px; max-width:900px;
+  align-items:start;
 }
 .lp-compare-col { border-radius:20px; padding:40px 36px; }
 .lp-compare-col--without {
@@ -446,8 +449,6 @@
 
 /* ═══ FAQ ════════════════════════════════════════════════════ */
 .lp-faq { padding:96px 0; background:#fff; }
-.lp-faq-header { max-width:600px; margin-bottom:52px; }
-.lp-faq-list { max-width:720px; }
 .lp-faq-item { border-bottom:1px solid var(--lp-gray-200); }
 .lp-faq-question {
   width:100%; background:none; padding:22px 0;

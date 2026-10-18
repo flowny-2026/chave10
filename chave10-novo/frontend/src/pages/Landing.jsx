@@ -217,7 +217,7 @@ export default function Landing() {
       {/* PROBLEMA */}
       <section className="lp-pain">
         <div className="lp-container">
-          <div className="lp-pain-header lp-reveal">
+          <div className="lp-pain-header lp-reveal" style={{maxWidth:640}}>
             <div className="lp-section-tag">O problema</div>
             <h2 className="lp-section-h2">Sua oficina passa por alguma dessas situações?</h2>
             <p className="lp-section-lead">Se a resposta for sim para qualquer uma delas, o Chave 10 foi feito para você.</p>
@@ -254,7 +254,7 @@ export default function Landing() {
       {/* FUNCIONALIDADES */}
       <section className="lp-features">
         <div className="lp-container">
-          <div className="lp-features-header lp-reveal">
+          <div className="lp-features-header lp-reveal" style={{maxWidth:640}}>
             <div className="lp-section-tag">Funcionalidades</div>
             <h2 className="lp-section-h2">Tudo que sua oficina precisa, em um único sistema.</h2>
           </div>
@@ -274,7 +274,7 @@ export default function Landing() {
       {/* COMO FUNCIONA */}
       <section className="lp-how">
         <div className="lp-container">
-          <div className="lp-how-header lp-reveal">
+          <div className="lp-how-header lp-reveal" style={{maxWidth:600}}>
             <div className="lp-section-tag">Como funciona</div>
             <h2 className="lp-section-h2">Do cadastro à primeira OS em menos de 5 minutos.</h2>
           </div>
@@ -302,7 +302,7 @@ export default function Landing() {
             <div className="lp-section-tag">Antes e depois</div>
             <h2 className="lp-section-h2">O que muda quando você usa o Chave 10</h2>
           </div>
-          <div className="lp-compare-grid">
+          <div className="lp-compare-grid" style={{margin:'0 auto'}}>
             <div className="lp-compare-col lp-compare-col--without lp-reveal">
               <div className="lp-compare-col-head lp-compare-col-head--without">Sem Chave 10</div>
               <ul className="lp-compare-list">
@@ -336,12 +336,12 @@ export default function Landing() {
       {/* PREÇO */}
       <section className="lp-pricing">
         <div className="lp-container">
-          <div className="lp-pricing-header lp-reveal">
+          <div className="lp-pricing-header lp-reveal" style={{textAlign:'center',maxWidth:640,margin:'0 auto 48px'}}>
             <div className="lp-section-tag lp-section-tag--light">Investimento</div>
             <h2 className="lp-section-h2 lp-section-h2--white">Menos que um almoço por semana.</h2>
             <p className="lp-pricing-sub">Quanto você perde por mês por falta de organização?</p>
           </div>
-          <div className="lp-pricing-card lp-reveal">
+          <div className="lp-pricing-card lp-reveal" style={{margin:'0 auto'}}>
             <div className="lp-pricing-badge">Oferta de lançamento — vagas limitadas</div>
             <h3 className="lp-pricing-name">Plano Completo</h3>
             <div className="lp-pricing-price">
@@ -371,7 +371,7 @@ export default function Landing() {
       {/* FAQ */}
       <section className="lp-faq">
         <div className="lp-container">
-          <div className="lp-faq-header lp-reveal">
+          <div className="lp-faq-header lp-reveal" style={{maxWidth:600}}>
             <div className="lp-section-tag">Dúvidas</div>
             <h2 className="lp-section-h2">Perguntas frequentes</h2>
           </div>
