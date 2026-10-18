@@ -609,7 +609,7 @@ export default function AppOS() {
           <div className="os-table-desktop">
             <div className="table-wrapper">
               <table>
-                <thead><tr><th>OS</th><th>Data</th><th>Cliente</th><th>{t.veiculo}</th><th>Problema</th><th>Mecânico</th>{!isFuncionario&&<th>Total</th>}<th>Status</th><th>Ações</th></tr></thead>
+                <thead><tr><th>OS</th><th>Data</th><th>Cliente</th><th>{t.veiculo}</th><th>Problema</th><th>{t.mecanico}</th>{!isFuncionario&&<th>Total</th>}<th>Status</th><th>Ações</th></tr></thead>
                 <tbody>
                   {listaFiltrada.map(os => {
                     const total = parseFloat(os.valor_mo||0)+parseFloat(os.valor_pecas||0)||parseFloat(os.valor||0);
@@ -789,9 +789,9 @@ export default function AppOS() {
                   </div>
                   {!isFuncionario && !isMecanico && (
                   <div className="form-group">
-                    <label>Mecânico responsável</label>
+                    <label>{t.mecanico} responsável</label>
                     <select value={form.mecanico_id||''} onChange={e=>setForm(f=>({...f,mecanico_id:e.target.value||null}))}>
-                      <option value="">Sem mecânico</option>
+                      <option value="">Sem {t.mecanico.toLowerCase()}</option>
                       {mecanicos.map(m=><option key={m.id} value={m.id}>{m.nome}</option>)}
                     </select>
                   </div>

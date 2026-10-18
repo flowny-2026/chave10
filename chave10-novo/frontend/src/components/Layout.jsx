@@ -37,20 +37,9 @@ const adminNav = [
   { to: '/admin/trocar-senha',    label: 'Trocar Senha',       icon: IC.configuracoes },
 ];
 
-const appNavGestao = [
-  { to: '/app/financeiro',     label: 'Financeiro',    icon: IC.financeiro,    soNaoMecanico: true, soNaoFuncionario: true },
-  { to: '/app/relatorios',     label: 'Relatórios',    icon: IC.relatorios,    soNaoMecanico: true, soNaoFuncionario: true },
-  { to: '/app/lembretes',      label: 'Lembretes',     icon: IC.lembretes,     soNaoMecanico: true },
-  { to: '/app/estoque',        label: 'Estoque',       icon: IC.estoque,       soNaoMecanico: true },
-  { to: '/app/mecanicos',      label: 'Mecânicos',     icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>, soNaoFuncionario: true, soNaoMecanico: true, badge: 'Novo' },
-  { to: '/app/comissoes',      label: 'Comissões',     icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>, soNaoFuncionario: true, soNaoMecanico: true, badge: 'Novo' },
-  { to: '/app/pos-venda',      label: 'Pós-venda',     icon: IC.mensagens,     soNaoFuncionario: true, soNaoMecanico: true, badge: 'Novo' },
-  { to: '/app/notificacoes',   label: 'Notificações',  icon: IC.notificacoes },
-  { to: '/app/configuracoes',  label: 'Configurações', icon: IC.configuracoes, soNaoFuncionario: true, soNaoMecanico: true },
-  // "Meu Perfil" permanece acessível apenas ao mecânico (comissões + senha),
-  // filtrado no render do menu. Admin/gerente troca a senha em Configurações.
-  { to: '/app/meu-perfil',     label: 'Meu Perfil',    icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>, soMecanico: true },
-];
+const appNavGestao_ICON_MECANICOS = <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>;
+const appNavGestao_ICON_COMISSOES = <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>;
+const appNavGestao_ICON_MEU_PERFIL = <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
 
 function getUser() {
   try {
@@ -484,7 +473,7 @@ function UserDropdown({ user, onLogout }) {
         <div className="topbar-avatar">{user?.nome?.[0]?.toUpperCase() || 'U'}</div>
         <div className="topbar-user-info">
           <span className="topbar-user-name">{user?.nome || 'Usuário'}</span>
-          <span className="topbar-user-role">{user?.perfil === 'master_admin' ? 'Administrador' : user?.perfil === 'funcionario' ? 'Funcionário' : user?.perfil === 'mecanico' ? 'Mecânico' : 'Gerente'}</span>
+          <span className="topbar-user-role">{user?.perfil === 'master_admin' ? 'Administrador' : user?.perfil === 'funcionario' ? 'Funcionário' : user?.perfil === 'mecanico' ? t.mecanico : 'Gerente'}</span>
         </div>
         <svg style={{ marginLeft: 4, color: 'var(--gray-400)', flexShrink: 0 }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
       </button>
@@ -494,7 +483,7 @@ function UserDropdown({ user, onLogout }) {
             <div className="udrop-avatar">{user?.nome?.[0]?.toUpperCase() || 'U'}</div>
             <div>
               <div className="udrop-name">{user?.nome}</div>
-              <div className="udrop-role">{user?.perfil === 'master_admin' ? 'Administrador' : user?.perfil === 'funcionario' ? 'Funcionário · oficina' : user?.perfil === 'mecanico' ? 'Mecânico · oficina' : 'Gerente · oficina'}</div>
+              <div className="udrop-role">{user?.perfil === 'master_admin' ? 'Administrador' : user?.perfil === 'funcionario' ? 'Funcionário · oficina' : user?.perfil === 'mecanico' ? `${t.mecanico} · oficina` : 'Gerente · oficina'}</div>
             </div>
           </div>
           <div className="udrop-divider" />
@@ -543,6 +532,20 @@ export default function Layout({ area }) {
     { to: '/app/orcamentos',   label: t.orcamentos,   icon: IC.orcamentos },
     { to: '/app/agenda',       label: 'Agenda',            icon: IC.agenda },
     { to: '/app/mensagens',    label: 'Mensagens',         icon: IC.mensagens },
+  ];
+
+  const appNavGestao = [
+    { to: '/app/financeiro',   label: 'Financeiro',        icon: IC.financeiro,    soNaoMecanico: true, soNaoFuncionario: true },
+    { to: '/app/relatorios',   label: 'Relatórios',        icon: IC.relatorios,    soNaoMecanico: true, soNaoFuncionario: true },
+    { to: '/app/lembretes',    label: 'Lembretes',         icon: IC.lembretes,     soNaoMecanico: true },
+    { to: '/app/estoque',      label: 'Estoque',           icon: IC.estoque,       soNaoMecanico: true },
+    { to: '/app/mecanicos',    label: t.mecanicos,         icon: appNavGestao_ICON_MECANICOS, soNaoFuncionario: true, soNaoMecanico: true, badge: 'Novo' },
+    { to: '/app/comissoes',    label: 'Comissões',         icon: appNavGestao_ICON_COMISSOES, soNaoFuncionario: true, soNaoMecanico: true, badge: 'Novo' },
+    { to: '/app/pos-venda',    label: 'Pós-venda',         icon: IC.mensagens,     soNaoFuncionario: true, soNaoMecanico: true, badge: 'Novo' },
+    { to: '/app/notificacoes', label: 'Notificações',      icon: IC.notificacoes },
+    { to: '/app/configuracoes',label: 'Configurações',     icon: IC.configuracoes, soNaoFuncionario: true, soNaoMecanico: true },
+    // "Meu Perfil" permanece acessível apenas ao mecânico (comissões + senha)
+    { to: '/app/meu-perfil',   label: 'Meu Perfil',        icon: appNavGestao_ICON_MEU_PERFIL, soMecanico: true },
   ];
 
   const [open, setOpen] = useState(false);
@@ -773,7 +776,7 @@ export default function Layout({ area }) {
             <div className="sidebar-avatar">{user?.nome?.[0]?.toUpperCase() || 'U'}</div>
             <div className="sidebar-user-info">
               <span className="sidebar-user-name">{user?.nome || 'Usuário'}</span>
-              <span className="sidebar-user-role">{user?.perfil === 'master_admin' ? 'Administrador' : user?.perfil === 'mecanico' ? 'Mecânico' : user?.perfil === 'funcionario' ? 'Funcionário' : 'Gerente'}</span>
+              <span className="sidebar-user-role">{user?.perfil === 'master_admin' ? 'Administrador' : user?.perfil === 'mecanico' ? t.mecanico : user?.perfil === 'funcionario' ? 'Funcionário' : 'Gerente'}</span>
             </div>
             <button className="btn-logout-icon" onClick={logout} title="Sair">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

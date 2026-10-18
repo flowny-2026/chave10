@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../../api';
+import { useSegmento } from '../../hooks/useSegmento';
 
 const fmt = {
   currency: v => 'R$ ' + parseFloat(v || 0).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.'),
@@ -21,6 +22,7 @@ function Toast({ msg, type }) {
 }
 
 export default function MecanicoComissoes() {
+  const t = useSegmento();
   const [mecanicos, setMecanicos] = useState([]);
   const [resumo, setResumo] = useState([]);
   const [mecSelecionado, setMecSelecionado] = useState(null);
@@ -135,7 +137,7 @@ export default function MecanicoComissoes() {
           ) : (
             <>
               <h1 className="page-title">💰 Comissões</h1>
-              <p className="page-subtitle">Controle de comissões por mecânico</p>
+              <p className="page-subtitle">Controle de comissões por {t.mecanico.toLowerCase()}</p>
             </>
           )}
         </div>
@@ -155,7 +157,7 @@ export default function MecanicoComissoes() {
               <div style={{ fontSize: 22, fontWeight: 800, color: '#16a34a' }}>{fmt.currency(globalPago)}</div>
             </div>
             <div className="card" style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 12, color: 'var(--gray-400)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4 }}>Mecânicos</div>
+              <div style={{ fontSize: 12, color: 'var(--gray-400)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4 }}>{t.mecanicos}</div>
               <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--gray-700)' }}>{mecanicos.length}</div>
             </div>
           </div>
@@ -175,7 +177,7 @@ export default function MecanicoComissoes() {
                 <table className="table">
                   <thead>
                     <tr>
-                      <th>Mecânico</th>
+                      <th>{t.mecanico}</th>
                       <th style={{ textAlign: 'center' }}>OS</th>
                       <th style={{ textAlign: 'right' }}>Pendente</th>
                       <th style={{ textAlign: 'right' }}>Aprovado</th>

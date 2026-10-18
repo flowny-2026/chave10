@@ -41,6 +41,8 @@ const BASE_VEICULAR = {
   modelo:     'Modelo',
   aplicacao:  'Aplicação',
   ano:        'Ano',
+  mecanico:   'Mecânico',
+  mecanicos:  'Mecânicos',
 };
 
 const BASE_NAUTICO = {
@@ -65,6 +67,8 @@ const BASE_NAUTICO = {
   modelo:     'Modelo',
   aplicacao:  'Localização',
   ano:        'Ano',
+  mecanico:   'Mecânico',
+  mecanicos:  'Mecânicos',
 };
 
 export const SEGMENTOS = {
@@ -142,6 +146,8 @@ export const SEGMENTOS = {
     modelo:     'Modelo do Equipamento',
     aplicacao:  'Localização / Setor',
     ano:        'Ano de Fabricação',
+    mecanico:   'Técnico',
+    mecanicos:  'Técnicos',
   },
 };
 
