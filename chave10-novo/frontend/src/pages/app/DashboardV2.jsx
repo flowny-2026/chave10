@@ -265,10 +265,18 @@ export default function DashboardV2() {
           <style>{`
             @keyframes slideUp { from { transform:translateY(100%); opacity:0; } to { transform:translateY(0); opacity:1; } }
             @keyframes fadeIn  { from { opacity:0; } to { opacity:1; } }
+            .atencao-popup .painel-item-label  { color: #e6edf3 !important; }
+            .atencao-popup .painel-item-count  { color: rgba(255,255,255,.55) !important; }
+            .atencao-popup .painel-row-name    { color: #e6edf3 !important; }
+            .atencao-popup .painel-row-sub     { color: rgba(255,255,255,.5) !important; }
+            .atencao-popup .painel-item        { background: rgba(255,255,255,.04) !important; border-color: rgba(255,255,255,.07) !important; }
+            .atencao-popup .painel-item-header { background: transparent !important; }
+            .atencao-popup .painel-item-body   { background: rgba(0,0,0,.15) !important; }
+            .atencao-popup .painel-item-chevron { color: rgba(255,255,255,.4) !important; }
           `}</style>
-          <div style={{
+          <div className="atencao-popup" style={{
             width:'100%',maxWidth:520,
-            background:'var(--bg-card,#1a2535)',
+            background:'#1a2535',
             borderRadius:'18px 18px 0 0',
             maxHeight:'85vh',overflowY:'auto',
             animation:'slideUp .22s cubic-bezier(.22,1,.36,1)',
@@ -278,15 +286,13 @@ export default function DashboardV2() {
             {/* Header */}
             <div style={{
               display:'flex',alignItems:'center',justifyContent:'space-between',
-              padding:'18px 18px 0',marginBottom:10,
+              padding:'18px 18px 12px',
               position:'sticky',top:0,
-              background:'var(--bg-card,#1a2535)',
-              borderBottom:'1px solid var(--gray-800,#2d3748)',
-              paddingBottom:12,
+              background:'#1a2535',
+              borderBottom:'1px solid rgba(255,255,255,.08)',
             }}>
               <div style={{display:'flex',alignItems:'center',gap:8}}>
-                <span style={{fontSize:18}}>⚠️</span>
-                <span style={{fontWeight:700,fontSize:16,color:'var(--gray-100,#f1f5f9)'}}>Atenção hoje</span>
+                <span style={{fontWeight:700,fontSize:16,color:'#f1f5f9'}}>Atenção hoje</span>
                 <span style={{
                   background:'#f97316',color:'#fff',
                   borderRadius:20,padding:'1px 9px',
@@ -295,7 +301,7 @@ export default function DashboardV2() {
               </div>
               <button onClick={fecharAtencaoPopup} style={{
                 background:'none',border:'none',cursor:'pointer',
-                color:'var(--gray-400,#9ca3af)',fontSize:20,lineHeight:1,
+                color:'rgba(255,255,255,.5)',fontSize:20,lineHeight:1,
                 padding:'4px 8px',borderRadius:6,
               }} aria-label="Fechar">✕</button>
             </div>
@@ -357,8 +363,8 @@ export default function DashboardV2() {
 
               <button onClick={fecharAtencaoPopup} style={{
                 marginTop:8,width:'100%',padding:'12px',
-                background:'var(--gray-800,#2d3748)',border:'none',borderRadius:10,
-                color:'var(--gray-300,#d1d5db)',fontSize:14,fontWeight:600,cursor:'pointer',
+                background:'rgba(255,255,255,.07)',border:'1px solid rgba(255,255,255,.1)',borderRadius:10,
+                color:'rgba(255,255,255,.75)',fontSize:14,fontWeight:600,cursor:'pointer',
               }}>Fechar</button>
             </div>
           </div>
