@@ -1,4 +1,4 @@
-﻿import { useNavigate } from 'react-router-dom';
+﻿import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { getFromStorage, registrarCliqueReferral } from '../api';
 import '../styles/landing.css';
@@ -112,6 +112,7 @@ const FEATURE_ITEMS = [
 
 export default function Landing() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
     const token = getFromStorage('c10_token');
@@ -126,12 +127,11 @@ export default function Landing() {
       }
     }
     window.scrollTo(0, 0);
-    // Captura código de indicação da URL (?ref=C10-XXXXXX) e persiste em sessionStorage
-    const params = new URLSearchParams(window.location.search);
-    const refCode = params.get('ref');
+    // Captura código de indicação da URL (?ref=C10-XXXXXX) via React Router
+    const refCode = searchParams.get('ref');
     if (refCode && /^C10-[A-F0-9]{6}$/.test(refCode)) {
       sessionStorage.setItem('c10_ref', refCode);
-      registrarCliqueReferral(refCode); // registra no backend (fire-and-forget)
+      registrarCliqueReferral(refCode);
     }
     const observer = new IntersectionObserver(
       (entries) => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }),
@@ -139,7 +139,7 @@ export default function Landing() {
     );
     document.querySelectorAll('.lp-reveal').forEach(el => observer.observe(el));
     return () => observer.disconnect();
-  }, []);
+  }, [searchParams]);
 
   const [faqOpen, setFaqOpen] = useState(null);
 
