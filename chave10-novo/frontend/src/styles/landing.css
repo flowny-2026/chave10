@@ -94,7 +94,7 @@
   min-height:100vh;
   display:flex; align-items:center;
   background:radial-gradient(ellipse 120% 80% at 60% 30%, #1a3558 0%, var(--lp-navy-dark) 65%);
-  padding:110px 0 80px;
+  padding:130px 0 80px;
   position:relative; overflow:hidden;
 }
 
@@ -168,6 +168,7 @@
 .lp-hero-mockup {
   position:relative;
   display:flex; justify-content:center; align-items:center;
+  padding-top:24px;
   padding-bottom:70px; padding-right:70px;
 }
 @keyframes float-laptop {
