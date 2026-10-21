@@ -23,6 +23,7 @@ const AdminPagamentos     = lazy(() => import('./pages/admin/Pagamentos'));
 const AdminTrocarSenha    = lazy(() => import('./pages/admin/TrocarSenha'));
 const AdminAuditLogs      = lazy(() => import('./pages/admin/AuditLogs'));
 const AdminSecurityAlerts = lazy(() => import('./pages/admin/SecurityAlerts'));
+const AdminReferral       = lazy(() => import('./pages/admin/Referral'));
 const AppDashboard     = lazy(() => import('./pages/app/DashboardV2'));
 const AppClientes      = lazy(() => import('./pages/app/Clientes'));
 const AppVeiculos      = lazy(() => import('./pages/app/Veiculos'));
@@ -42,6 +43,7 @@ const AppMecanicos       = lazy(() => import('./pages/app/Mecanicos'));
 const AppMecanicoComissoes = lazy(() => import('./pages/app/MecanicoComissoes'));
 const AppMeuPerfil     = lazy(() => import('./pages/app/MeuPerfil'));
 const AppPosVenda      = lazy(() => import('./pages/app/PosVenda'));
+const AppIndicacoes    = lazy(() => import('./pages/app/Indicacoes'));
 
 // Fallback simples enquanto carrega a página
 function PageLoader() {
@@ -340,6 +342,7 @@ export default function App() {
             <Route path="audit-logs"      element={<AdminAuditLogs />} />
             <Route path="security-alerts" element={<AdminSecurityAlerts />} />
             <Route path="trocar-senha"    element={<AdminTrocarSenha />} />
+            <Route path="referral"        element={<AdminReferral />} />
             <Route index element={<Navigate to="dashboard" replace />} />
           </Route>
 
@@ -362,6 +365,7 @@ export default function App() {
             <Route path="mecanicos"     element={<PrivateRoute noFuncionario><AppMecanicos /></PrivateRoute>} />
             <Route path="comissoes"     element={<PrivateRoute noFuncionario><AppMecanicoComissoes /></PrivateRoute>} />
             <Route path="meu-perfil"    element={<AppMeuPerfil />} />
+            <Route path="indicacoes"    element={<PrivateRoute noFuncionario noMecanico><AppIndicacoes /></PrivateRoute>} />
             <Route index element={<Navigate to="dashboard" replace />} />
           </Route>
 

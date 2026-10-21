@@ -93,6 +93,27 @@ export const api = {
       list:    (oficina_id)          => get('/admin/pagamentos' + (oficina_id ? '?oficina_id='+oficina_id : '')),
       create:  (data)                => post('/admin/pagamentos', data),
     },
+    referral: {
+      dashboard:      ()             => get('/admin/referral/dashboard'),
+      participantes:  {
+        list:   ()                   => get('/admin/referral/participantes'),
+        create: (data)               => post('/admin/referral/participantes', data),
+        setStatus: (id, status)      => patch('/admin/referral/participantes/'+id+'/status', { status }),
+      },
+      indicacoes: {
+        list:      ()                => get('/admin/referral/indicacoes'),
+        setStatus: (id, status)      => patch('/admin/referral/indicacoes/'+id+'/status', { status }),
+      },
+      comissoes: {
+        list:     ()                 => get('/admin/referral/comissoes'),
+        create:   (data)             => post('/admin/referral/comissoes', data),
+        aprovar:  (id)               => patch('/admin/referral/comissoes/'+id+'/aprovar', {}),
+        cancelar: (id, obs)          => patch('/admin/referral/comissoes/'+id+'/cancelar', { obs }),
+      },
+      repasses: {
+        create: (data)               => post('/admin/referral/repasses', data),
+      },
+    },
   },
   app: {
     dashboard: ()                    => get('/app/dashboard'),
@@ -192,8 +213,23 @@ export const api = {
       comissoes: (qs)                => get('/app/meu-perfil/comissoes' + (qs ? '?' + qs : '')),
       trocarSenha: (senha_atual, nova_senha) => patch('/app/meu-perfil/senha', { senha_atual, nova_senha }),
     },
+    referral: {
+      me:         ()                 => get('/app/referral/me'),
+      indicacoes: ()                 => get('/app/referral/indicacoes'),
+    },
   },
 };
+
+// Métodos públicos (sem autenticação)
+export async function registrarCliqueReferral(codigo) {
+  try {
+    await fetch((import.meta.env.VITE_API_URL || 'http://localhost:3001/api') + '/public/referral/clique', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ codigo }),
+    });
+  } catch { /* silencioso — não bloqueia o usuário */ }
+}
 
 // Exportar funções de storage para uso em outras partes da aplicação
 export { saveToken, saveUser, getToken, getFromStorage, saveToStorage };

@@ -482,6 +482,128 @@ async function initDB() {
   ];
   for (const idx of indices) { await pool.query(idx).catch(() => {}); }
 
+  // ── PROGRAMA DE INDICAÇÕES ────────────────────────────────
+  // Todas as operações são idempotentes (IF NOT EXISTS / ADD COLUMN IF NOT EXISTS).
+  // Dados existentes não são alterados.
+
+  // Colunas adicionadas a tabelas existentes
+  await pool.query(`ALTER TABLE oficinas ADD COLUMN IF NOT EXISTS indicado_por_codigo TEXT;`).catch(() => {});
+  await pool.query(`ALTER TABLE pagamentos ADD COLUMN IF NOT EXISTS indicacao_id INTEGER REFERENCES referral_indicacoes(id) ON DELETE SET NULL;`).catch(() => {});
+
+  // Tabela de indicadores (quem pode indicar)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS referral_indicadores (
+      id           SERIAL PRIMARY KEY,
+      oficina_id   INTEGER UNIQUE REFERENCES oficinas(id) ON DELETE CASCADE,
+      tipo         TEXT NOT NULL DEFAULT 'cliente'
+                   CHECK(tipo IN ('influenciador','cliente','parceiro','outro')),
+      status       TEXT NOT NULL DEFAULT 'pendente'
+                   CHECK(status IN ('pendente','ativo','suspenso')),
+      nome_contato TEXT,
+      email        TEXT,
+      telefone     TEXT,
+      observacoes  TEXT,
+      aprovado_por INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+      aprovado_em  TIMESTAMPTZ,
+      criado_em    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `).catch(() => {});
+
+  // Tabela de códigos de indicação (um por indicador, permanente)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS referral_codigos (
+      id              SERIAL PRIMARY KEY,
+      indicador_id    INTEGER NOT NULL UNIQUE REFERENCES referral_indicadores(id) ON DELETE CASCADE,
+      codigo          TEXT NOT NULL UNIQUE,
+      ativo           BOOLEAN NOT NULL DEFAULT true,
+      total_cliques   INTEGER NOT NULL DEFAULT 0,
+      criado_em       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `).catch(() => {});
+
+  // Tabela de cliques/visitas rastreados
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS referral_cliques (
+      id           BIGSERIAL PRIMARY KEY,
+      codigo       TEXT NOT NULL,
+      ip_hash      TEXT,
+      user_agent   TEXT,
+      convertido   BOOLEAN NOT NULL DEFAULT false,
+      criado_em    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `).catch(() => {});
+
+  // Tabela de indicações confirmadas (vínculo indicador ↔ oficina indicada)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS referral_indicacoes (
+      id              SERIAL PRIMARY KEY,
+      indicador_id    INTEGER NOT NULL REFERENCES referral_indicadores(id) ON DELETE RESTRICT,
+      oficina_id      INTEGER NOT NULL UNIQUE REFERENCES oficinas(id) ON DELETE RESTRICT,
+      codigo_usado    TEXT NOT NULL,
+      status          TEXT NOT NULL DEFAULT 'cadastro'
+                      CHECK(status IN ('cadastro','trial','pagante','cancelado')),
+      convertido_em   TIMESTAMPTZ,
+      criado_em       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `).catch(() => {});
+
+  // Tabela de comissões calculadas
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS referral_comissoes (
+      id              SERIAL PRIMARY KEY,
+      indicacao_id    INTEGER NOT NULL REFERENCES referral_indicacoes(id) ON DELETE RESTRICT,
+      indicador_id    INTEGER NOT NULL REFERENCES referral_indicadores(id) ON DELETE RESTRICT,
+      pagamento_id    INTEGER NOT NULL UNIQUE REFERENCES pagamentos(id) ON DELETE RESTRICT,
+      valor           NUMERIC(10,2) NOT NULL,
+      status          TEXT NOT NULL DEFAULT 'aguardando_validacao'
+                      CHECK(status IN ('aguardando_validacao','aprovada','cancelada','paga')),
+      aprovado_por    INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+      aprovado_em     TIMESTAMPTZ,
+      obs             TEXT,
+      criado_em       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `).catch(() => {});
+
+  // Tabela de repasses (pagamento da comissão ao indicador)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS referral_repasses (
+      id              SERIAL PRIMARY KEY,
+      indicador_id    INTEGER NOT NULL REFERENCES referral_indicadores(id) ON DELETE RESTRICT,
+      comissao_id     INTEGER NOT NULL UNIQUE REFERENCES referral_comissoes(id) ON DELETE RESTRICT,
+      valor           NUMERIC(10,2) NOT NULL,
+      metodo          TEXT NOT NULL DEFAULT 'pix'
+                      CHECK(metodo IN ('pix','transferencia','credito','outro')),
+      referencia      TEXT,
+      realizado_por   INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE RESTRICT,
+      realizado_em    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      obs             TEXT
+    );
+  `).catch(() => {});
+
+  // Índices do programa de indicações
+  const referralIndices = [
+    'CREATE INDEX IF NOT EXISTS idx_ref_indicadores_oficina  ON referral_indicadores(oficina_id)',
+    'CREATE INDEX IF NOT EXISTS idx_ref_indicadores_status   ON referral_indicadores(status)',
+    'CREATE INDEX IF NOT EXISTS idx_ref_codigos_codigo       ON referral_codigos(codigo)',
+    'CREATE INDEX IF NOT EXISTS idx_ref_cliques_codigo       ON referral_cliques(codigo, criado_em DESC)',
+    'CREATE INDEX IF NOT EXISTS idx_ref_indicacoes_indicador ON referral_indicacoes(indicador_id)',
+    'CREATE INDEX IF NOT EXISTS idx_ref_indicacoes_oficina   ON referral_indicacoes(oficina_id)',
+    'CREATE INDEX IF NOT EXISTS idx_ref_comissoes_indicacao  ON referral_comissoes(indicacao_id)',
+    'CREATE INDEX IF NOT EXISTS idx_ref_comissoes_indicador  ON referral_comissoes(indicador_id)',
+    'CREATE INDEX IF NOT EXISTS idx_ref_comissoes_status     ON referral_comissoes(status)',
+    'CREATE INDEX IF NOT EXISTS idx_ref_repasses_indicador   ON referral_repasses(indicador_id)',
+    'CREATE INDEX IF NOT EXISTS idx_oficinas_indicado_por    ON oficinas(indicado_por_codigo)',
+  ];
+  for (const idx of referralIndices) { await pool.query(idx).catch(() => {}); }
+
+  // Agora que referral_indicacoes existe, podemos adicionar a FK em pagamentos
+  // (a coluna pode já ter sido criada antes da tabela existir — o ADD COLUMN acima
+  //  pode falhar silenciosamente se a tabela não existia ainda na mesma rodada;
+  //  repetimos aqui para garantir após a criação da tabela referenciada)
+  await pool.query(`ALTER TABLE pagamentos ADD COLUMN IF NOT EXISTS indicacao_id INTEGER REFERENCES referral_indicacoes(id) ON DELETE SET NULL;`).catch(() => {});
+
+  console.log('✅ Tabelas do programa de indicações prontas');
+
   // Cria master_admin se não existir
   const admin = await queryOne("SELECT id FROM usuarios WHERE perfil = 'master_admin'");
   if (!admin) {

@@ -328,7 +328,42 @@ router.post('/complete-oficina', sensitiveOpsLimiter, authMiddleware, validateLo
 
     await run('UPDATE usuarios SET oficina_id=$1 WHERE id=$2', [oficina.id, req.user.id]);
 
-    const newToken = jwt.sign(
+    // ── Rastreamento de indicação ──────────────────────────────
+    // Se veio um código de indicação válido, vincula a nova oficina ao indicador.
+    // Anti-autoindicação: o código não pode pertencer à própria oficina recém-criada.
+    // Idempotente: UNIQUE em referral_indicacoes(oficina_id) previne duplicata.
+    const codigoIndicacao = req.body?.codigo_indicacao;
+    if (codigoIndicacao && typeof codigoIndicacao === 'string' && /^C10-[A-F0-9]{6}$/.test(codigoIndicacao)) {
+      try {
+        const codigoRow = await queryOne(
+          `SELECT rc.id, rc.indicador_id, ri2.oficina_id AS indicador_oficina_id
+           FROM referral_codigos rc
+           JOIN referral_indicadores ri2 ON ri2.id = rc.indicador_id AND ri2.status='ativo'
+           WHERE rc.codigo=$1 AND rc.ativo=true`,
+          [codigoIndicacao]
+        );
+        // Valida: código existe, indicador ativo, e não é autoindicação
+        if (codigoRow && codigoRow.indicador_oficina_id !== oficina.id) {
+          await run(
+            `INSERT INTO referral_indicacoes(indicador_id, oficina_id, codigo_usado, status)
+             VALUES($1,$2,$3,'cadastro') ON CONFLICT (oficina_id) DO NOTHING`,
+            [codigoRow.indicador_id, oficina.id, codigoIndicacao]
+          );
+          // Salva o código usado na oficina (imutável)
+          await run('UPDATE oficinas SET indicado_por_codigo=$1 WHERE id=$2', [codigoIndicacao, oficina.id]);
+          // Marca o clique correspondente como convertido (melhores práticas de analytics)
+          await run(
+            `UPDATE referral_cliques SET convertido=true WHERE codigo=$1 AND convertido=false
+             ORDER BY criado_em DESC LIMIT 1`,
+            [codigoIndicacao]
+          );
+          log.info('referral_indicacao_criada', { oficina_id: oficina.id, codigo: codigoIndicacao });
+        }
+      } catch (refErr) {
+        // Falha silenciosa: o cadastro da oficina já ocorreu — não rollback por causa do referral
+        log.error('referral_vincular', refErr);
+      }
+    }    const newToken = jwt.sign(
       { id: req.user.id, perfil: 'admin_oficina', oficina_id: oficina.id, nome: usuario.nome },
       SECRET,
       { expiresIn: '30d' }

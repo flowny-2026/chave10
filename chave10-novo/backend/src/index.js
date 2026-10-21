@@ -304,9 +304,11 @@ function cacheMiddleware(ttlSeconds = 30) {
 // Cada rota sensível dentro do auth router tem seu limiter específico (ver routes/auth.js).
 app.use('/api/auth',              loginLimiter, require('./routes/auth'));
 app.use('/api/admin',             adminLimiter, require('./routes/admin'));
+app.use('/api/admin/referral',    adminLimiter, require('./routes/referral-admin'));
 app.use('/api/app/os-fotos',      writeLimiter, require('./routes/os-fotos'));
 app.use('/api/app/mecanicos',     writeLimiter, require('./routes/mecanicos'));
 app.use('/api/app/meu-perfil',    writeLimiter, require('./routes/mecanico-perfil'));
+app.use('/api/app/referral',      writeLimiter, require('./routes/referral'));
 app.use('/api/app',               writeLimiter, cacheMiddleware(15), require('./routes/app'));
 app.use('/api/backup',            writeLimiter, require('./routes/backup'));
 app.use('/api/approval',          writeLimiter, require('./routes/approval'));
@@ -316,6 +318,48 @@ app.use('/api/approval',          writeLimiter, require('./routes/approval'));
 // Suporta GET e HEAD (UptimeRobot usa HEAD por padrão).
 app.get('/ping', (_, res) => res.status(200).json({ ok: true }));
 app.head('/ping', (_, res) => res.status(200).end());
+
+// ── RASTREAMENTO DE CLIQUE DE INDICAÇÃO (pública, rate-limited) ──
+// Chamada pelo frontend quando alguém acessa via ?ref=CODIGO.
+// Registra o clique e incrementa o contador do código.
+app.post('/api/public/referral/clique', readLimiter, async (req, res) => {
+  try {
+    const { query: pgQuery, queryOne: pgOne, run: pgRun } = require('./db');
+    const crypto = require('crypto');
+    const codigo = req.body?.codigo;
+    if (!codigo || typeof codigo !== 'string' || !/^C10-[A-F0-9]{6}$/.test(codigo)) {
+      return res.status(400).json({ error: 'Código inválido' });
+    }
+    const codigoRow = await pgOne('SELECT * FROM referral_codigos WHERE codigo=$1 AND ativo=true', [codigo]);
+    if (!codigoRow) return res.status(404).json({ error: 'Código não encontrado' });
+
+    // Hash do IP para privacidade — não armazenamos o IP bruto
+    const ipHash = crypto.createHash('sha256')
+      .update((req.ip || 'unknown') + (process.env.JWT_SECRET || ''))
+      .digest('hex').slice(0, 16);
+
+    // Evita duplicata do mesmo IP no mesmo dia
+    const hoje = new Date().toISOString().slice(0, 10);
+    const jaCli = await pgOne(
+      `SELECT id FROM referral_cliques WHERE codigo=$1 AND ip_hash=$2 AND criado_em::date=$3::date`,
+      [codigo, ipHash, hoje]
+    );
+    if (!jaCli) {
+      await pgRun(
+        'INSERT INTO referral_cliques(codigo, ip_hash, user_agent) VALUES($1,$2,$3)',
+        [codigo, ipHash, (req.headers['user-agent'] || '').slice(0, 200)]
+      );
+      await pgRun(
+        'UPDATE referral_codigos SET total_cliques=total_cliques+1 WHERE codigo=$1',
+        [codigo]
+      );
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    require('./utils/logger').error('referral_clique', err);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
 
 // ── HEALTH CHECK ──────────────────────────────────────────────
 // Rota pública — usada por load balancers e monitoramento.

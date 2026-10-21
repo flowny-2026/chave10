@@ -87,9 +87,13 @@ export default function Cadastro() {
     { nome_oficina: '', cnpj_cpf: '', telefone: '', endereco: '', logo: '', segmento: 'carro' },
     async (values) => {
       setErro('');
-      const { token, usuario } = await api.auth.completeOficina(tempToken, values);
+      // Inclui o código de indicação se existir no sessionStorage
+      const refCode = sessionStorage.getItem('c10_ref') || undefined;
+      const payload = refCode ? { ...values, codigo_indicacao: refCode } : values;
+      const { token, usuario } = await api.auth.completeOficina(tempToken, payload);
       saveToken(token);
       saveUser(usuario);
+      sessionStorage.removeItem('c10_ref'); // limpa após uso
       navigate('/app/dashboard');
     },
     { nome_oficina: [validateRequired], telefone: [validatePhone] }

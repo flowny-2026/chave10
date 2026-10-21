@@ -1,6 +1,6 @@
 ﻿import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { getFromStorage } from '../api';
+import { getFromStorage, registrarCliqueReferral } from '../api';
 import '../styles/landing.css';
 
 function getTokenExp(token) {
@@ -126,6 +126,13 @@ export default function Landing() {
       }
     }
     window.scrollTo(0, 0);
+    // Captura código de indicação da URL (?ref=C10-XXXXXX) e persiste em sessionStorage
+    const params = new URLSearchParams(window.location.search);
+    const refCode = params.get('ref');
+    if (refCode && /^C10-[A-F0-9]{6}$/.test(refCode)) {
+      sessionStorage.setItem('c10_ref', refCode);
+      registrarCliqueReferral(refCode); // registra no backend (fire-and-forget)
+    }
     const observer = new IntersectionObserver(
       (entries) => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }),
       { threshold: 0.08, rootMargin: '0px 0px -40px 0px' }
