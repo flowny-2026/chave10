@@ -152,6 +152,8 @@ export default function Landing() {
           <img src="/teste sem fundo 2.png" alt="Chave 10" className="lp-logo-img" />
           <div className="lp-nav-actions">
             <button className="lp-nav-login" onClick={() => navigate('/login')}>Entrar</button>
+            <button className="lp-nav-login" style={{ color: 'rgba(255,255,255,.6)' }}
+              onClick={() => navigate('/indicar')}>Indique e Ganhe</button>
             <button className="lp-nav-cta" onClick={() => navigate('/cadastro')}>Teste grátis 7 dias</button>
           </div>
         </div>

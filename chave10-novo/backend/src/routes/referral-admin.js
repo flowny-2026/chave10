@@ -33,20 +33,25 @@ router.get('/participantes', async (req, res) => {
   try {
     const rows = await query(`
       SELECT
-        ri.id, ri.tipo, ri.status, ri.nome_contato, ri.email, ri.telefone,
+        ri.id, ri.tipo, ri.status,
+        COALESCE(ri.nome, ri.nome_contato) AS nome_contato,
+        COALESCE(ri.email, o.email)        AS email,
+        COALESCE(ri.telefone, ri.whatsapp) AS telefone,
         ri.aprovado_em, ri.criado_em, ri.observacoes,
-        o.nome  AS oficina_nome,
-        o.email AS oficina_email,
+        o.nome   AS oficina_nome,
+        o.email  AS oficina_email,
+        u_ind.nome AS usuario_nome,
         rc.codigo,
         rc.total_cliques,
-        u.nome  AS aprovado_por_nome,
-        (SELECT COUNT(*) FROM referral_indicacoes WHERE indicador_id=ri.id)            AS total_indicacoes,
-        (SELECT COUNT(*) FROM referral_indicacoes WHERE indicador_id=ri.id AND status='pagante') AS total_pagantes,
+        u_apr.nome AS aprovado_por_nome,
+        (SELECT COUNT(*) FROM referral_indicacoes WHERE indicador_id=ri.id)                              AS total_indicacoes,
+        (SELECT COUNT(*) FROM referral_indicacoes WHERE indicador_id=ri.id AND status='pagante')         AS total_pagantes,
         (SELECT COALESCE(SUM(valor),0) FROM referral_comissoes WHERE indicador_id=ri.id AND status IN ('aprovada','paga')) AS total_comissoes
       FROM referral_indicadores ri
-      JOIN oficinas o             ON o.id  = ri.oficina_id
-      LEFT JOIN referral_codigos rc ON rc.indicador_id = ri.id AND rc.ativo = true
-      LEFT JOIN usuarios u        ON u.id  = ri.aprovado_por
+      LEFT JOIN oficinas o              ON o.id  = ri.oficina_id
+      LEFT JOIN usuarios u_ind          ON u_ind.id = ri.usuario_id
+      LEFT JOIN referral_codigos rc     ON rc.indicador_id = ri.id AND rc.ativo = true
+      LEFT JOIN usuarios u_apr          ON u_apr.id = ri.aprovado_por
       ORDER BY ri.criado_em DESC
     `);
     res.json(rows);

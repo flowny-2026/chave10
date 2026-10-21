@@ -239,8 +239,11 @@ export default function AdminReferral() {
                 {participantes.map(p => (
                   <tr key={p.id}>
                     <td>
-                      <div style={{ fontWeight: 600 }}>{p.oficina_nome}</div>
-                      <div style={{ fontSize: 11, color: 'var(--gray-400)' }}>{p.oficina_email}</div>
+                      <div style={{ fontWeight: 600 }}>{p.oficina_nome || p.usuario_nome || p.nome_contato || '—'}</div>
+                      <div style={{ fontSize: 11, color: 'var(--gray-400)' }}>
+                        {p.email}
+                        {!p.oficina_nome && <span style={{ marginLeft: 6, background: 'var(--brand-light)', color: 'var(--brand)', borderRadius: 4, padding: '1px 6px', fontSize: 10, fontWeight: 700 }}>Indicador externo</span>}
+                      </div>
                     </td>
                     <td><span className="badge badge-blue">{TIPO_LABEL[p.tipo] || p.tipo}</span></td>
                     <td><code style={{ fontSize: 12, background: 'var(--gray-100)', padding: '2px 6px', borderRadius: 4 }}>{p.codigo || '—'}</code></td>

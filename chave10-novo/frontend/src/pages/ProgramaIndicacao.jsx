@@ -65,18 +65,25 @@ export default function ProgramaIndicacao() {
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
         background: 'rgba(15,27,45,0.96)', backdropFilter: 'blur(12px)',
         borderBottom: '1px solid rgba(255,255,255,0.07)',
-        padding: '14px 24px',
+        padding: '14px 20px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
-        <img src="/teste sem fundo 2.png" alt="Chave 10" style={{ height: 40, objectFit: 'contain', cursor: 'pointer' }}
+        <img src="/teste sem fundo 2.png" alt="Chave 10"
+          style={{ height: 36, objectFit: 'contain', cursor: 'pointer', flexShrink: 0 }}
           onClick={() => navigate('/')} />
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <button onClick={() => navigate('/login')}
-            style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.65)', fontSize: 14, fontWeight: 500, cursor: 'pointer', padding: '8px 14px' }}>
+            style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.65)',
+              fontSize: 14, fontWeight: 500, cursor: 'pointer', padding: '8px 10px',
+              whiteSpace: 'nowrap' }}>
             Entrar
           </button>
           <button onClick={irParaCadastro}
-            style={{ background: '#F97316', border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', padding: '9px 20px', borderRadius: 8, boxShadow: '0 2px 12px rgba(249,115,22,.4)' }}>
+            style={{ background: '#F97316', border: 'none', color: '#fff',
+              fontSize: 13, fontWeight: 700, cursor: 'pointer',
+              padding: '9px 16px', borderRadius: 8,
+              boxShadow: '0 2px 12px rgba(249,115,22,.4)',
+              whiteSpace: 'nowrap' }}>
             Cadastrar grátis
           </button>
         </div>
@@ -303,8 +310,8 @@ export default function ProgramaIndicacao() {
 
           {/* Tabela de exemplos */}
           <div style={{ background: '#F9FAFB', borderRadius: 14, overflow: 'hidden',
-            border: '1px solid #E5E7EB', marginBottom: 20 }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            border: '1px solid #E5E7EB', marginBottom: 20, overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 260 }}>
               <thead>
                 <tr style={{ background: '#F3F4F6' }}>
                   <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: 11,
@@ -357,9 +364,12 @@ export default function ProgramaIndicacao() {
       </section>
 
       {/* ══ CADASTRO ════════════════════════════════════════ */}
-      <section ref={cadastroRef} style={{ background: 'radial-gradient(ellipse 120% 100% at 50% 50%, #1a3558 0%, #0a1525 70%)',
-        padding: '80px 24px' }}>
-        <div style={{ maxWidth: 480, margin: '0 auto' }}>
+      <section ref={cadastroRef} style={{
+        background: 'radial-gradient(ellipse 120% 100% at 50% 50%, #1a3558 0%, #0a1525 70%)',
+        padding: '80px 20px',
+        overflow: 'hidden',
+      }}>
+        <div style={{ maxWidth: 480, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
           <div style={{ textAlign: 'center', marginBottom: 36 }}>
             <h2 style={{ fontFamily: 'Poppins,sans-serif', fontSize: 'clamp(1.5rem,3vw,2rem)',
               fontWeight: 900, color: '#fff', letterSpacing: '-.02em', marginBottom: 10 }}>
@@ -433,7 +443,6 @@ function FormCadastroIndicador({ navigate }) {
       });
       saveToken(result.token);
       saveUser(result.usuario);
-      // Navega para o painel do indicador
       navigate('/painel-indicador');
     } catch (err) {
       setErro(err?.error || 'Erro ao criar conta. Tente novamente.');
@@ -442,39 +451,66 @@ function FormCadastroIndicador({ navigate }) {
     }
   }
 
-  const inp = { background: 'rgba(255,255,255,.07)', border: '1px solid rgba(255,255,255,.15)',
-    color: '#fff', borderRadius: 10, padding: '13px 16px', fontSize: 14,
-    width: '100%', boxSizing: 'border-box', outline: 'none',
-    fontFamily: 'inherit' };
+  /* Estilo base dos inputs — fundo branco com texto escuro para máxima
+     compatibilidade em iOS/Android (evita textos invisíveis em temas escuros) */
+  const inp = {
+    background: '#fff',
+    border: '1px solid #D1D5DB',
+    color: '#111827',
+    borderRadius: 10,
+    padding: '13px 16px',
+    fontSize: 15,
+    width: '100%',
+    boxSizing: 'border-box',
+    outline: 'none',
+    fontFamily: 'inherit',
+    WebkitAppearance: 'none',
+  };
+
+  const label = {
+    fontSize: 13,
+    fontWeight: 600,
+    color: 'rgba(255,255,255,.75)',
+    display: 'block',
+    marginBottom: 6,
+  };
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14, width: '100%', boxSizing: 'border-box' }}>
       {[
-        { name: 'nome',      label: 'Nome completo *',     type: 'text',     ph: 'Seu nome' },
-        { name: 'email',     label: 'E-mail *',            type: 'email',    ph: 'seu@email.com' },
-        { name: 'whatsapp',  label: 'WhatsApp',            type: 'tel',      ph: '(00) 00000-0000' },
+        { name: 'nome',     label: 'Nome completo *',  type: 'text',  ph: 'Seu nome completo',  auto: 'name' },
+        { name: 'email',    label: 'E-mail *',         type: 'email', ph: 'seu@email.com',       auto: 'email' },
+        { name: 'whatsapp', label: 'WhatsApp',         type: 'tel',   ph: '(00) 00000-0000',     auto: 'tel' },
       ].map(f => (
         <div key={f.name}>
-          <label style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,.6)',
-            display: 'block', marginBottom: 5 }}>{f.label}</label>
-          <input type={f.type} placeholder={f.ph} required={f.name !== 'whatsapp'}
-            value={form[f.name]} onChange={e => setForm(p => ({ ...p, [f.name]: e.target.value }))}
-            style={inp} autoComplete={f.name === 'email' ? 'email' : f.name === 'nome' ? 'name' : 'tel'} />
+          <label style={label}>{f.label}</label>
+          <input
+            type={f.type} placeholder={f.ph} required={f.name !== 'whatsapp'}
+            value={form[f.name]}
+            onChange={e => setForm(p => ({ ...p, [f.name]: e.target.value }))}
+            style={inp} autoComplete={f.auto}
+          />
         </div>
       ))}
 
       {/* Senha */}
       <div>
-        <label style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,.6)',
-          display: 'block', marginBottom: 5 }}>Senha * (mín. 6 caracteres)</label>
+        <label style={label}>Senha * <span style={{ fontWeight: 400, opacity: .7 }}>(mín. 6 caracteres)</span></label>
         <div style={{ position: 'relative' }}>
-          <input type={showSenha ? 'text' : 'password'} placeholder="••••••••" required
-            value={form.senha} onChange={e => setForm(p => ({ ...p, senha: e.target.value }))}
-            style={{ ...inp, paddingRight: 44 }} autoComplete="new-password" />
+          <input
+            type={showSenha ? 'text' : 'password'}
+            placeholder="••••••••" required
+            value={form.senha}
+            onChange={e => setForm(p => ({ ...p, senha: e.target.value }))}
+            style={{ ...inp, paddingRight: 48 }}
+            autoComplete="new-password"
+          />
           <button type="button" onClick={() => setShowSenha(s => !s)}
-            style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-              background: 'none', border: 'none', color: 'rgba(255,255,255,.4)', cursor: 'pointer',
-              fontSize: 16, lineHeight: 1 }}>
+            style={{
+              position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+              background: 'none', border: 'none', color: '#6B7280', cursor: 'pointer',
+              fontSize: 17, lineHeight: 1, padding: 4,
+            }}>
             {showSenha ? '🙈' : '👁️'}
           </button>
         </div>
@@ -482,38 +518,73 @@ function FormCadastroIndicador({ navigate }) {
 
       {/* Confirmar senha */}
       <div>
-        <label style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,.6)',
-          display: 'block', marginBottom: 5 }}>Confirmar senha *</label>
-        <input type={showSenha ? 'text' : 'password'} placeholder="Repita a senha" required
-          value={form.confirmar} onChange={e => setForm(p => ({ ...p, confirmar: e.target.value }))}
-          style={{ ...inp }} autoComplete="new-password" />
+        <label style={label}>Confirmar senha *</label>
+        <input
+          type={showSenha ? 'text' : 'password'}
+          placeholder="Repita a senha" required
+          value={form.confirmar}
+          onChange={e => setForm(p => ({ ...p, confirmar: e.target.value }))}
+          style={inp} autoComplete="new-password"
+        />
         {form.confirmar && form.senha !== form.confirmar && (
-          <p style={{ fontSize: 11, color: '#f87171', marginTop: 4 }}>As senhas não coincidem</p>
+          <p style={{ fontSize: 12, color: '#fca5a5', marginTop: 5, margin: '5px 0 0' }}>
+            As senhas não coincidem
+          </p>
         )}
       </div>
 
-      {/* Aceite */}
-      <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer',
-        fontSize: 13, color: 'rgba(255,255,255,.65)', lineHeight: 1.5 }}>
-        <input type="checkbox" checked={form.aceite}
+      {/* Aceite — checkbox nativo oculto com label estilizado */}
+      <label htmlFor="aceite-termos" style={{
+        display: 'flex', alignItems: 'flex-start', gap: 12, cursor: 'pointer',
+        background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.15)',
+        borderRadius: 10, padding: '14px 16px', boxSizing: 'border-box', width: '100%',
+      }}>
+        {/* Input nativo oculto — acessível e sem bugs de clique */}
+        <input
+          id="aceite-termos"
+          type="checkbox"
+          checked={form.aceite}
           onChange={e => setForm(p => ({ ...p, aceite: e.target.checked }))}
-          style={{ marginTop: 2, accentColor: '#F97316', flexShrink: 0 }} />
-        <span>
+          style={{ position: 'absolute', opacity: 0, width: 0, height: 0, pointerEvents: 'none' }}
+        />
+        {/* Checkbox visual */}
+        <div style={{
+          flexShrink: 0, width: 24, height: 24, borderRadius: 6, marginTop: 1,
+          background: form.aceite ? '#F97316' : 'rgba(255,255,255,.1)',
+          border: `2px solid ${form.aceite ? '#F97316' : 'rgba(255,255,255,.3)'}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transition: 'all .15s',
+        }}>
+          {form.aceite && (
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff"
+              strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          )}
+        </div>
+        <span style={{ fontSize: 14, color: 'rgba(255,255,255,.85)', lineHeight: 1.65, flex: 1, minWidth: 0 }}>
           Li e aceito os{' '}
           <a href="/termos-uso" target="_blank" rel="noopener"
+            onClick={e => e.stopPropagation()}
             style={{ color: '#F97316', textDecoration: 'underline' }}>
             Termos de Uso
-          </a>{' '}e a{' '}
+          </a>
+          {' '}e a{' '}
           <a href="/politica-privacidade" target="_blank" rel="noopener"
+            onClick={e => e.stopPropagation()}
             style={{ color: '#F97316', textDecoration: 'underline' }}>
             Política de Privacidade
-          </a>{' '}do Programa de Indicação.
+          </a>
+          {' '}do Programa de Indicação.
         </span>
       </label>
 
+      {/* Erro */}
       {erro && (
-        <div style={{ background: 'rgba(239,68,68,.12)', border: '1px solid rgba(239,68,68,.3)',
-          borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#fca5a5' }}>
+        <div style={{
+          background: 'rgba(239,68,68,.15)', border: '1px solid rgba(239,68,68,.35)',
+          borderRadius: 8, padding: '12px 16px', fontSize: 14, color: '#fca5a5', lineHeight: 1.5,
+        }}>
           {erro}
         </div>
       )}
@@ -522,11 +593,13 @@ function FormCadastroIndicador({ navigate }) {
         style={{
           background: loading ? 'rgba(249,115,22,.5)' : 'linear-gradient(135deg,#F97316,#f45c08)',
           border: 'none', color: '#fff',
-          padding: '15px', borderRadius: 12, cursor: loading ? 'not-allowed' : 'pointer',
+          padding: '16px', borderRadius: 12,
+          cursor: loading ? 'not-allowed' : 'pointer',
           fontSize: '1rem', fontWeight: 800, marginTop: 4,
-          boxShadow: '0 4px 20px rgba(249,115,22,.35)',
+          boxShadow: loading ? 'none' : '0 4px 20px rgba(249,115,22,.35)',
+          transition: 'all .2s',
         }}>
-        {loading ? 'Criando conta...' : 'Criar conta e começar a indicar'}
+        {loading ? 'Criando conta…' : 'Criar conta e começar a indicar'}
       </button>
     </form>
   );
