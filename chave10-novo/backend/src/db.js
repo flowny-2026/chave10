@@ -604,7 +604,26 @@ async function initDB() {
 
   console.log('✅ Tabelas do programa de indicações prontas');
 
-  // Cria master_admin se não existir
+  // ── Indicadores independentes (sem oficina) ─────────────────
+  // Permite que qualquer pessoa se cadastre como indicador,
+  // sem precisar ter uma oficina no Chave 10.
+  await pool.query(`ALTER TABLE referral_indicadores ALTER COLUMN oficina_id DROP NOT NULL;`).catch(() => {});
+  await pool.query(`ALTER TABLE referral_indicadores ADD COLUMN IF NOT EXISTS usuario_id INTEGER REFERENCES usuarios(id) ON DELETE SET NULL;`).catch(() => {});
+  await pool.query(`ALTER TABLE referral_indicadores ADD COLUMN IF NOT EXISTS nome TEXT;`).catch(() => {});
+  await pool.query(`ALTER TABLE referral_indicadores ADD COLUMN IF NOT EXISTS whatsapp TEXT;`).catch(() => {});
+  await pool.query(`ALTER TABLE referral_indicadores ADD COLUMN IF NOT EXISTS aceite_termos BOOLEAN NOT NULL DEFAULT false;`).catch(() => {});
+  await pool.query(`ALTER TABLE referral_indicadores ADD COLUMN IF NOT EXISTS aceite_em TIMESTAMPTZ;`).catch(() => {});
+  // Índice para busca por usuario_id
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_ref_indicadores_usuario ON referral_indicadores(usuario_id)`).catch(() => {});
+  // Novos usuários indicadores usam perfil 'indicador' — adicionamos ao CHECK se ainda não existir
+  await pool.query(`
+    DO $$
+    BEGIN
+      ALTER TABLE usuarios DROP CONSTRAINT IF EXISTS usuarios_perfil_check;
+      ALTER TABLE usuarios ADD CONSTRAINT usuarios_perfil_check
+        CHECK(perfil IN ('master_admin','admin_oficina','funcionario','mecanico','indicador'));
+    END $$;
+  `).catch(() => {});
   const admin = await queryOne("SELECT id FROM usuarios WHERE perfil = 'master_admin'");
   if (!admin) {
     // ⚠️  IMPORTANTE: defina MASTER_ADMIN_PASSWORD no .env antes do primeiro deploy.

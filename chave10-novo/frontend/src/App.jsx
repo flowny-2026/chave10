@@ -15,6 +15,8 @@ import Bloqueado from './pages/Bloqueado';
 import ApprovalPage from './pages/ApprovalPage';
 import PoliticaPrivacidade from './pages/PoliticaPrivacidade';
 import TermosUso from './pages/TermosUso';
+import ProgramaIndicacao from './pages/ProgramaIndicacao';
+import PainelIndicador from './pages/PainelIndicador';
 
 // Páginas do app — carregadas sob demanda (lazy)
 const AdminDashboard      = lazy(() => import('./pages/admin/Dashboard'));
@@ -334,6 +336,8 @@ export default function App() {
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/bloqueado" element={<Bloqueado />} />
           <Route path="/approve/:token" element={<ApprovalPage />} />
+          <Route path="/indicar"        element={<ProgramaIndicacao />} />
+          <Route path="/painel-indicador" element={<PainelIndicador />} />
 
           <Route path="/admin" element={<PrivateRoute adminOnly><Layout area="admin" /></PrivateRoute>}>
             <Route path="dashboard"       element={<AdminDashboard />} />

@@ -120,11 +120,10 @@ export default function AppIndicacoes() {
             }
           </p>
           <a
-            href="https://wa.me/5516992383821?text=Olá! Quero participar do programa de indicações do Chave 10."
-            target="_blank" rel="noopener"
+            href="/indicar"
             className="btn btn-primary"
           >
-            Falar com o suporte
+            Saiba como funciona e cadastre-se
           </a>
         </div>
       </div>

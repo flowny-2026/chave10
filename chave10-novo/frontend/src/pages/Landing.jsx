@@ -190,6 +190,15 @@ export default function Landing() {
               <span>Sem cartão</span>
               <span>Cancela quando quiser</span>
             </div>
+            {/* Link para o programa de indicação */}
+            <div style={{ marginTop: 28, paddingTop: 20, borderTop: '1px solid rgba(255,255,255,.08)' }}>
+              <span style={{ fontSize: 13, color: 'rgba(255,255,255,.45)' }}>Quer ganhar indicando? </span>
+              <button onClick={() => navigate('/indicar')}
+                style={{ background: 'none', border: 'none', color: '#F97316', fontSize: 13,
+                  fontWeight: 700, cursor: 'pointer', padding: 0, textDecoration: 'underline' }}>
+                Conheça o programa de indicação →
+              </button>
+            </div>
           </div>
           <div className="lp-hero-mockup lp-reveal lp-reveal-delay-2">
             <div className="lp-mockup-laptop">
@@ -353,7 +362,7 @@ export default function Landing() {
             <h3 className="lp-pricing-name">Plano Completo</h3>
             <div className="lp-pricing-price">
               <span className="lp-pricing-from">de <s>R$79</s> por</span>
-              R$49<span className="lp-pricing-mo">/mês</span>
+              R$49,90<span className="lp-pricing-mo">/mês</span>
             </div>
             <ul className="lp-pricing-features">
               {[

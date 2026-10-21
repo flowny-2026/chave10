@@ -128,7 +128,7 @@ export default function AppPlanos() {
               De R$ 79/mês
             </div>
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4 }}>
-              <span style={{ fontFamily: 'Poppins, sans-serif', fontSize: 42, fontWeight: 900, color: '#F97316', lineHeight: 1 }}>R$49</span>
+              <span style={{ fontFamily: 'Poppins, sans-serif', fontSize: 42, fontWeight: 900, color: '#F97316', lineHeight: 1 }}>R$49,90</span>
               <span style={{ fontSize: 14, color: 'rgba(255,255,255,.7)', marginBottom: 6 }}>/mês</span>
             </div>
           </div>

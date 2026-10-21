@@ -302,8 +302,7 @@ function cacheMiddleware(ttlSeconds = 30) {
 // ── RASTREAMENTO PÚBLICO DE CLIQUE (antes das rotas autenticadas) ──
 // Rota pública — não exige JWT. Rate-limited pelo readLimiter global.
 // Chamada pelo frontend quando alguém acessa via ?ref=CODIGO.
-app.post('/api/public/referral/clique', async (req, res) => {
-  try {
+app.post('/api/public/referral/clique', async (req, res) => {  try {
     const { query: pgQuery, queryOne: pgOne, run: pgRun } = require('./db');
     const crypto = require('crypto');
     const codigo = req.body?.codigo;
@@ -336,6 +335,92 @@ app.post('/api/public/referral/clique', async (req, res) => {
   } catch (err) {
     require('./utils/logger').error('referral_clique', err);
     res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+// ── CADASTRO PÚBLICO DE INDICADOR ────────────────────────────
+// Qualquer pessoa pode se cadastrar como indicador sem ter uma oficina.
+// Cria um usuário com perfil 'indicador', já ativo, gera código automaticamente.
+// Protegido por registerLimiter (mesmo limite do cadastro de oficinas).
+app.post('/api/public/referral/cadastro', loginLimiter, async (req, res) => {
+  try {
+    const bcrypt = require('bcryptjs');
+    const jwt    = require('jsonwebtoken');
+    const crypto = require('crypto');
+    const { queryOne: pgOne, run: pgRun } = require('./db');
+    const log = require('./utils/logger');
+
+    const { nome, email, whatsapp, senha, aceite_termos } = req.body;
+
+    // Validações básicas
+    if (!nome || typeof nome !== 'string' || nome.trim().length < 2 || nome.trim().length > 120)
+      return res.status(400).json({ error: 'Nome inválido (2 a 120 caracteres)' });
+    if (!email || typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
+      return res.status(400).json({ error: 'E-mail inválido' });
+    if (!senha || typeof senha !== 'string' || senha.length < 6 || senha.length > 128)
+      return res.status(400).json({ error: 'Senha deve ter entre 6 e 128 caracteres' });
+    if (!aceite_termos)
+      return res.status(400).json({ error: 'É necessário aceitar os termos para continuar' });
+
+    const nomeVal     = nome.trim();
+    const emailVal    = email.trim().toLowerCase();
+    const whatsappVal = whatsapp ? String(whatsapp).replace(/[^\d\+\-\(\)\s]/g, '').slice(0, 30) : null;
+
+    // Verifica e-mail duplicado
+    const jaExiste = await pgOne('SELECT id, perfil FROM usuarios WHERE email=$1', [emailVal]);
+    if (jaExiste) {
+      // Se já é indicador, retorna 409 com hint de login
+      if (jaExiste.perfil === 'indicador') {
+        return res.status(409).json({ error: 'Este e-mail já está cadastrado como indicador. Faça login.' });
+      }
+      // Outro perfil — não revela detalhes por segurança
+      return res.status(409).json({ error: 'Este e-mail já está cadastrado.' });
+    }
+
+    const hash = bcrypt.hashSync(senha, 12);
+
+    // Cria usuário com perfil 'indicador' (sem oficina_id)
+    const usuario = await pgOne(
+      "INSERT INTO usuarios(oficina_id, nome, email, senha_hash, perfil, ativo) VALUES(NULL,$1,$2,$3,'indicador',1) RETURNING id",
+      [nomeVal, emailVal, hash]
+    );
+
+    // Cria o registro de indicador já ativo (autoativação)
+    const indicador = await pgOne(`
+      INSERT INTO referral_indicadores(usuario_id, oficina_id, tipo, status, nome, email, telefone, aceite_termos, aceite_em)
+      VALUES($1, NULL, 'outro', 'ativo', $2, $3, $4, true, NOW()) RETURNING id
+    `, [usuario.id, nomeVal, emailVal, whatsappVal]);
+
+    // Gera código único
+    let codigo;
+    for (let i = 0; i < 20; i++) {
+      const tentativa = 'C10-' + crypto.randomBytes(3).toString('hex').toUpperCase();
+      const existe = await pgOne('SELECT id FROM referral_codigos WHERE codigo=$1', [tentativa]);
+      if (!existe) { codigo = tentativa; break; }
+    }
+    if (!codigo) return res.status(500).json({ error: 'Erro ao gerar código. Tente novamente.' });
+
+    await pgRun('INSERT INTO referral_codigos(indicador_id, codigo) VALUES($1,$2)', [indicador.id, codigo]);
+
+    // Gera token JWT para login automático pós-cadastro
+    const token = jwt.sign(
+      { id: usuario.id, perfil: 'indicador', oficina_id: null, nome: nomeVal },
+      process.env.JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
+    log.info('referral_indicador_cadastrado', { usuario_id: usuario.id, indicador_id: indicador.id, codigo });
+
+    res.status(201).json({
+      token,
+      codigo,
+      link: `https://www.chave10.tech/?ref=${codigo}`,
+      usuario: { id: usuario.id, nome: nomeVal, email: emailVal, perfil: 'indicador' },
+    });
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'Este e-mail já está cadastrado.' });
+    require('./utils/logger').error('referral_cadastro', err);
+    res.status(500).json({ error: 'Erro interno ao criar conta' });
   }
 });
 

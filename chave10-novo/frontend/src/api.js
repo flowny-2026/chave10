@@ -231,5 +231,16 @@ export async function registrarCliqueReferral(codigo) {
   } catch { /* silencioso — não bloqueia o usuário */ }
 }
 
+export async function cadastrarIndicador(dados) {
+  const res = await fetch((import.meta.env.VITE_API_URL || 'http://localhost:3001/api') + '/public/referral/cadastro', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(dados),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw { ...data, status: res.status };
+  return data;
+}
+
 // Exportar funções de storage para uso em outras partes da aplicação
 export { saveToken, saveUser, getToken, getFromStorage, saveToStorage };
