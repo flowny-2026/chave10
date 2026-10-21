@@ -22,18 +22,18 @@ const STATUS_COM = {
 function Card({ label, value, sub, highlight }) {
   return (
     <div style={{
-      background: 'var(--card-bg, #1e2d3d)',
-      border: '1px solid var(--gray-700, rgba(255,255,255,.1))',
+      background: 'var(--bg-card)',
+      border: '1px solid var(--gray-200)',
       borderRadius: 'var(--r-md, 10px)',
       padding: '18px 20px',
     }}>
-      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--gray-400, #9CA3AF)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 6 }}>{label}</div>
+      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--gray-400)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 6 }}>{label}</div>
       <div style={{
         fontFamily: 'Poppins, sans-serif',
         fontSize: 22, fontWeight: 800,
-        color: highlight ? '#F97316' : 'var(--gray-100, #F3F4F6)',
+        color: highlight ? 'var(--accent, #F97316)' : 'var(--gray-800)',
       }}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: 'var(--gray-400, #9CA3AF)', marginTop: 4 }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 11, color: 'var(--gray-400)', marginTop: 4 }}>{sub}</div>}
     </div>
   );
 }
@@ -150,14 +150,14 @@ export default function AppIndicacoes() {
 
       {/* ── Bloco do link ── */}
       <div className="card" style={{ marginBottom: 20 }}>
-        <div style={{ marginBottom: 20, paddingBottom: 20, borderBottom: '1px solid rgba(255,255,255,.08)' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gray-300, #D1D5DB)', marginBottom: 4 }}>Seu link exclusivo</div>
+        <div style={{ marginBottom: 20, paddingBottom: 20, borderBottom: '1px solid var(--gray-100)' }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gray-700)', marginBottom: 4 }}>Seu link exclusivo</div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <div style={{
               flex: 1, minWidth: 200,
-              background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.1)',
+              background: 'var(--gray-50)', border: '1px solid var(--gray-200)',
               borderRadius: 'var(--r-sm)', padding: '10px 14px',
-              fontSize: 13, fontFamily: 'monospace', color: '#F97316',
+              fontSize: 13, fontFamily: 'monospace', color: 'var(--accent, #F97316)',
               wordBreak: 'break-all',
             }}>
               {link}
@@ -173,9 +173,9 @@ export default function AppIndicacoes() {
               WhatsApp
             </button>
           </div>
-          <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--gray-400, #9CA3AF)' }}>
+          <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--gray-500)' }}>
             <span>Código:</span>
-            <code style={{ background: 'rgba(255,255,255,.08)', padding: '2px 8px', borderRadius: 4, fontWeight: 700, color: '#F97316' }}>
+            <code style={{ background: 'var(--gray-100)', padding: '2px 8px', borderRadius: 4, fontWeight: 700, color: 'var(--accent, #F97316)' }}>
               {dados.codigo}
             </code>
           </div>
@@ -183,16 +183,16 @@ export default function AppIndicacoes() {
 
         {/* Mensagem pronta */}
         <div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gray-300, #D1D5DB)', marginBottom: 8 }}>Mensagem pronta para divulgar</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gray-700)', marginBottom: 8 }}>Mensagem pronta para divulgar</div>
           <div style={{
-            background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.1)',
+            background: 'var(--gray-50)', border: '1px solid var(--gray-200)',
             borderRadius: 'var(--r-sm)', padding: '14px 16px',
-            fontSize: 13, color: 'var(--gray-300, #D1D5DB)', lineHeight: 1.65,
+            fontSize: 13, color: 'var(--gray-700)', lineHeight: 1.65,
           }}>
-            Estou usando o <strong style={{ color: '#fff' }}>Chave 10</strong> para gerenciar minha oficina e recomendo muito!
+            Estou usando o <strong>Chave 10</strong> para gerenciar minha oficina e recomendo muito!
             Organize suas OS, orçamentos e faturamento em um só lugar.{' '}
-            <strong style={{ color: '#fff' }}>Experimente grátis por 7 dias:</strong>{' '}
-            <span style={{ color: '#F97316' }}>{link}</span>
+            <strong>Experimente grátis por 7 dias:</strong>{' '}
+            <span style={{ color: 'var(--accent, #F97316)' }}>{link}</span>
           </div>
         </div>
       </div>
@@ -210,7 +210,7 @@ export default function AppIndicacoes() {
 
       {/* ── Histórico de indicações ── */}
       <div className="card">
-        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--gray-200, #E5E7EB)', marginBottom: 16 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--gray-800)', marginBottom: 16 }}>
           Histórico de indicações
         </div>
 

@@ -25,7 +25,7 @@ function Confirm({ msg, onOk, onCancel }) {
     <div className="modal-overlay open">
       <div className="modal" style={{ maxWidth: 400 }}>
         <div className="modal-body" style={{ padding: 28, textAlign: 'center' }}>
-          <p style={{ fontSize: 15, marginBottom: 24, color: 'var(--gray-300,#D1D5DB)' }}>{msg}</p>
+          <p style={{ fontSize: 15, marginBottom: 24, color: 'var(--gray-700)' }}>{msg}</p>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
             <button className="btn btn-outline" onClick={onCancel}>Cancelar</button>
             <button className="btn btn-primary" onClick={onOk}>Confirmar</button>
@@ -168,7 +168,7 @@ export default function AdminReferral() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '1px solid rgba(255,255,255,.1)', paddingBottom: 0 }}>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '1px solid var(--gray-200)', paddingBottom: 0 }}>
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             style={{
@@ -196,9 +196,9 @@ export default function AdminReferral() {
               { label: 'Comissões aprovadas',  val: fmt.currency(d.comissoes_aprovadas), highlight: true },
               { label: 'Comissões pagas',      val: fmt.currency(d.comissoes_pagas),     highlight: true },
             ].map((c, i) => (
-              <div key={i} style={{ background: 'var(--bg-card,#1e2d3d)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 'var(--r-md,10px)', padding: '16px 18px' }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray-400,#9CA3AF)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 6 }}>{c.label}</div>
-                <div style={{ fontFamily: 'Poppins,sans-serif', fontSize: 20, fontWeight: 800, color: c.highlight ? '#F97316' : 'var(--gray-100,#F3F4F6)' }}>{c.val}</div>
+              <div key={i} style={{ background: 'var(--bg-card)', border: '1px solid var(--gray-200)', borderRadius: 'var(--r-md,10px)', padding: '16px 18px' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray-400)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 6 }}>{c.label}</div>
+                <div style={{ fontFamily: 'Poppins,sans-serif', fontSize: 20, fontWeight: 800, color: c.highlight ? 'var(--accent,#F97316)' : 'var(--gray-800)' }}>{c.val}</div>
               </div>
             ))}
           </div>
@@ -211,7 +211,7 @@ export default function AdminReferral() {
                 <tbody>
                   {(dashboard?.recentes || []).map(r => (
                     <tr key={r.id}>
-                      <td style={{ fontSize: 12, color: 'var(--gray-400,#9CA3AF)' }}>{fmt.date(r.criado_em)}</td>
+                      <td style={{ fontSize: 12, color: 'var(--gray-500)' }}>{fmt.date(r.criado_em)}</td>
                       <td>{r.indicador_nome}</td>
                       <td>{r.indicado_nome}</td>
                       <td><span className={`badge ${STATUS_IND[r.status] || 'badge-gray'}`}>{r.status}</span></td>
@@ -246,7 +246,7 @@ export default function AdminReferral() {
                       </div>
                     </td>
                     <td><span className="badge badge-blue">{TIPO_LABEL[p.tipo] || p.tipo}</span></td>
-                    <td><code style={{ fontSize: 12, background: 'rgba(255,255,255,.08)', padding: '2px 6px', borderRadius: 4, color: '#F97316' }}>{p.codigo || '—'}</code></td>
+                    <td><code style={{ fontSize: 12, background: 'var(--gray-100)', padding: '2px 6px', borderRadius: 4, color: 'var(--accent,#F97316)' }}>{p.codigo || '—'}</code></td>
                     <td style={{ textAlign: 'center' }}>{p.total_cliques || 0}</td>
                     <td style={{ textAlign: 'center' }}>{p.total_indicacoes || 0}</td>
                     <td style={{ textAlign: 'center' }}>{p.total_pagantes || 0}</td>
@@ -280,7 +280,7 @@ export default function AdminReferral() {
               <tbody>
                 {indicacoes.map(ind => (
                   <tr key={ind.id}>
-                    <td style={{ fontSize: 12, color: 'var(--gray-400,#9CA3AF)' }}>{fmt.date(ind.criado_em)}</td>
+                    <td style={{ fontSize: 12, color: 'var(--gray-500)' }}>{fmt.date(ind.criado_em)}</td>
                     <td>
                       <div style={{ fontWeight: 600 }}>{ind.indicador_nome}</div>
                       <div style={{ fontSize: 11, color: 'var(--gray-400)' }}>{ind.indicador_tipo}</div>
@@ -337,7 +337,7 @@ export default function AdminReferral() {
               <tbody>
                 {comissoes.map(com => (
                   <tr key={com.id}>
-                    <td style={{ fontSize: 12, color: 'var(--gray-400,#9CA3AF)' }}>{fmt.date(com.criado_em)}</td>
+                    <td style={{ fontSize: 12, color: 'var(--gray-500)' }}>{fmt.date(com.criado_em)}</td>
                     <td style={{ fontWeight: 600 }}>{com.indicador_nome}</td>
                     <td>{com.indicado_nome}</td>
                     <td style={{ textAlign: 'right', fontWeight: 700 }}>{fmt.currency(com.valor)}</td>
