@@ -699,7 +699,7 @@ export default function Layout({ area }) {
                   </svg>
                   <div>
                     <div style={{ fontSize: 12, fontWeight: 700, color: '#F97316', lineHeight: 1.2 }}>Assinar Plano</div>
-                    <div style={{ fontSize: 10, color: 'rgba(249,115,22,.7)', lineHeight: 1.2 }}>R$29/mês — oferta limitada</div>
+                    <div style={{ fontSize: 10, color: 'rgba(249,115,22,.7)', lineHeight: 1.2 }}>R$49/mês — oferta limitada</div>
                   </div>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#F97316" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 'auto' }}>
                     <polyline points="9 18 15 12 9 6"/>

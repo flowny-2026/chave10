@@ -352,8 +352,8 @@ export default function Landing() {
             <div className="lp-pricing-badge">Oferta de lançamento — vagas limitadas</div>
             <h3 className="lp-pricing-name">Plano Completo</h3>
             <div className="lp-pricing-price">
-              <span className="lp-pricing-from">de <s>R$59</s> por</span>
-              R$29<span className="lp-pricing-mo">/mês</span>
+              <span className="lp-pricing-from">de <s>R$79</s> por</span>
+              R$49<span className="lp-pricing-mo">/mês</span>
             </div>
             <ul className="lp-pricing-features">
               {[
