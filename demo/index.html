@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chave 10 — A ferramenta que faltava na sua oficina</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="landing.css" />
+</head>
+<body>
+
+<!-- LANDING PAGE -->
+<div id="landingPage">
+
+  <!-- NAV -->
+  <nav class="lp-nav">
+    <div class="lp-nav-inner">
+      <div class="lp-logo">Chave <span class="lp-logo-accent">10</span></div>
+      <button class="lp-nav-cta" onclick="irParaLogin()">Teste grátis 7 dias</button>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="lp-hero">
+    <div class="lp-container">
+      <div class="lp-hero-content lp-reveal">
+        <h1 class="lp-hero-title">Mais controle. Menos bagunça.<br><span>Mais lucro para sua oficina.</span></h1>
+        <p class="lp-hero-sub">Organize clientes, ordens de serviço e faturamento em um único sistema. Use pelo computador ou celular.</p>
+        <div class="lp-hero-actions">
+          <button class="lp-btn-primary" onclick="irParaLogin()">Teste grátis por 7 dias</button>
+          <a class="lp-btn-outline" href="https://wa.me/5516992915540" target="_blank" rel="noopener">Ver demonstração</a>
+        </div>
+        <div class="lp-hero-trust">
+          <span>✓ Sem cartão de crédito</span>
+          <span>✓ Configuração rápida</span>
+          <span>✓ Suporte humanizado</span>
+        </div>
+      </div>
+      <div class="lp-hero-mockup lp-reveal lp-reveal-delay-2">
+        <div class="lp-mockup-laptop">
+          <div class="lp-mockup-screen">
+            <div class="lp-mockup-card"></div>
+            <div class="lp-mockup-card"></div>
+            <div class="lp-mockup-card"></div>
+            <div class="lp-mockup-card"></div>
+          </div>
+        </div>
+        <div class="lp-mockup-phone">
+          <div class="lp-mockup-phone-bar"></div>
+          <div class="lp-mockup-phone-line"></div>
+          <div class="lp-mockup-phone-line"></div>
+          <div class="lp-mockup-phone-bar"></div>
+          <div class="lp-mockup-phone-line"></div>
+          <div class="lp-mockup-phone-line"></div>
+          <div class="lp-mockup-phone-line"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PAIN POINTS -->
+  <section class="lp-pain">
+    <div class="lp-container">
+      <div class="lp-pain-header lp-reveal">
+        <p class="lp-section-label">O problema</p>
+        <h2 class="lp-section-title">Sua oficina passa por isso?</h2>
+      </div>
+      <div class="lp-pain-grid">
+        <div class="lp-pain-card lp-reveal">
+          <div class="lp-pain-icon">📋</div>
+          <h3>Papel para todo lado</h3>
+          <p>Fichas, anotações e recibos que se perdem com o tempo.</p>
+        </div>
+        <div class="lp-pain-card lp-reveal lp-reveal-delay-1">
+          <div class="lp-pain-icon">💸</div>
+          <h3>Orçamentos perdidos</h3>
+          <p>Clientes que somem porque o orçamento nunca chegou.</p>
+        </div>
+        <div class="lp-pain-card lp-reveal lp-reveal-delay-2">
+          <div class="lp-pain-icon">📞</div>
+          <h3>Cliente perguntando do carro</h3>
+          <p>Ligações constantes pedindo status que você não tem na ponta da língua.</p>
+        </div>
+        <div class="lp-pain-card lp-reveal lp-reveal-delay-3">
+          <div class="lp-pain-icon">📊</div>
+          <h3>Falta controle financeiro</h3>
+          <p>Não sabe quanto entrou, quanto saiu, nem o lucro real do mês.</p>
+        </div>
+        <div class="lp-pain-card lp-reveal lp-reveal-delay-4">
+          <div class="lp-pain-icon">🗂️</div>
+          <h3>Informações espalhadas</h3>
+          <p>Dados em cadernos, WhatsApp, planilhas e cabeça do dono.</p>
+        </div>
+        <div class="lp-pain-card lp-reveal lp-reveal-delay-5">
+          <div class="lp-pain-icon">⏰</div>
+          <h3>Tempo perdido</h3>
+          <p>Horas gastas procurando informação que deveria estar em um clique.</p>
+        </div>
+      </div>
+      <p class="lp-pain-resolve lp-reveal">O <span>Chave 10</span> resolve tudo isso.</p>
+    </div>
+  </section>
+
+  <!-- BENEFITS (Editorial) -->
+  <section class="lp-benefits">
+    <div class="lp-container">
+      <div class="lp-benefit-line lp-reveal">Nunca mais perca um orçamento.</div>
+      <div class="lp-benefit-line lp-reveal lp-reveal-delay-1">Saiba exatamente quanto faturou.</div>
+      <div class="lp-benefit-line lp-reveal lp-reveal-delay-2">Atenda seus clientes mais rápido.</div>
+      <div class="lp-benefit-line lp-reveal lp-reveal-delay-3">Tenha toda a oficina organizada.</div>
+    </div>
+  </section>
+
+  <!-- MOBILE -->
+  <section class="lp-mobile">
+    <div class="lp-container">
+      <div class="lp-mobile-content lp-reveal">
+        <p class="lp-section-label">Mobilidade</p>
+        <h2 class="lp-section-title">Sua oficina na palma da mão.</h2>
+        <ul class="lp-mobile-list">
+          <li>Abrir OS de qualquer lugar</li>
+          <li>Consultar dados de clientes</li>
+          <li>Acompanhar faturamento em tempo real</li>
+          <li>Acessar pelo celular, tablet ou computador</li>
+        </ul>
+      </div>
+      <div class="lp-mobile-mockup lp-reveal lp-reveal-delay-2">
+        <div class="lp-phone-frame">
+          <div class="lp-phone-screen">
+            <div class="lp-phone-row lp-phone-row--accent"></div>
+            <div class="lp-phone-row"></div>
+            <div class="lp-phone-row"></div>
+            <div class="lp-phone-row lp-phone-row--accent"></div>
+            <div class="lp-phone-row"></div>
+            <div class="lp-phone-row"></div>
+            <div class="lp-phone-row"></div>
+            <div class="lp-phone-row lp-phone-row--accent"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="lp-how">
+    <div class="lp-container">
+      <div class="lp-how-header lp-reveal">
+        <p class="lp-section-label">Como funciona</p>
+        <h2 class="lp-section-title">Simples como deve ser.</h2>
+      </div>
+      <div class="lp-timeline">
+        <div class="lp-timeline-step lp-reveal">
+          <div class="lp-timeline-num">1</div>
+          <h4>Cadastre clientes</h4>
+          <p>Registre clientes e veículos em segundos.</p>
+        </div>
+        <div class="lp-timeline-step lp-reveal lp-reveal-delay-1">
+          <div class="lp-timeline-num">2</div>
+          <h4>Crie OS</h4>
+          <p>Abra ordens de serviço e envie orçamentos.</p>
+        </div>
+        <div class="lp-timeline-step lp-reveal lp-reveal-delay-2">
+          <div class="lp-timeline-num">3</div>
+          <h4>Controle financeiro</h4>
+          <p>Acompanhe entradas, saídas e lucro real.</p>
+        </div>
+        <div class="lp-timeline-step lp-reveal lp-reveal-delay-3">
+          <div class="lp-timeline-num">4</div>
+          <h4>Cresça com organização</h4>
+          <p>Relatórios e metas para crescer com dados.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPARISON -->
+  <section class="lp-compare">
+    <div class="lp-container">
+      <div class="lp-compare-header lp-reveal">
+        <h2 class="lp-section-title">Antes e depois do Chave 10</h2>
+      </div>
+      <div class="lp-compare-grid">
+        <div class="lp-compare-col lp-compare-col--without lp-reveal">
+          <h3>✕ Sem Chave 10</h3>
+          <ul class="lp-compare-list">
+            <li>Anotações em papel que se perdem</li>
+            <li>Orçamentos esquecidos no WhatsApp</li>
+            <li>Sem ideia do faturamento real</li>
+            <li>Cliente ligando pedindo status</li>
+            <li>Informações espalhadas em vários lugares</li>
+          </ul>
+        </div>
+        <div class="lp-compare-col lp-compare-col--with lp-reveal lp-reveal-delay-1">
+          <h3>✓ Com Chave 10</h3>
+          <ul class="lp-compare-list">
+            <li>Tudo digital, organizado e acessível</li>
+            <li>Orçamentos enviados em segundos</li>
+            <li>Dashboard com faturamento em tempo real</li>
+            <li>Status atualizado para cada OS</li>
+            <li>Um só sistema, qualquer dispositivo</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section class="lp-pricing">
+    <div class="lp-container">
+      <div class="lp-pricing-header lp-reveal">
+        <p class="lp-section-label">Investimento</p>
+        <h2 class="lp-section-title">Preço justo para sua oficina crescer.</h2>
+      </div>
+      <div class="lp-pricing-card lp-reveal">
+        <div class="lp-pricing-badge">Oferta de lançamento — apenas 10 vagas</div>
+        <h3 class="lp-pricing-name">Plano Fundadores</h3>
+        <div class="lp-pricing-price">R$29<span>/mês</span></div>
+        <p class="lp-pricing-old">Preço normal: R$59/mês</p>
+        <ul class="lp-pricing-features">
+          <li>Clientes e veículos ilimitados</li>
+          <li>Ordens de serviço ilimitadas</li>
+          <li>Orçamentos via WhatsApp</li>
+          <li>Dashboard com métricas em tempo real</li>
+          <li>Acesso multi-dispositivo</li>
+          <li>Suporte prioritário por WhatsApp</li>
+        </ul>
+        <button class="lp-btn-primary" onclick="irParaLogin()" style="width:100%;justify-content:center;">Teste grátis por 7 dias</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="lp-faq">
+    <div class="lp-container">
+      <div class="lp-faq-header lp-reveal">
+        <p class="lp-section-label">Dúvidas</p>
+        <h2 class="lp-section-title">Perguntas frequentes</h2>
+      </div>
+      <div class="lp-faq-list">
+        <div class="lp-faq-item lp-reveal">
+          <button class="lp-faq-question" onclick="toggleFaq(this)">
+            Preciso instalar alguma coisa?
+            <span class="lp-faq-icon">+</span>
+          </button>
+          <div class="lp-faq-answer"><p>Não. O Chave 10 funciona direto no navegador, sem instalar nada. Acesse pelo computador, tablet ou celular.</p></div>
+        </div>
+        <div class="lp-faq-item lp-reveal lp-reveal-delay-1">
+          <button class="lp-faq-question" onclick="toggleFaq(this)">
+            Meus dados ficam seguros?
+            <span class="lp-faq-icon">+</span>
+          </button>
+          <div class="lp-faq-answer"><p>Sim. Utilizamos criptografia e backups automáticos diários. Seus dados ficam protegidos e acessíveis apenas por você.</p></div>
+        </div>
+        <div class="lp-faq-item lp-reveal lp-reveal-delay-2">
+          <button class="lp-faq-question" onclick="toggleFaq(this)">
+            Posso cancelar a qualquer momento?
+            <span class="lp-faq-icon">+</span>
+          </button>
+          <div class="lp-faq-answer"><p>Sim. Sem fidelidade, sem multa. Cancele quando quiser diretamente pelo sistema.</p></div>
+        </div>
+        <div class="lp-faq-item lp-reveal lp-reveal-delay-3">
+          <button class="lp-faq-question" onclick="toggleFaq(this)">
+            Funciona para oficinas pequenas?
+            <span class="lp-faq-icon">+</span>
+          </button>
+          <div class="lp-faq-answer"><p>Com certeza. O Chave 10 foi feito pensando em oficinas de todos os tamanhos, do mecânico solo à equipe com vários funcionários.</p></div>
+        </div>
+        <div class="lp-faq-item lp-reveal lp-reveal-delay-4">
+          <button class="lp-faq-question" onclick="toggleFaq(this)">
+            Tem suporte se eu precisar de ajuda?
+            <span class="lp-faq-icon">+</span>
+          </button>
+          <div class="lp-faq-answer"><p>Sim. Suporte humanizado via WhatsApp. Respondemos rápido e ajudamos você a configurar tudo.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section class="lp-final-cta">
+    <div class="lp-container">
+      <h2 class="lp-reveal">Organize sua oficina hoje.</h2>
+      <button class="lp-btn-primary lp-reveal lp-reveal-delay-1" onclick="irParaLogin()">Teste grátis por 7 dias</button>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="lp-footer">
+    <div class="lp-container">
+      <div class="lp-footer-inner">
+        <div class="lp-footer-brand">
+          <div class="lp-footer-logo">Chave <span>10</span></div>
+          <span>A ferramenta que faltava na sua oficina</span>
+        </div>
+        <div class="lp-footer-links">
+          <a href="https://instagram.com" target="_blank" rel="noopener">Instagram</a>
+          <a href="https://wa.me/5516992915540" target="_blank" rel="noopener">WhatsApp</a>
+          <a href="mailto:contato@chave10.com.br">Email</a>
+          <a href="#">Política de Privacidade</a>
+          <a href="#">Termos de Uso</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scroll Reveal Script -->
+  <script>
+    (function() {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+          }
+        });
+      }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+
+      document.querySelectorAll('.lp-reveal').forEach(el => observer.observe(el));
+    })();
+
+    function toggleFaq(btn) {
+      const item = btn.parentElement;
+      const wasActive = item.classList.contains('active');
+      document.querySelectorAll('.lp-faq-item').forEach(i => i.classList.remove('active'));
+      if (!wasActive) item.classList.add('active');
+    }
+  </script>
+
+</div>
+
+<!-- LOGIN -->
+<div class="login-screen hidden" id="loginScreen">
+  <div class="login-left">
+    <div class="login-left-content">
+      <div class="login-brand-mark">
+        <div>
+          <div class="login-brand-name"><span>Chave</span> <span class="accent">10</span></div>
+          <div class="login-brand-slogan">A ferramenta que faltava na sua oficina</div>
+        </div>
+      </div>
+      <h2 class="login-headline">Organize sua oficina.<br/>Cresça com dados.</h2>
+      <p class="login-desc">Controle ordens de serviço, clientes, veículos e faturamento em um só lugar.</p>
+      <div class="login-features">
+        <div class="login-feat"><span class="feat-dot"></span>Dashboard com métricas em tempo real</div>
+        <div class="login-feat"><span class="feat-dot"></span>Orçamentos enviados pelo WhatsApp</div>
+        <div class="login-feat"><span class="feat-dot"></span>Histórico completo de cada veículo</div>
+        <div class="login-feat"><span class="feat-dot"></span>Relatórios de desempenho da oficina</div>
+      </div>
+    </div>
+  </div>
+  <div class="login-right">
+    <div class="login-box">
+      <div class="login-mobile-brand">
+        <div>
+          <div class="login-mobile-name">Chave <span class="accent">10</span></div>
+          <div class="login-mobile-slogan">A ferramenta que faltava na sua oficina</div>
+        </div>
+      </div>
+      <h1 class="login-title">Acesse sua oficina</h1>
+      <p class="login-subtitle">O sistema completo para organizar sua oficina.</p>
+      <div class="form-group" style="margin-bottom:14px">
+        <label>E-mail ou usuário</label>
+        <div class="input-icon-wrap">
+          <svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <input id="loginUser" type="text" placeholder="admin" />
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:8px">
+        <label>Senha</label>
+        <div class="input-icon-wrap">
+          <svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <input id="loginPass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()" />
+        </div>
+      </div>
+      <div class="login-hint">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Demo: <strong>teste</strong> / <strong>1234</strong>
+      </div>
+      <button class="btn btn-primary login-btn" onclick="doLogin()">
+        Entrar na conta
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- APP SHELL -->
+<div class="app-shell" id="appShell" style="display:none">
+
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-text">
+        <span class="brand-name">Chave <span class="brand-accent">10</span></span>
+        <span class="brand-slogan">A ferramenta que faltava na sua oficina</span>
+      </div>
+    </div>
+
+    <div class="sidebar-section-label">Principal</div>
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active" data-page="dashboard">
+        <span class="nav-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span>
+        <span>Dashboard</span>
+      </a>
+      <a href="#" class="nav-item" data-page="clientes">
+        <span class="nav-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+        <span>Clientes</span>
+      </a>
+      <a href="#" class="nav-item" data-page="veiculos">
+        <span class="nav-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></span>
+        <span>Veículos</span>
+      </a>
+      <a href="#" class="nav-item" data-page="ordens">
+        <span class="nav-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span>
+        <span>Ordens de Serviço</span>
+      </a>
+      <a href="#" class="nav-item" data-page="orcamentos">
+        <span class="nav-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>
+        <span>Orçamentos</span>
+      </a>
+      <a href="#" class="nav-item" data-page="agenda">
+        <span class="nav-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+        <span>Agenda</span>
+        <span class="nav-badge">Novo</span>
+      </a>
+      <a href="#" class="nav-item" data-page="mensagens">
+        <span class="nav-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+        <span>Mensagens</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-section-label">Gestão</div>
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item" data-page="financeiro">
+        <span class="nav-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
+        <span>Financeiro</span>
+      </a>
+      <a href="#" class="nav-item" data-page="relatorios">
+        <span class="nav-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
+        <span>Relatórios</span>
+      </a>
+      <a href="#" class="nav-item" data-page="lembretes">
+        <span class="nav-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>
+        <span>Lembretes</span>
+      </a>
+      <a href="#" class="nav-item" data-page="estoque">
+        <span class="nav-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span>
+        <span>Estoque</span>
+      </a>
+      <a href="#" class="nav-item" data-page="configuracoes">
+        <span class="nav-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+        <span>Configurações</span>
+      </a>
+
+      <a href="#" class="nav-item nav-item-planos" data-page="planos">
+        <span class="nav-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>
+        <span>Planos</span>
+        <span class="nav-badge nav-badge-promo">oferta</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-avatar">A</div>
+        <div class="sidebar-user-info">
+          <span class="sidebar-user-name">Administrador</span>
+          <span class="sidebar-user-role">Gerente</span>
+        </div>
+        <button class="btn-logout-icon" onclick="doLogout()" title="Sair">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+      </div>
+      <span class="sidebar-version">v1.0 MVP</span>
+    </div>
+  </aside>
+
+  <!-- MAIN AREA -->
+  <div class="main-area">
+    <header class="topbar">
+      <button class="menu-toggle" id="menuToggle">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-logo">
+        <span class="topbar-name">Chave <span class="accent">10</span></span>
+      </div>
+      <div class="topbar-search">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" placeholder="Buscar cliente, OS, veículo..." id="globalSearch" oninput="globalSearchHandler(this.value)" onblur="setTimeout(()=>document.getElementById('globalResults').style.display='none',200)" />
+        <div class="global-results" id="globalResults"></div>
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-quick-actions">
+          <button class="btn btn-primary btn-sm topbar-action-btn" onclick="navigate('ordens');setTimeout(novaOrdem,100)" title="Nova OS">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+            <span class="action-label">Nova OS</span>
+          </button>
+          <button class="btn btn-outline btn-sm topbar-action-btn" onclick="navigate('clientes');setTimeout(formCliente,100)" title="Novo Cliente">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+            <span class="action-label">Cliente</span>
+          </button>
+          <button class="btn btn-outline btn-sm topbar-action-btn" onclick="navigate('orcamentos');setTimeout(formOrcamento,100)" title="Novo Orçamento">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+            <span class="action-label">Orçamento</span>
+          </button>
+        </div>
+        <div class="topbar-divider"></div>
+        <button class="topbar-btn" title="Notificações" onclick="navigate('lembretes')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span class="topbar-badge" id="notifBadge" style="display:none"></span>
+        </button>
+        <div class="topbar-divider"></div>
+        <div class="user-menu-wrap" id="userMenuWrap">
+          <button class="topbar-user" onclick="toggleUserMenu()" id="userMenuBtn">
+            <div class="topbar-avatar">A</div>
+            <div class="topbar-user-info">
+              <span class="topbar-user-name">Administrador</span>
+              <span class="topbar-user-role">Gerente</span>
+            </div>
+            <svg style="margin-left:4px;color:var(--gray-400);flex-shrink:0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="user-dropdown" id="userDropdown">
+            <div class="udrop-header">
+              <div class="udrop-avatar">A</div>
+              <div>
+                <div class="udrop-name">Administrador</div>
+                <div class="udrop-role">Gerente · admin</div>
+              </div>
+            </div>
+            <div class="udrop-divider"></div>
+            <button class="udrop-item" onclick="closeUserMenu();navigate('dashboard')">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              Dashboard
+            </button>
+            <button class="udrop-item" onclick="closeUserMenu();navigate('configuracoes')">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              Configurações da oficina
+            </button>
+            <button class="udrop-item" onclick="closeUserMenu();navigate('relatorios')">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              Relatórios
+            </button>
+            <div class="udrop-divider"></div>
+            <button class="udrop-item udrop-item-danger" onclick="closeUserMenu();doLogout()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              Sair da conta
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+    <main class="main-content" id="mainContent"></main>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <h2 id="modalTitle"></h2>
+      <button class="modal-close" id="modalClose">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- CHART TOOLTIP -->
+<div id="chartTip"></div>
+
+<script src="data.js?v=3"></script>
+<script src="app.js?v=3"></script>
+</body>
+</html>
