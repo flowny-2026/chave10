@@ -84,21 +84,39 @@ router.get('/me', async (req, res) => {
       [indicador.id]
     );
 
+    // Separa contagens de indicações e somas de comissões em CTEs para evitar
+    // produto cartesiano (fan-out) entre referral_indicacoes e referral_comissoes.
     const totais = await queryOne(`
+      WITH ind_counts AS (
+        SELECT
+          COUNT(DISTINCT id)                                    AS indicacoes,
+          COUNT(DISTINCT id) FILTER (WHERE status='trial')     AS trials,
+          COUNT(DISTINCT id) FILTER (WHERE status='pagante')   AS pagantes
+        FROM referral_indicacoes
+        WHERE indicador_id = $1
+          AND status <> 'cancelado'
+      ),
+      com_sums AS (
+        SELECT
+          COALESCE(SUM(valor) FILTER (WHERE status='aguardando_validacao'), 0) AS comissao_pendente,
+          COALESCE(SUM(valor) FILTER (WHERE status='aprovada'),             0) AS comissao_aprovada,
+          COALESCE(SUM(valor) FILTER (WHERE status='paga'),                 0) AS comissao_paga
+        FROM referral_comissoes
+        WHERE indicador_id = $1
+      )
       SELECT
-        COALESCE(rc.total_cliques,0)                                                AS cliques,
-        COUNT(DISTINCT ri.id)                                                        AS indicacoes,
-        COUNT(DISTINCT ri.id) FILTER (WHERE ri.status='trial')                      AS trials,
-        COUNT(DISTINCT ri.id) FILTER (WHERE ri.status='pagante')                    AS pagantes,
-        COALESCE(SUM(com.valor) FILTER (WHERE com.status='aguardando_validacao'),0) AS comissao_pendente,
-        COALESCE(SUM(com.valor) FILTER (WHERE com.status='aprovada'),0)             AS comissao_aprovada,
-        COALESCE(SUM(com.valor) FILTER (WHERE com.status='paga'),0)                 AS comissao_paga
+        COALESCE(rc.total_cliques, 0) AS cliques,
+        ic.indicacoes,
+        ic.trials,
+        ic.pagantes,
+        cs.comissao_pendente,
+        cs.comissao_aprovada,
+        cs.comissao_paga
       FROM referral_indicadores ind
-      LEFT JOIN referral_codigos rc    ON rc.indicador_id  = ind.id
-      LEFT JOIN referral_indicacoes ri ON ri.indicador_id = ind.id
-      LEFT JOIN referral_comissoes com ON com.indicador_id = ind.id
+      LEFT JOIN referral_codigos rc ON rc.indicador_id = ind.id AND rc.ativo = true
+      CROSS JOIN ind_counts ic
+      CROSS JOIN com_sums cs
       WHERE ind.id = $1
-      GROUP BY ind.id, rc.total_cliques
     `, [indicador.id]);
 
     res.json({

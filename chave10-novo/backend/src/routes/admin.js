@@ -148,8 +148,52 @@ router.post('/pagamentos', validatePagamento, async (req,res) => {
   try {
     const {oficina_id,valor,data_pagamento,novo_vencimento,forma_pagamento,observacao}=req.body;
     if(!oficina_id) return res.status(400).json({error:'oficina_id obrigatório'});
-    await run("INSERT INTO pagamentos(oficina_id,valor,data_pagamento,novo_vencimento,forma_pagamento,observacao,confirmado_por) VALUES($1,$2,$3,$4,$5,$6,$7)",[oficina_id,valor,data_pagamento||new Date().toISOString().split('T')[0],novo_vencimento,forma_pagamento||'pix',observacao||null,String(req.user.id)]);
+
+    const pag = await queryOne(
+      "INSERT INTO pagamentos(oficina_id,valor,data_pagamento,novo_vencimento,forma_pagamento,observacao,confirmado_por) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id",
+      [oficina_id,valor,data_pagamento||new Date().toISOString().split('T')[0],novo_vencimento,forma_pagamento||'pix',observacao||null,String(req.user.id)]
+    );
     await run("UPDATE oficinas SET status_assinatura='active',data_vencimento=$1 WHERE id=$2",[novo_vencimento,oficina_id]);
+
+    // ── Automação de indicação ────────────────────────────────────────
+    // Se a oficina foi indicada, avança o status da indicação e gera comissão.
+    // Valor fixo por cliente pagante: R$ 24,95 (mesmo valor do simulador).
+    const COMISSAO_UNIT = 24.95;
+    try {
+      const indicacao = await queryOne(
+        "SELECT * FROM referral_indicacoes WHERE oficina_id=$1 AND status <> 'cancelado'",
+        [+oficina_id]
+      );
+      if (indicacao) {
+        // Avança para 'pagante' se ainda não estava (idempotente nos demais casos)
+        if (indicacao.status !== 'pagante') {
+          await run(
+            "UPDATE referral_indicacoes SET status='pagante', convertido_em=COALESCE(convertido_em,NOW()) WHERE id=$1",
+            [indicacao.id]
+          );
+        }
+        // Vincula o pagamento à indicação para rastreabilidade
+        await run("UPDATE pagamentos SET indicacao_id=$1 WHERE id=$2", [indicacao.id, pag.id]);
+
+        // Gera comissão automaticamente (idempotente via UNIQUE pagamento_id)
+        const jaExiste = await queryOne(
+          "SELECT id FROM referral_comissoes WHERE pagamento_id=$1",
+          [pag.id]
+        );
+        if (!jaExiste) {
+          await run(
+            "INSERT INTO referral_comissoes(indicacao_id,indicador_id,pagamento_id,valor,status) VALUES($1,$2,$3,$4,'aguardando_validacao')",
+            [indicacao.id, indicacao.indicador_id, pag.id, COMISSAO_UNIT]
+          );
+          log.info('referral_comissao_gerada_auto', { oficina_id, pagamento_id: pag.id, valor: COMISSAO_UNIT });
+        }
+      }
+    } catch (refErr) {
+      // Falha silenciosa: o pagamento já foi registrado — não reverte por causa do referral
+      log.error('referral_pagamento_auto', refErr);
+    }
+    // ─────────────────────────────────────────────────────────────────
+
     res.status(201).json({ok:true});
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
@@ -186,9 +230,40 @@ router.post('/renovar-lote', validateRenovarLote, async (req,res) => {
     const {ids,novo_vencimento,valor,forma_pagamento}=req.body;
     // validateRenovarLote já garantiu ids válidos e novo_vencimento válido
     const hoje=new Date().toISOString().split('T')[0];
+    const COMISSAO_UNIT = 24.95;
     for(const id of ids){
       await run("UPDATE oficinas SET status_assinatura='active',data_vencimento=$1 WHERE id=$2",[novo_vencimento,id]);
-      if(valor&&parseFloat(valor)>0) await run("INSERT INTO pagamentos(oficina_id,valor,data_pagamento,novo_vencimento,forma_pagamento,confirmado_por) VALUES($1,$2,$3,$4,$5,$6)",[id,parseFloat(valor),hoje,novo_vencimento,forma_pagamento||'pix',String(req.user.id)]);
+      if(valor&&parseFloat(valor)>0) {
+        const pag = await queryOne(
+          "INSERT INTO pagamentos(oficina_id,valor,data_pagamento,novo_vencimento,forma_pagamento,confirmado_por) VALUES($1,$2,$3,$4,$5,$6) RETURNING id",
+          [id,parseFloat(valor),hoje,novo_vencimento,forma_pagamento||'pix',String(req.user.id)]
+        );
+        // Automação de indicação (silenciosa — não bloqueia lote em caso de erro)
+        try {
+          const indicacao = await queryOne(
+            "SELECT * FROM referral_indicacoes WHERE oficina_id=$1 AND status <> 'cancelado'",
+            [+id]
+          );
+          if (indicacao) {
+            if (indicacao.status !== 'pagante') {
+              await run(
+                "UPDATE referral_indicacoes SET status='pagante', convertido_em=COALESCE(convertido_em,NOW()) WHERE id=$1",
+                [indicacao.id]
+              );
+            }
+            await run("UPDATE pagamentos SET indicacao_id=$1 WHERE id=$2", [indicacao.id, pag.id]);
+            const jaExiste = await queryOne("SELECT id FROM referral_comissoes WHERE pagamento_id=$1", [pag.id]);
+            if (!jaExiste) {
+              await run(
+                "INSERT INTO referral_comissoes(indicacao_id,indicador_id,pagamento_id,valor,status) VALUES($1,$2,$3,$4,'aguardando_validacao')",
+                [indicacao.id, indicacao.indicador_id, pag.id, COMISSAO_UNIT]
+              );
+            }
+          }
+        } catch (refErr) {
+          log.error('referral_lote_auto', refErr);
+        }
+      }
     }
     res.json({ok:true,renovadas:ids.length});
   } catch(err){res.status(500).json({error:'Erro interno'});}

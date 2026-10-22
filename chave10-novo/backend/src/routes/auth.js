@@ -346,7 +346,7 @@ router.post('/complete-oficina', sensitiveOpsLimiter, authMiddleware, validateLo
         if (codigoRow && codigoRow.indicador_oficina_id !== oficina.id) {
           await run(
             `INSERT INTO referral_indicacoes(indicador_id, oficina_id, codigo_usado, status)
-             VALUES($1,$2,$3,'cadastro') ON CONFLICT (oficina_id) DO NOTHING`,
+             VALUES($1,$2,$3,'trial') ON CONFLICT (oficina_id) DO UPDATE SET status='trial'`,
             [codigoRow.indicador_id, oficina.id, codigoIndicacao]
           );
           // Salva o código usado na oficina (imutável)
