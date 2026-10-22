@@ -15,12 +15,17 @@ const fmt = {
 const STATUS_CLASS = { em_andamento:'badge-orange', finalizado:'badge-green' };
 const STATUS_LABEL = { em_andamento:'Em andamento', finalizado:'Finalizado' };
 const PECA_EMPTY = { nome:'', qtd:'1', valor_unit:'', cliente_fornece: false };
+const MO_EMPTY   = { descricao:'', valor:'' };
 
 function novaPeca() { return { ...PECA_EMPTY, id: Date.now() }; }
+function novaMO()   { return { ...MO_EMPTY,   id: Date.now() + Math.random() }; }
 
-function calcTotal(pecas, valor_mo) {
+function calcTotal(pecas, mo_itens) {
   const totalPecas = pecas.reduce((s,p)=>s+(parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1),0);
-  return (parseFloat(valor_mo)||0) + totalPecas;
+  const totalMO    = Array.isArray(mo_itens)
+    ? mo_itens.reduce((s,m)=>s+(parseFloat(m.valor)||0),0)
+    : 0;
+  return totalMO + totalPecas;
 }
 
 function Toast({ msg, type }) {
@@ -34,7 +39,12 @@ function gerarHTMLOS(os, clientes, veiculos, oficina, t) {
   const v = veiculos.find(x=>x.id===os.veiculo_id);
   const pecas = os.pecas_itens || [];
   const totalPecas = pecas.reduce((s,p)=>s+(parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1),0);
-  const total = (parseFloat(os.valor_mo)||0) + totalPecas;
+
+  const moItens = os.mo_itens || [];
+  const totalMO = moItens.length > 0
+    ? moItens.reduce((s,m)=>s+(parseFloat(m.valor)||0),0)
+    : (parseFloat(os.valor_mo)||0);
+  const total = totalMO + totalPecas;
 
   return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/>
   <title>OS #${String(os.id).padStart(4,'0')}</title>
@@ -120,7 +130,15 @@ function gerarHTMLOS(os, clientes, veiculos, oficina, t) {
 
   <div class="section">
     <div class="section-title">Valores</div>
-    <div class="total-row"><span>Mão de obra</span><span>${fmt.currency(os.valor_mo)}</span></div>
+    ${moItens.length > 0 ? `
+    <table style="margin-bottom:8px">
+      <thead><tr><th>Serviço / Mão de obra</th><th style="text-align:right">Valor</th></tr></thead>
+      <tbody>
+        ${moItens.map(m=>`<tr><td>${m.descricao||'—'}</td><td style="text-align:right">${fmt.currency(m.valor)}</td></tr>`).join('')}
+      </tbody>
+    </table>
+    <div class="total-row"><span>Total mão de obra</span><span>${fmt.currency(totalMO)}</span></div>
+    ` : `<div class="total-row"><span>Mão de obra</span><span>${fmt.currency(os.valor_mo)}</span></div>`}
     <div class="total-row"><span>Total ${t.pecas.toLowerCase()}</span><span>${fmt.currency(totalPecas)}</span></div>
     <div class="total-final"><span style="font-size:15px;font-weight:700">TOTAL</span><span class="val">${fmt.currency(total)}</span></div>
   </div>
@@ -191,7 +209,7 @@ export default function AppOS() {
   const [search, setSearch]     = useState(() => searchParams.get('q') || '');
   const [statusFiltro, setStatusFiltro] = useState('');
   const [modal, setModal]       = useState(null);
-  const [form, setForm]         = useState({ cliente_id:'', veiculo_id:'', mecanico_id:null, descricao:'', servicos:'', pecas_itens:[novaPeca()], valor_mo:'', data:new Date().toISOString().split('T')[0], status:'em_andamento', observacao:'' });
+  const [form, setForm]         = useState({ cliente_id:'', veiculo_id:'', mecanico_id:null, descricao:'', servicos:'', pecas_itens:[novaPeca()], mo_itens:[novaMO()], valor_mo:'', data:new Date().toISOString().split('T')[0], status:'em_andamento', observacao:'' });
   const [editing, setEditing]   = useState(null);
 
   // ── OS Rápida ─────────────────────────────────────────────────────
@@ -410,7 +428,7 @@ export default function AppOS() {
   }, []);
 
   function openCreate() {
-    setForm({ cliente_id:'', veiculo_id:'', mecanico_id:null, descricao:'', servicos:'', pecas_itens:[novaPeca()], valor_mo:'', data:new Date().toISOString().split('T')[0], status:'em_andamento', observacao:'' });
+    setForm({ cliente_id:'', veiculo_id:'', mecanico_id:null, descricao:'', servicos:'', pecas_itens:[novaPeca()], mo_itens:[novaMO()], valor_mo:'', data:new Date().toISOString().split('T')[0], status:'em_andamento', observacao:'' });
     setEditing(null); setPendingPhotos([]);
     setNovoClienteOpen(false); setNovoVeiculoOpen(false);
     setNovoClienteForm({ nome:'', telefone:'', endereco:'' }); setNovoVeiculoForm({ marca:'', modelo:'', placa:'', ano:'', km:'' });
@@ -419,7 +437,8 @@ export default function AppOS() {
 
   function openEdit(os) {
     const pecas = os.pecas_itens && os.pecas_itens.length ? os.pecas_itens : [novaPeca()];
-    setForm({ cliente_id:os.cliente_id||'', veiculo_id:os.veiculo_id||'', mecanico_id:os.mecanico_id||null, descricao:os.descricao||'', servicos:os.servicos||'', pecas_itens:pecas.map(p=>({...p,id:p.id||Date.now()})), valor_mo:os.valor_mo||'', data:os.data||new Date().toISOString().split('T')[0], status:os.status||'em_andamento', observacao:os.observacao||'' });
+    const moIt  = os.mo_itens   && os.mo_itens.length   ? os.mo_itens.map(m=>({...m,id:m.id||Date.now()+Math.random()})) : (os.valor_mo ? [{ ...novaMO(), descricao:'Mão de obra', valor: String(os.valor_mo) }] : [novaMO()]);
+    setForm({ cliente_id:os.cliente_id||'', veiculo_id:os.veiculo_id||'', mecanico_id:os.mecanico_id||null, descricao:os.descricao||'', servicos:os.servicos||'', pecas_itens:pecas.map(p=>({...p,id:p.id||Date.now()})), mo_itens:moIt, valor_mo:os.valor_mo||'', data:os.data||new Date().toISOString().split('T')[0], status:os.status||'em_andamento', observacao:os.observacao||'' });
     setEditing(os.id); setModal('form');
   }
 
@@ -444,6 +463,12 @@ export default function AppOS() {
   function addPeca() { setForm(f=>({...f, pecas_itens:[...f.pecas_itens, novaPeca()]})); }
   function removePeca(id) { setForm(f=>({...f, pecas_itens: f.pecas_itens.filter(p=>p.id!==id)})); }
 
+  // ── Mão de obra detalhada ─────────────────────────────────────────
+  function setMO(id, field, val) { setForm(f=>({...f, mo_itens: f.mo_itens.map(m=>m.id===id?{...m,[field]:val}:m)})); }
+  function addMO()    { setForm(f=>({...f, mo_itens:[...f.mo_itens, novaMO()]})); }
+  function removeMO(id) { setForm(f=>({...f, mo_itens: f.mo_itens.filter(m=>m.id!==id)})); }
+  const totalMOForm = (form.mo_itens||[]).reduce((s,m)=>s+(parseFloat(m.valor)||0),0);
+
   async function save(e) {
     e.preventDefault();
     if (!form.descricao.trim()) { showToast('Problema/descrição é obrigatório','error'); return; }
@@ -451,13 +476,16 @@ export default function AppOS() {
     try {
       const pecasValidas = form.pecas_itens.filter(p=>p.nome.trim());
       const totalPecas = pecasValidas.reduce((s,p)=>s+(parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1),0);
+      const moValidas  = (form.mo_itens||[]).filter(m=>m.descricao.trim()||parseFloat(m.valor)>0);
+      const totalMO    = moValidas.reduce((s,m)=>s+(parseFloat(m.valor)||0),0);
       const payload = { 
         ...form, 
         cliente_id:form.cliente_id||null, 
         veiculo_id:form.veiculo_id||null, 
-        valor_mo:parseFloat(form.valor_mo)||0, 
+        valor_mo:totalMO,
+        mo_itens:moValidas,
         valor_pecas:totalPecas, 
-        valor:(parseFloat(form.valor_mo)||0)+totalPecas, 
+        valor:totalMO+totalPecas, 
         pecas_itens:pecasValidas, 
         pecas: pecasValidas.map(p=>`${p.qtd}x ${p.nome} (${fmt.currency(p.valor_unit)})`).join('\n') 
       };
@@ -524,13 +552,16 @@ export default function AppOS() {
       // Se falhar mesmo online, adiciona à fila
       const pecasValidas = form.pecas_itens.filter(p=>p.nome.trim());
       const totalPecas = pecasValidas.reduce((s,p)=>s+(parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1),0);
+      const moValidas  = (form.mo_itens||[]).filter(m=>m.descricao.trim()||parseFloat(m.valor)>0);
+      const totalMO    = moValidas.reduce((s,m)=>s+(parseFloat(m.valor)||0),0);
       const payload = { 
         ...form, 
         cliente_id:form.cliente_id||null, 
         veiculo_id:form.veiculo_id||null, 
-        valor_mo:parseFloat(form.valor_mo)||0, 
+        valor_mo:totalMO,
+        mo_itens:moValidas,
         valor_pecas:totalPecas, 
-        valor:(parseFloat(form.valor_mo)||0)+totalPecas, 
+        valor:totalMO+totalPecas, 
         pecas_itens:pecasValidas, 
         pecas: pecasValidas.map(p=>`${p.qtd}x ${p.nome} (${fmt.currency(p.valor_unit)})`).join('\n') 
       };
@@ -701,7 +732,7 @@ export default function AppOS() {
       })
     : osList;
 
-  const totalForm = calcTotal(form.pecas_itens, form.valor_mo);
+  const totalForm = calcTotal(form.pecas_itens, form.mo_itens);
 
   return (
     <div>
@@ -1005,7 +1036,37 @@ export default function AppOS() {
                 )}
 
                 <div className="form-grid">
-                  {!isFuncionario && <div className="form-group"><label>Mão de obra (R$)</label><input type="number" step="0.01" min="0" value={form.valor_mo} onChange={e=>setForm(f=>({...f,valor_mo:e.target.value}))} placeholder="0,00" /></div>}
+                  {!isFuncionario && (
+                  <div className="form-group full">
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+                      <label style={{marginBottom:0,fontWeight:700}}>Mão de obra</label>
+                      <button type="button" className="btn btn-outline btn-sm" onClick={addMO}>+ Adicionar serviço</button>
+                    </div>
+                    <div style={{background:'var(--gray-50)',borderRadius:'var(--r-sm)',overflow:'hidden',border:'1px solid var(--gray-200)'}}>
+                      {(form.mo_itens||[]).map((m)=>(
+                        <div key={m.id} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 10px',borderBottom:'1px solid var(--gray-200)'}}>
+                          <input
+                            placeholder="Descrição do serviço (ex: Troca de óleo)"
+                            value={m.descricao}
+                            onChange={e=>setMO(m.id,'descricao',e.target.value)}
+                            style={{flex:1,padding:'7px 10px',fontSize:13}}
+                          />
+                          <input
+                            type="number" step="0.01" min="0"
+                            placeholder="R$ 0,00"
+                            value={m.valor}
+                            onChange={e=>setMO(m.id,'valor',e.target.value)}
+                            style={{width:110,padding:'7px 10px',fontSize:13,textAlign:'right'}}
+                          />
+                          <button type="button" onClick={()=>removeMO(m.id)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--danger)',fontSize:18,flexShrink:0}} disabled={(form.mo_itens||[]).length===1}>×</button>
+                        </div>
+                      ))}
+                      <div style={{display:'flex',justifyContent:'flex-end',padding:'8px 10px',fontSize:12,fontWeight:600,color:'var(--gray-600)'}}>
+                        Total mão de obra: <strong style={{marginLeft:8,color:'var(--gray-900)'}}>{fmt.currency(totalMOForm)}</strong>
+                      </div>
+                    </div>
+                  </div>
+                  )}
                   {!isFuncionario && (
                   <div className="form-group">
                     <label>Total geral</label>
@@ -1081,7 +1142,9 @@ export default function AppOS() {
       {modal==='ver' && viewing && (()=>{
         const pecas = viewing.pecas_itens || [];
         const totalPecas = pecas.reduce((s,p)=>s+(parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1),0);
-        const total = (parseFloat(viewing.valor_mo)||0)+totalPecas||parseFloat(viewing.valor||0);
+        const moItensView = viewing.mo_itens || [];
+        const totalMOView = moItensView.length > 0 ? moItensView.reduce((s,m)=>s+(parseFloat(m.valor)||0),0) : (parseFloat(viewing.valor_mo)||0);
+        const total = totalMOView + totalPecas || parseFloat(viewing.valor||0);
         return (
           <div className="modal-overlay open">
             <div className="modal" style={{maxWidth:620}}>
@@ -1139,10 +1202,25 @@ export default function AppOS() {
                 {!isFuncionario && (
                 <>
                 <div className="os-view-totais">
-                  <div className="os-view-total-item">
-                    <span>Mão de obra</span>
-                    <span>{fmt.currency(viewing.valor_mo)}</span>
-                  </div>
+                  {moItensView.length > 0 ? (
+                    moItensView.map((m,i)=>(
+                      <div key={i} className="os-view-total-item">
+                        <span>{m.descricao||'Mão de obra'}</span>
+                        <span>{fmt.currency(m.valor)}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="os-view-total-item">
+                      <span>Mão de obra</span>
+                      <span>{fmt.currency(viewing.valor_mo)}</span>
+                    </div>
+                  )}
+                  {moItensView.length > 1 && (
+                    <div className="os-view-total-item" style={{fontWeight:700}}>
+                      <span>Total mão de obra</span>
+                      <span>{fmt.currency(totalMOView)}</span>
+                    </div>
+                  )}
                   <div className="os-view-total-item">
                     <span>Total {t.pecas.toLowerCase()}</span>
                     <span>{fmt.currency(totalPecas)}</span>
