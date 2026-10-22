@@ -928,7 +928,7 @@ export default function AppOS() {
                   <div className="form-group">
                     <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
                       <label style={{marginBottom:0}}>Cliente</label>
-                      <button type="button" onClick={()=>{setNovoClienteOpen(o=>!o);setNovoVeiculoOpen(false);}} style={{fontSize:11,fontWeight:700,color:'var(--brand)',background:'none',border:'none',cursor:'pointer',padding:'2px 6px',borderRadius:4,border:'1px solid var(--brand)'}}>
+                      <button type="button" onClick={()=>{setNovoClienteOpen(o=>!o);setNovoVeiculoOpen(false);}} className="btn btn-primary btn-sm" style={{fontSize:12,fontWeight:700,padding:'4px 10px',lineHeight:1.4}}>
                         {novoClienteOpen ? '✕ Cancelar' : '+ Novo'}
                       </button>
                     </div>
@@ -951,7 +951,7 @@ export default function AppOS() {
                   <div className="form-group">
                     <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
                       <label style={{marginBottom:0}}>{t.veiculo}</label>
-                      <button type="button" onClick={()=>{setNovoVeiculoOpen(o=>!o);setNovoClienteOpen(false);}} style={{fontSize:11,fontWeight:700,color:'var(--brand)',background:'none',border:'none',cursor:'pointer',padding:'2px 6px',borderRadius:4,border:'1px solid var(--brand)'}}>
+                      <button type="button" onClick={()=>{setNovoVeiculoOpen(o=>!o);setNovoClienteOpen(false);}} className="btn btn-primary btn-sm" style={{fontSize:12,fontWeight:700,padding:'4px 10px',lineHeight:1.4}}>
                         {novoVeiculoOpen ? '✕ Cancelar' : '+ Novo'}
                       </button>
                     </div>
