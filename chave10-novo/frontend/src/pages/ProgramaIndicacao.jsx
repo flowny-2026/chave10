@@ -309,33 +309,33 @@ export default function ProgramaIndicacao() {
           </div>
 
           {/* Tabela de exemplos */}
-          <div style={{ background: '#F9FAFB', borderRadius: 14, overflow: 'hidden',
+          <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden',
             border: '1px solid #E5E7EB', marginBottom: 20, overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 260 }}>
               <thead>
-                <tr style={{ background: '#F3F4F6' }}>
-                  <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: 11,
-                    fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '.05em' }}>
+                <tr style={{ background: '#1E3A5F' }}>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 12,
+                    fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '.05em' }}>
                     Clientes pagantes
                   </th>
-                  <th style={{ padding: '10px 16px', textAlign: 'right', fontSize: 11,
-                    fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '.05em' }}>
+                  <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: 12,
+                    fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '.05em' }}>
                     Comissão
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {EXEMPLOS.map((n, i) => (
+                {EXEMPLOS.map((n) => (
                   <tr key={n} style={{ borderTop: '1px solid #E5E7EB',
-                    background: n === qtd ? 'rgba(249,115,22,.06)' : 'transparent',
+                    background: n === qtd ? 'rgba(249,115,22,.1)' : '#fff',
                     cursor: 'pointer' }}
                     onClick={() => setQtd(n)}>
-                    <td style={{ padding: '10px 16px', fontSize: 14,
-                      fontWeight: n === qtd ? 700 : 400, color: n === qtd ? '#F97316' : '#374151' }}>
+                    <td style={{ padding: '12px 16px', fontSize: 14,
+                      fontWeight: n === qtd ? 700 : 500, color: n === qtd ? '#EA6C00' : '#111827' }}>
                       {n} cliente{n !== 1 ? 's' : ''}
                     </td>
-                    <td style={{ padding: '10px 16px', textAlign: 'right', fontSize: 14,
-                      fontWeight: 700, color: n === qtd ? '#F97316' : '#374151' }}>
+                    <td style={{ padding: '12px 16px', textAlign: 'right', fontSize: 14,
+                      fontWeight: 700, color: n === qtd ? '#EA6C00' : '#111827' }}>
                       {fmt.currency(n * COMISSAO_UNIT)}
                     </td>
                   </tr>
