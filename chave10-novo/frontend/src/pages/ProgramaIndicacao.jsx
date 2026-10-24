@@ -7,8 +7,11 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { registrarCliqueReferral } from '../api';
 
-const COMISSAO_UNIT = 24.95;
-const PRECO_PLANO   = 49.90;
+const COMISSAO = {
+  influenciador: 49.90,  // 100% da primeira mensalidade
+  padrao: 24.95,         // 50% da primeira mensalidade (cliente, parceiro, outro)
+};
+const PRECO_PLANO = 49.90;
 
 const fmt = {
   currency: v =>
@@ -53,7 +56,7 @@ export default function ProgramaIndicacao() {
     simuladorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  const ganho = (qtd * COMISSAO_UNIT).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  const ganho = (qtd * COMISSAO.padrao).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 
   const EXEMPLOS = [1, 5, 10, 20, 50, 100];
 
@@ -133,8 +136,10 @@ export default function ProgramaIndicacao() {
           fontSize: 'clamp(1rem, 2vw, 1.15rem)', color: 'rgba(255,255,255,.72)',
           maxWidth: 560, margin: '0 auto 40px', lineHeight: 1.75,
         }}>
-          Indique oficinas para o Chave 10 e ganhe{' '}
-          <strong style={{ color: '#fff' }}>{fmt.currency(COMISSAO_UNIT)}</strong>{' '}
+          Indique oficinas para o Chave 10 e ganhe entre{' '}
+          <strong style={{ color: '#fff' }}>{fmt.currency(COMISSAO.padrao)}</strong>{' '}
+          e{' '}
+          <strong style={{ color: '#fff' }}>{fmt.currency(COMISSAO.influenciador)}</strong>{' '}
           por cada novo cliente que contratar o plano mensal e pagar a primeira mensalidade.
         </p>
 
@@ -164,7 +169,7 @@ export default function ProgramaIndicacao() {
           marginTop: 28, fontSize: 13, color: 'rgba(255,255,255,.5)' }}>
           <span>Cadastro gratuito</span>
           <span>Sem necessidade de ter oficina</span>
-          <span>{fmt.currency(COMISSAO_UNIT)} por cliente pagante</span>
+          <span>Até {fmt.currency(COMISSAO.influenciador)} por cliente pagante</span>
         </div>
       </section>
 
@@ -191,7 +196,7 @@ export default function ProgramaIndicacao() {
               { num: '03', title: 'A oficina contrata',
                 desc: 'Quando a oficina cadastrada pelo seu link pagar o primeiro mês, a indicação é confirmada.' },
               { num: '04', title: 'Receba sua comissão',
-                desc: `Você recebe ${fmt.currency(COMISSAO_UNIT)} por cada cliente que efetivamente pagar a primeira mensalidade.` },
+                desc: `Você recebe entre ${fmt.currency(COMISSAO.padrao)} e ${fmt.currency(COMISSAO.influenciador)} por cliente que efetivamente pagar a primeira mensalidade, conforme seu perfil.` },
             ].map((s, i) => (
               <div key={i} style={{
                 background: '#F9FAFB', borderRadius: 16,
@@ -220,7 +225,8 @@ export default function ProgramaIndicacao() {
             {[
               'Cadastro gratuito — qualquer pessoa pode participar, mesmo sem ser cliente do Chave 10.',
               `Plano mensal do Chave 10: ${fmt.currency(PRECO_PLANO)}/mês.`,
-              `Comissão por novo cliente mensal pagante: ${fmt.currency(COMISSAO_UNIT)} (50% da primeira mensalidade).`,
+              `Comissão padrão (cliente, parceiro): ${fmt.currency(COMISSAO.padrao)} — 50% da primeira mensalidade.`,
+              `Comissão influenciador: ${fmt.currency(COMISSAO.influenciador)} — 100% da primeira mensalidade.`,
               'A comissão só é gerada após a confirmação do primeiro pagamento. Teste gratuito não gera comissão.',
               'A comissão é paga uma única vez por cliente indicado — sem recorrência nas mensalidades seguintes.',
               'Não é permitido indicar a si mesmo para obter comissão.',
@@ -304,7 +310,7 @@ export default function ProgramaIndicacao() {
             </div>
 
             <p style={{ fontSize: 11, color: '#9CA3AF', marginTop: 20, lineHeight: 1.6, margin: '20px 0 0' }}>
-              Cálculo: {qtd} cliente{qtd !== 1 ? 's' : ''} × {fmt.currency(COMISSAO_UNIT)} = R$&nbsp;{ganho}
+              Cálculo (perfil padrão): {qtd} cliente{qtd !== 1 ? 's' : ''} × {fmt.currency(COMISSAO.padrao)} = R$&nbsp;{ganho}
             </p>
           </div>
 
@@ -336,7 +342,7 @@ export default function ProgramaIndicacao() {
                     </td>
                     <td style={{ padding: '10px 16px', textAlign: 'right', fontSize: 14,
                       fontWeight: 700, color: n === qtd ? '#F97316' : '#374151' }}>
-                      {fmt.currency(n * COMISSAO_UNIT)}
+                      {fmt.currency(n * COMISSAO.padrao)}
                     </td>
                   </tr>
                 ))}

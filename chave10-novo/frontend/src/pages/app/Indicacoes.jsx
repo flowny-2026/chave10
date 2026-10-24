@@ -133,6 +133,10 @@ export default function AppIndicacoes() {
   const t = dados.totais || {};
   const link = `${BASE_URL}/?ref=${dados.codigo}`;
 
+  // Comissão por tipo: influenciador = R$49,90 (100%), demais = R$24,95 (50%)
+  const comissaoPorCliente = dados.tipo === 'influenciador' ? 49.90 : 24.95;
+  const pctComissao        = dados.tipo === 'influenciador' ? '100%' : '50%';
+
   return (
     <div>
       <div className="page-header">
@@ -147,6 +151,39 @@ export default function AppIndicacoes() {
           {toast}
         </div>
       )}
+
+      {/* ── Card de comissão do perfil ── */}
+      <div style={{
+        background: dados.tipo === 'influenciador'
+          ? 'linear-gradient(135deg,var(--brand) 0%,#243f6a 100%)'
+          : 'var(--bg-card)',
+        border: `1px solid ${dados.tipo === 'influenciador' ? 'rgba(249,115,22,.3)' : 'var(--gray-200)'}`,
+        borderRadius: 'var(--r-md)', padding: '16px 20px', marginBottom: 20,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12,
+      }}>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em',
+            color: dados.tipo === 'influenciador' ? 'rgba(255,255,255,.6)' : 'var(--gray-400)',
+            marginBottom: 4 }}>
+            Seu perfil — {dados.tipo === 'influenciador' ? 'Influenciador' : dados.tipo === 'parceiro' ? 'Parceiro' : dados.tipo === 'cliente' ? 'Cliente' : 'Indicador'}
+          </div>
+          <div style={{ fontSize: 13, color: dados.tipo === 'influenciador' ? 'rgba(255,255,255,.8)' : 'var(--gray-700)' }}>
+            Comissão por cliente pagante: <strong style={{ color: 'var(--accent,#F97316)', fontSize: 15 }}>
+              {fmt.currency(comissaoPorCliente)}
+            </strong>{' '}
+            <span style={{ fontSize: 12, color: dados.tipo === 'influenciador' ? 'rgba(255,255,255,.5)' : 'var(--gray-400)' }}>
+              ({pctComissao} da 1ª mensalidade de {fmt.currency(49.90)})
+            </span>
+          </div>
+        </div>
+        {dados.tipo === 'influenciador' && (
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6,
+            background: 'rgba(249,115,22,.15)', border: '1px solid rgba(249,115,22,.3)',
+            color: '#F97316', borderRadius: 100, padding: '4px 12px', fontSize: 12, fontWeight: 700 }}>
+            ⭐ Influenciador
+          </div>
+        )}
+      </div>
 
       {/* ── Bloco do link ── */}
       <div className="card" style={{ marginBottom: 20 }}>
@@ -304,8 +341,8 @@ export default function AppIndicacoes() {
 
       {/* Nota informativa */}
       <p style={{ fontSize: 12, color: 'var(--gray-400)', marginTop: 16, lineHeight: 1.6 }}>
-        As comissões são calculadas sobre a primeira mensalidade de cada cliente indicado, após confirmação do pagamento.
-        O repasse é realizado após aprovação pela equipe do Chave 10.
+        Sua comissão é de <strong>{fmt.currency(comissaoPorCliente)}</strong> ({pctComissao} da primeira mensalidade de {fmt.currency(49.90)}) por cliente indicado que efetivamente pagar.
+        A comissão é paga uma única vez por cliente, após aprovação pela equipe do Chave 10.
       </p>
     </div>
   );
