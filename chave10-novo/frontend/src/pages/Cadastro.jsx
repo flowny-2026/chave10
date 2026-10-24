@@ -67,7 +67,12 @@ export default function Cadastro() {
     { nome: '', email: '', senha: '', confirmarSenha: '' },
     async (values) => {
       setErro('');
-      const { token } = await api.auth.register({ nome: values.nome, email: values.email, senha: values.senha });
+      const { token, needsOficina } = await api.auth.register({ nome: values.nome, email: values.email, senha: values.senha });
+      // token 'pending' significa que o email já tem uma conta completa — redireciona para login
+      if (token === 'pending' || !needsOficina) {
+        setErro('Este e-mail já possui uma conta. Faça login para acessar.');
+        return;
+      }
       setTempToken(token);
       setStep(2);
     },

@@ -15,12 +15,17 @@ const fmt = {
 const STATUS_CLASS = { em_andamento:'badge-orange', finalizado:'badge-green' };
 const STATUS_LABEL = { em_andamento:'Em andamento', finalizado:'Finalizado' };
 const PECA_EMPTY = { nome:'', qtd:'1', valor_unit:'', cliente_fornece: false };
+const MO_EMPTY   = { descricao:'', valor:'' };
 
 function novaPeca() { return { ...PECA_EMPTY, id: Date.now() }; }
+function novaMO()   { return { ...MO_EMPTY,   id: Date.now() + Math.random() }; }
 
-function calcTotal(pecas, valor_mo) {
+function calcTotal(pecas, mo_itens) {
   const totalPecas = pecas.reduce((s,p)=>s+(parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1),0);
-  return (parseFloat(valor_mo)||0) + totalPecas;
+  const totalMO    = Array.isArray(mo_itens)
+    ? mo_itens.reduce((s,m)=>s+(parseFloat(m.valor)||0),0)
+    : 0;
+  return totalMO + totalPecas;
 }
 
 function Toast({ msg, type }) {
@@ -34,7 +39,12 @@ function gerarHTMLOS(os, clientes, veiculos, oficina, t) {
   const v = veiculos.find(x=>x.id===os.veiculo_id);
   const pecas = os.pecas_itens || [];
   const totalPecas = pecas.reduce((s,p)=>s+(parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1),0);
-  const total = (parseFloat(os.valor_mo)||0) + totalPecas;
+
+  const moItens = os.mo_itens || [];
+  const totalMO = moItens.length > 0
+    ? moItens.reduce((s,m)=>s+(parseFloat(m.valor)||0),0)
+    : (parseFloat(os.valor_mo)||0);
+  const total = totalMO + totalPecas;
 
   return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/>
   <title>OS #${String(os.id).padStart(4,'0')}</title>
@@ -120,7 +130,15 @@ function gerarHTMLOS(os, clientes, veiculos, oficina, t) {
 
   <div class="section">
     <div class="section-title">Valores</div>
-    <div class="total-row"><span>Mão de obra</span><span>${fmt.currency(os.valor_mo)}</span></div>
+    ${moItens.length > 0 ? `
+    <table style="margin-bottom:8px">
+      <thead><tr><th>Serviço / Mão de obra</th><th style="text-align:right">Valor</th></tr></thead>
+      <tbody>
+        ${moItens.map(m=>`<tr><td>${m.descricao||'—'}</td><td style="text-align:right">${fmt.currency(m.valor)}</td></tr>`).join('')}
+      </tbody>
+    </table>
+    <div class="total-row"><span>Total mão de obra</span><span>${fmt.currency(totalMO)}</span></div>
+    ` : `<div class="total-row"><span>Mão de obra</span><span>${fmt.currency(os.valor_mo)}</span></div>`}
     <div class="total-row"><span>Total ${t.pecas.toLowerCase()}</span><span>${fmt.currency(totalPecas)}</span></div>
     <div class="total-final"><span style="font-size:15px;font-weight:700">TOTAL</span><span class="val">${fmt.currency(total)}</span></div>
   </div>
@@ -191,8 +209,123 @@ export default function AppOS() {
   const [search, setSearch]     = useState(() => searchParams.get('q') || '');
   const [statusFiltro, setStatusFiltro] = useState('');
   const [modal, setModal]       = useState(null);
-  const [form, setForm]         = useState({ cliente_id:'', veiculo_id:'', mecanico_id:null, descricao:'', servicos:'', pecas_itens:[novaPeca()], valor_mo:'', data:new Date().toISOString().split('T')[0], status:'em_andamento', observacao:'' });
+  const [form, setForm]         = useState({ cliente_id:'', veiculo_id:'', mecanico_id:null, descricao:'', servicos:'', pecas_itens:[novaPeca()], mo_itens:[novaMO()], valor_mo:'', data:new Date().toISOString().split('T')[0], status:'em_andamento', observacao:'' });
   const [editing, setEditing]   = useState(null);
+
+  // ── OS Rápida ─────────────────────────────────────────────────────
+  const RAPIDA_EMPTY = { nome_cliente:'', telefone_cliente:'', endereco_cliente:'', marca_veiculo:'', modelo_veiculo:'', placa_veiculo:'', ano_veiculo:'', km_veiculo:'', descricao:'', servicos:'', mecanico_id:'', valor_mo:'' };
+  const [rapida, setRapida]         = useState(RAPIDA_EMPTY);
+  const [rapidaSaving, setRapidaSaving] = useState(false);
+
+  async function saveRapida(e) {
+    e.preventDefault();
+    if (!rapida.nome_cliente.trim())   { showToast('Nome do cliente é obrigatório','error'); return; }
+    if (!rapida.descricao.trim())      { showToast('Problema/descrição é obrigatório','error'); return; }
+    setRapidaSaving(true);
+    try {
+      // 1. Cria cliente
+      const novoCliente = await api.app.clientes.create({
+        nome:     rapida.nome_cliente.trim(),
+        telefone: rapida.telefone_cliente.trim() || null,
+        endereco: rapida.endereco_cliente.trim() || null,
+      });
+      let veiculo_id = null;
+      // 2. Cria veículo (se preencheu pelo menos modelo)
+      if (rapida.modelo_veiculo.trim()) {
+        const novoVeiculo = await api.app.veiculos.create({
+          cliente_id: novoCliente.id,
+          marca:  rapida.marca_veiculo.trim() || 'Outro',
+          modelo: rapida.modelo_veiculo.trim(),
+          placa:  rapida.placa_veiculo.trim().toUpperCase() || null,
+          ano:    rapida.ano_veiculo.trim() || null,
+          km:     rapida.km_veiculo ? parseInt(rapida.km_veiculo) || null : null,
+        });
+        veiculo_id = novoVeiculo.id;
+      }
+      // 3. Cria OS
+      await api.app.os.create({
+        cliente_id:  novoCliente.id,
+        veiculo_id,
+        mecanico_id: rapida.mecanico_id || null,
+        descricao:   rapida.descricao.trim(),
+        servicos:    rapida.servicos.trim() || null,
+        valor_mo:    parseFloat(rapida.valor_mo) || 0,
+        valor_pecas: 0,
+        valor:       parseFloat(rapida.valor_mo) || 0,
+        pecas_itens: [],
+        pecas:       '',
+        data:        new Date().toISOString().split('T')[0],
+        status:      'em_andamento',
+      });
+      // 4. Recarrega listas
+      const [c, v] = await Promise.all([api.app.clientes.list(), api.app.veiculos.list()]);
+      setClientes(c); setVeiculos(v);
+      load(statusFiltro);
+      setRapida(RAPIDA_EMPTY);
+      setModal(null);
+      showToast('OS criada com sucesso!');
+    } catch (err) {
+      showToast(err?.error || 'Erro ao criar OS rápida','error');
+    } finally {
+      setRapidaSaving(false);
+    }
+  }
+
+  // ── Novo cliente inline (dentro do modal de OS completa) ──────────
+  const [novoClienteOpen, setNovoClienteOpen]   = useState(false);
+  const [novoClienteForm, setNovoClienteForm]   = useState({ nome:'', telefone:'', endereco:'' });
+  const [novoClienteSaving, setNovoClienteSaving] = useState(false);
+
+  async function criarClienteInline(e) {
+    e.preventDefault();
+    if (!novoClienteForm.nome.trim()) { showToast('Nome é obrigatório','error'); return; }
+    setNovoClienteSaving(true);
+    try {
+      const novo = await api.app.clientes.create({ nome: novoClienteForm.nome.trim(), telefone: novoClienteForm.telefone.trim() || null, endereco: novoClienteForm.endereco.trim() || null });
+      const lista = await api.app.clientes.list();
+      setClientes(lista);
+      setForm(f => ({ ...f, cliente_id: String(novo.id), veiculo_id: '' }));
+      setNovoClienteForm({ nome:'', telefone:'', endereco:'' });
+      setNovoClienteOpen(false);
+      showToast('Cliente criado!');
+    } catch (err) {
+      showToast(err?.error || 'Erro ao criar cliente','error');
+    } finally {
+      setNovoClienteSaving(false);
+    }
+  }
+
+  // ── Novo veículo inline (dentro do modal de OS completa) ──────────
+  const [novoVeiculoOpen, setNovoVeiculoOpen]   = useState(false);
+  const [novoVeiculoForm, setNovoVeiculoForm]   = useState({ marca:'', modelo:'', placa:'', ano:'', km:'' });
+  const [novoVeiculoSaving, setNovoVeiculoSaving] = useState(false);
+
+  async function criarVeiculoInline(e) {
+    e.preventDefault();
+    if (!novoVeiculoForm.modelo.trim()) { showToast('Modelo é obrigatório','error'); return; }
+    setNovoVeiculoSaving(true);
+    try {
+      const clienteId = form.cliente_id || null;
+      const novo = await api.app.veiculos.create({
+        cliente_id: clienteId ? +clienteId : null,
+        marca:  novoVeiculoForm.marca.trim() || 'Outro',
+        modelo: novoVeiculoForm.modelo.trim(),
+        placa:  novoVeiculoForm.placa.trim().toUpperCase() || null,
+        ano:    novoVeiculoForm.ano.trim() || null,
+        km:     novoVeiculoForm.km ? parseInt(novoVeiculoForm.km) || null : null,
+      });
+      const lista = await api.app.veiculos.list();
+      setVeiculos(lista);
+      setForm(f => ({ ...f, veiculo_id: String(novo.id) }));
+      setNovoVeiculoForm({ marca:'', modelo:'', placa:'', ano:'', km:'' });
+      setNovoVeiculoOpen(false);
+      showToast('Veículo criado!');
+    } catch (err) {
+      showToast(err?.error || 'Erro ao criar veículo','error');
+    } finally {
+      setNovoVeiculoSaving(false);
+    }
+  }
   const [viewing, setViewing]   = useState(null);
   const [toast, setToast]       = useState({ msg:'', type:'' });
   const [pagForm, setPagForm]   = useState({ os_id:null, forma:'', valor_total:0, parcelas:1, bandeira:'', taxa_maquininha:'', observacao:'' });
@@ -295,13 +428,17 @@ export default function AppOS() {
   }, []);
 
   function openCreate() {
-    setForm({ cliente_id:'', veiculo_id:'', mecanico_id:null, descricao:'', servicos:'', pecas_itens:[novaPeca()], valor_mo:'', data:new Date().toISOString().split('T')[0], status:'em_andamento', observacao:'' });
-    setEditing(null); setPendingPhotos([]); setModal('form');
+    setForm({ cliente_id:'', veiculo_id:'', mecanico_id:null, descricao:'', servicos:'', pecas_itens:[novaPeca()], mo_itens:[novaMO()], valor_mo:'', data:new Date().toISOString().split('T')[0], status:'em_andamento', observacao:'' });
+    setEditing(null); setPendingPhotos([]);
+    setNovoClienteOpen(false); setNovoVeiculoOpen(false);
+    setNovoClienteForm({ nome:'', telefone:'', endereco:'' }); setNovoVeiculoForm({ marca:'', modelo:'', placa:'', ano:'', km:'' });
+    setModal('form');
   }
 
   function openEdit(os) {
     const pecas = os.pecas_itens && os.pecas_itens.length ? os.pecas_itens : [novaPeca()];
-    setForm({ cliente_id:os.cliente_id||'', veiculo_id:os.veiculo_id||'', mecanico_id:os.mecanico_id||null, descricao:os.descricao||'', servicos:os.servicos||'', pecas_itens:pecas.map(p=>({...p,id:p.id||Date.now()})), valor_mo:os.valor_mo||'', data:os.data||new Date().toISOString().split('T')[0], status:os.status||'em_andamento', observacao:os.observacao||'' });
+    const moIt  = os.mo_itens   && os.mo_itens.length   ? os.mo_itens.map(m=>({...m,id:m.id||Date.now()+Math.random()})) : (os.valor_mo ? [{ ...novaMO(), descricao:'Mão de obra', valor: String(os.valor_mo) }] : [novaMO()]);
+    setForm({ cliente_id:os.cliente_id||'', veiculo_id:os.veiculo_id||'', mecanico_id:os.mecanico_id||null, descricao:os.descricao||'', servicos:os.servicos||'', pecas_itens:pecas.map(p=>({...p,id:p.id||Date.now()})), mo_itens:moIt, valor_mo:os.valor_mo||'', data:os.data||new Date().toISOString().split('T')[0], status:os.status||'em_andamento', observacao:os.observacao||'' });
     setEditing(os.id); setModal('form');
   }
 
@@ -326,6 +463,12 @@ export default function AppOS() {
   function addPeca() { setForm(f=>({...f, pecas_itens:[...f.pecas_itens, novaPeca()]})); }
   function removePeca(id) { setForm(f=>({...f, pecas_itens: f.pecas_itens.filter(p=>p.id!==id)})); }
 
+  // ── Mão de obra detalhada ─────────────────────────────────────────
+  function setMO(id, field, val) { setForm(f=>({...f, mo_itens: f.mo_itens.map(m=>m.id===id?{...m,[field]:val}:m)})); }
+  function addMO()    { setForm(f=>({...f, mo_itens:[...f.mo_itens, novaMO()]})); }
+  function removeMO(id) { setForm(f=>({...f, mo_itens: f.mo_itens.filter(m=>m.id!==id)})); }
+  const totalMOForm = (form.mo_itens||[]).reduce((s,m)=>s+(parseFloat(m.valor)||0),0);
+
   async function save(e) {
     e.preventDefault();
     if (!form.descricao.trim()) { showToast('Problema/descrição é obrigatório','error'); return; }
@@ -333,13 +476,16 @@ export default function AppOS() {
     try {
       const pecasValidas = form.pecas_itens.filter(p=>p.nome.trim());
       const totalPecas = pecasValidas.reduce((s,p)=>s+(parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1),0);
+      const moValidas  = (form.mo_itens||[]).filter(m=>m.descricao.trim()||parseFloat(m.valor)>0);
+      const totalMO    = moValidas.reduce((s,m)=>s+(parseFloat(m.valor)||0),0);
       const payload = { 
         ...form, 
         cliente_id:form.cliente_id||null, 
         veiculo_id:form.veiculo_id||null, 
-        valor_mo:parseFloat(form.valor_mo)||0, 
+        valor_mo:totalMO,
+        mo_itens:moValidas,
         valor_pecas:totalPecas, 
-        valor:(parseFloat(form.valor_mo)||0)+totalPecas, 
+        valor:totalMO+totalPecas, 
         pecas_itens:pecasValidas, 
         pecas: pecasValidas.map(p=>`${p.qtd}x ${p.nome} (${fmt.currency(p.valor_unit)})`).join('\n') 
       };
@@ -406,13 +552,16 @@ export default function AppOS() {
       // Se falhar mesmo online, adiciona à fila
       const pecasValidas = form.pecas_itens.filter(p=>p.nome.trim());
       const totalPecas = pecasValidas.reduce((s,p)=>s+(parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1),0);
+      const moValidas  = (form.mo_itens||[]).filter(m=>m.descricao.trim()||parseFloat(m.valor)>0);
+      const totalMO    = moValidas.reduce((s,m)=>s+(parseFloat(m.valor)||0),0);
       const payload = { 
         ...form, 
         cliente_id:form.cliente_id||null, 
         veiculo_id:form.veiculo_id||null, 
-        valor_mo:parseFloat(form.valor_mo)||0, 
+        valor_mo:totalMO,
+        mo_itens:moValidas,
         valor_pecas:totalPecas, 
-        valor:(parseFloat(form.valor_mo)||0)+totalPecas, 
+        valor:totalMO+totalPecas, 
         pecas_itens:pecasValidas, 
         pecas: pecasValidas.map(p=>`${p.qtd}x ${p.nome} (${fmt.currency(p.valor_unit)})`).join('\n') 
       };
@@ -583,13 +732,16 @@ export default function AppOS() {
       })
     : osList;
 
-  const totalForm = calcTotal(form.pecas_itens, form.valor_mo);
+  const totalForm = calcTotal(form.pecas_itens, form.mo_itens);
 
   return (
     <div>
       <div className="page-header">
         <div><div className="page-title">{t.oss}</div><div className="page-subtitle">{listaFiltrada.length} ordem(ns)</div></div>
-        <button className="btn btn-primary" onClick={openCreate}>+ {t.novaOs}</button>
+        <div style={{display:'flex',gap:8}}>
+          <button className="btn btn-outline" onClick={()=>{setRapida(RAPIDA_EMPTY);setModal('rapida');}}>⚡ OS Rápida</button>
+          <button className="btn btn-primary" onClick={openCreate}>+ {t.novaOs}</button>
+        </div>
       </div>
       <div className="search-bar">
         <div className="search-input-wrap">
@@ -774,18 +926,54 @@ export default function AppOS() {
               <form onSubmit={save}>
                 <div className="form-grid">
                   <div className="form-group">
-                    <label>Cliente</label>
-                    <select value={form.cliente_id} onChange={e=>setForm(f=>({...f,cliente_id:e.target.value,veiculo_id:''}))}>
-                      <option value="">Selecionar...</option>
-                      {clientes.map(c=><option key={c.id} value={c.id}>{c.nome}</option>)}
-                    </select>
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
+                      <label style={{marginBottom:0}}>Cliente</label>
+                      <button type="button" onClick={()=>{setNovoClienteOpen(o=>!o);setNovoVeiculoOpen(false);}} className="btn btn-primary btn-sm" style={{fontSize:12,fontWeight:700,padding:'4px 10px',lineHeight:1.4}}>
+                        {novoClienteOpen ? '✕ Cancelar' : '+ Novo'}
+                      </button>
+                    </div>
+                    {novoClienteOpen ? (
+                      <form onSubmit={criarClienteInline} style={{background:'var(--gray-50)',border:'1px solid var(--brand)',borderRadius:8,padding:'10px 12px',display:'flex',flexDirection:'column',gap:8}}>
+                        <input placeholder="Nome *" value={novoClienteForm.nome} onChange={e=>setNovoClienteForm(f=>({...f,nome:e.target.value}))} autoFocus style={{padding:'7px 10px',fontSize:13}} />
+                        <input placeholder="Telefone" value={novoClienteForm.telefone} onChange={e=>setNovoClienteForm(f=>({...f,telefone:e.target.value}))} style={{padding:'7px 10px',fontSize:13}} />
+                        <input placeholder="Endereço" value={novoClienteForm.endereco} onChange={e=>setNovoClienteForm(f=>({...f,endereco:e.target.value}))} style={{padding:'7px 10px',fontSize:13}} />
+                        <button type="submit" className="btn btn-primary btn-sm" disabled={novoClienteSaving} style={{alignSelf:'flex-end'}}>
+                          {novoClienteSaving ? 'Salvando…' : 'Criar cliente'}
+                        </button>
+                      </form>
+                    ) : (
+                      <select value={form.cliente_id} onChange={e=>setForm(f=>({...f,cliente_id:e.target.value,veiculo_id:''}))}>
+                        <option value="">Selecionar...</option>
+                        {clientes.map(c=><option key={c.id} value={c.id}>{c.nome}</option>)}
+                      </select>
+                    )}
                   </div>
                   <div className="form-group">
-                    <label>{t.veiculo}</label>
-                    <select value={form.veiculo_id} onChange={e=>setForm(f=>({...f,veiculo_id:e.target.value}))}>
-                      <option value="">Selecionar...</option>
-                      {veiculosFiltrados.map(v=><option key={v.id} value={v.id}>{v.marca} {v.modelo} — {v.placa}</option>)}
-                    </select>
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
+                      <label style={{marginBottom:0}}>{t.veiculo}</label>
+                      <button type="button" onClick={()=>{setNovoVeiculoOpen(o=>!o);setNovoClienteOpen(false);}} className="btn btn-primary btn-sm" style={{fontSize:12,fontWeight:700,padding:'4px 10px',lineHeight:1.4}}>
+                        {novoVeiculoOpen ? '✕ Cancelar' : '+ Novo'}
+                      </button>
+                    </div>
+                    {novoVeiculoOpen ? (
+                      <form onSubmit={criarVeiculoInline} style={{background:'var(--gray-50)',border:'1px solid var(--brand)',borderRadius:8,padding:'10px 12px',display:'flex',flexDirection:'column',gap:8}}>
+                        <input placeholder={`${t.modelo} *`} value={novoVeiculoForm.modelo} onChange={e=>setNovoVeiculoForm(f=>({...f,modelo:e.target.value}))} autoFocus style={{padding:'7px 10px',fontSize:13}} />
+                        <input placeholder={t.marca} value={novoVeiculoForm.marca} onChange={e=>setNovoVeiculoForm(f=>({...f,marca:e.target.value}))} style={{padding:'7px 10px',fontSize:13}} />
+                        <input placeholder={`${t.placa} (opcional)`} value={novoVeiculoForm.placa} onChange={e=>setNovoVeiculoForm(f=>({...f,placa:e.target.value.toUpperCase()}))} style={{padding:'7px 10px',fontSize:13,textTransform:'uppercase'}} />
+                        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+                          <input placeholder={t.ano} value={novoVeiculoForm.ano} onChange={e=>setNovoVeiculoForm(f=>({...f,ano:e.target.value}))} style={{padding:'7px 10px',fontSize:13}} />
+                          <input type="number" placeholder={t.kmPlaceholder||`${t.kmAbrev} atual`} value={novoVeiculoForm.km} onChange={e=>setNovoVeiculoForm(f=>({...f,km:e.target.value}))} style={{padding:'7px 10px',fontSize:13}} min="0" />
+                        </div>
+                        <button type="submit" className="btn btn-primary btn-sm" disabled={novoVeiculoSaving} style={{alignSelf:'flex-end'}}>
+                          {novoVeiculoSaving ? 'Salvando…' : `Criar ${t.veiculo.toLowerCase()}`}
+                        </button>
+                      </form>
+                    ) : (
+                      <select value={form.veiculo_id} onChange={e=>setForm(f=>({...f,veiculo_id:e.target.value}))}>
+                        <option value="">Selecionar...</option>
+                        {veiculosFiltrados.map(v=><option key={v.id} value={v.id}>{v.marca} {v.modelo} — {v.placa}</option>)}
+                      </select>
+                    )}
                   </div>
                   {!isFuncionario && !isMecanico && (
                   <div className="form-group">
@@ -848,7 +1036,37 @@ export default function AppOS() {
                 )}
 
                 <div className="form-grid">
-                  {!isFuncionario && <div className="form-group"><label>Mão de obra (R$)</label><input type="number" step="0.01" min="0" value={form.valor_mo} onChange={e=>setForm(f=>({...f,valor_mo:e.target.value}))} placeholder="0,00" /></div>}
+                  {!isFuncionario && (
+                  <div className="form-group full">
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+                      <label style={{marginBottom:0,fontWeight:700}}>Mão de obra</label>
+                      <button type="button" className="btn btn-outline btn-sm" onClick={addMO}>+ Adicionar serviço</button>
+                    </div>
+                    <div style={{background:'var(--gray-50)',borderRadius:'var(--r-sm)',overflow:'hidden',border:'1px solid var(--gray-200)'}}>
+                      {(form.mo_itens||[]).map((m)=>(
+                        <div key={m.id} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 10px',borderBottom:'1px solid var(--gray-200)'}}>
+                          <input
+                            placeholder="Descrição do serviço (ex: Troca de óleo)"
+                            value={m.descricao}
+                            onChange={e=>setMO(m.id,'descricao',e.target.value)}
+                            style={{flex:1,padding:'7px 10px',fontSize:13}}
+                          />
+                          <input
+                            type="number" step="0.01" min="0"
+                            placeholder="R$ 0,00"
+                            value={m.valor}
+                            onChange={e=>setMO(m.id,'valor',e.target.value)}
+                            style={{width:110,padding:'7px 10px',fontSize:13,textAlign:'right'}}
+                          />
+                          <button type="button" onClick={()=>removeMO(m.id)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--danger)',fontSize:18,flexShrink:0}} disabled={(form.mo_itens||[]).length===1}>×</button>
+                        </div>
+                      ))}
+                      <div style={{display:'flex',justifyContent:'flex-end',padding:'8px 10px',fontSize:12,fontWeight:600,color:'var(--gray-600)'}}>
+                        Total mão de obra: <strong style={{marginLeft:8,color:'var(--gray-900)'}}>{fmt.currency(totalMOForm)}</strong>
+                      </div>
+                    </div>
+                  </div>
+                  )}
                   {!isFuncionario && (
                   <div className="form-group">
                     <label>Total geral</label>
@@ -924,7 +1142,9 @@ export default function AppOS() {
       {modal==='ver' && viewing && (()=>{
         const pecas = viewing.pecas_itens || [];
         const totalPecas = pecas.reduce((s,p)=>s+(parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1),0);
-        const total = (parseFloat(viewing.valor_mo)||0)+totalPecas||parseFloat(viewing.valor||0);
+        const moItensView = viewing.mo_itens || [];
+        const totalMOView = moItensView.length > 0 ? moItensView.reduce((s,m)=>s+(parseFloat(m.valor)||0),0) : (parseFloat(viewing.valor_mo)||0);
+        const total = totalMOView + totalPecas || parseFloat(viewing.valor||0);
         return (
           <div className="modal-overlay open">
             <div className="modal" style={{maxWidth:620}}>
@@ -982,10 +1202,25 @@ export default function AppOS() {
                 {!isFuncionario && (
                 <>
                 <div className="os-view-totais">
-                  <div className="os-view-total-item">
-                    <span>Mão de obra</span>
-                    <span>{fmt.currency(viewing.valor_mo)}</span>
-                  </div>
+                  {moItensView.length > 0 ? (
+                    moItensView.map((m,i)=>(
+                      <div key={i} className="os-view-total-item">
+                        <span>{m.descricao||'Mão de obra'}</span>
+                        <span>{fmt.currency(m.valor)}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="os-view-total-item">
+                      <span>Mão de obra</span>
+                      <span>{fmt.currency(viewing.valor_mo)}</span>
+                    </div>
+                  )}
+                  {moItensView.length > 1 && (
+                    <div className="os-view-total-item" style={{fontWeight:700}}>
+                      <span>Total mão de obra</span>
+                      <span>{fmt.currency(totalMOView)}</span>
+                    </div>
+                  )}
                   <div className="os-view-total-item">
                     <span>Total {t.pecas.toLowerCase()}</span>
                     <span>{fmt.currency(totalPecas)}</span>
@@ -1286,6 +1521,112 @@ export default function AppOS() {
                 <div className="form-actions">
                   <button type="button" className="btn btn-outline" onClick={()=>setModal(null)}>Cancelar</button>
                   <button type="submit" className="btn btn-primary" disabled={!pagForm.forma}>Confirmar pagamento e finalizar</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══ Modal OS Rápida ══════════════════════════════════════════ */}
+      {modal === 'rapida' && (
+        <div className="modal-overlay open">
+          <div className="modal" style={{maxWidth: 520}}>
+            <div className="modal-header">
+              <div>
+                <h2>⚡ OS Rápida</h2>
+                <div style={{fontSize:12,color:'var(--gray-400)',marginTop:2}}>Preencha e crie cliente, {t.veiculo.toLowerCase()} e OS de uma vez</div>
+              </div>
+              <button className="modal-close" onClick={()=>setModal(null)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={saveRapida}>
+
+                {/* ── Cliente ────────────────────────────────────── */}
+                <div style={{marginBottom:14,padding:'12px 14px',background:'var(--gray-50)',borderRadius:10,border:'1px solid var(--gray-200)'}}>
+                  <div style={{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px',color:'var(--gray-400)',marginBottom:10}}>Cliente</div>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}}>
+                    <div className="form-group" style={{marginBottom:0}}>
+                      <label>Nome *</label>
+                      <input autoFocus placeholder="Nome completo" value={rapida.nome_cliente} onChange={e=>setRapida(r=>({...r,nome_cliente:e.target.value}))} />
+                    </div>
+                    <div className="form-group" style={{marginBottom:0}}>
+                      <label>Telefone</label>
+                      <input placeholder="(00) 00000-0000" value={rapida.telefone_cliente} onChange={e=>setRapida(r=>({...r,telefone_cliente:e.target.value}))} />
+                    </div>
+                  </div>
+                  <div className="form-group" style={{marginBottom:0}}>
+                    <label>Endereço</label>
+                    <input placeholder="Rua, número, bairro..." value={rapida.endereco_cliente} onChange={e=>setRapida(r=>({...r,endereco_cliente:e.target.value}))} />
+                  </div>
+                </div>
+
+                {/* ── Veículo ────────────────────────────────────── */}
+                <div style={{marginBottom:14,padding:'12px 14px',background:'var(--gray-50)',borderRadius:10,border:'1px solid var(--gray-200)'}}>
+                  <div style={{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px',color:'var(--gray-400)',marginBottom:10}}>
+                    {t.veiculo} <span style={{fontWeight:400,color:'var(--gray-300)'}}>(opcional)</span>
+                  </div>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}}>
+                    <div className="form-group" style={{marginBottom:0}}>
+                      <label>{t.marca}</label>
+                      <input placeholder="Ex: Chevrolet" value={rapida.marca_veiculo} onChange={e=>setRapida(r=>({...r,marca_veiculo:e.target.value}))} />
+                    </div>
+                    <div className="form-group" style={{marginBottom:0}}>
+                      <label>{t.modelo}</label>
+                      <input placeholder="Ex: Onix" value={rapida.modelo_veiculo} onChange={e=>setRapida(r=>({...r,modelo_veiculo:e.target.value}))} />
+                    </div>
+                  </div>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}}>
+                    <div className="form-group" style={{marginBottom:0}}>
+                      <label>{t.placa}</label>
+                      <input placeholder="ABC-1234" value={rapida.placa_veiculo} onChange={e=>setRapida(r=>({...r,placa_veiculo:e.target.value.toUpperCase()}))} style={{textTransform:'uppercase'}} />
+                    </div>
+                    <div className="form-group" style={{marginBottom:0}}>
+                      <label>{t.ano}</label>
+                      <input placeholder="2022" value={rapida.ano_veiculo} onChange={e=>setRapida(r=>({...r,ano_veiculo:e.target.value}))} />
+                    </div>
+                    <div className="form-group" style={{marginBottom:0}}>
+                      <label>{t.kmAbrev||'KM'} atual</label>
+                      <input type="number" min="0" placeholder="Ex: 45000" value={rapida.km_veiculo} onChange={e=>setRapida(r=>({...r,km_veiculo:e.target.value}))} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── OS ─────────────────────────────────────────── */}
+                <div style={{marginBottom:14,padding:'12px 14px',background:'var(--gray-50)',borderRadius:10,border:'1px solid var(--gray-200)'}}>
+                  <div style={{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px',color:'var(--gray-400)',marginBottom:10}}>Ordem de Serviço</div>
+                  <div className="form-group">
+                    <label>Problema relatado *</label>
+                    <textarea placeholder="Descreva o problema..." value={rapida.descricao} onChange={e=>setRapida(r=>({...r,descricao:e.target.value}))} rows={2} required />
+                  </div>
+                  <div className="form-group">
+                    <label>Serviços realizados</label>
+                    <textarea placeholder="Liste os serviços feitos..." value={rapida.servicos} onChange={e=>setRapida(r=>({...r,servicos:e.target.value}))} rows={2} />
+                  </div>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+                    {!isFuncionario && !isMecanico && (
+                      <div className="form-group" style={{marginBottom:0}}>
+                        <label>{t.mecanico} responsável</label>
+                        <select value={rapida.mecanico_id} onChange={e=>setRapida(r=>({...r,mecanico_id:e.target.value}))}>
+                          <option value="">Sem {t.mecanico.toLowerCase()}</option>
+                          {mecanicos.map(m=><option key={m.id} value={m.id}>{m.nome}</option>)}
+                        </select>
+                      </div>
+                    )}
+                    {!isFuncionario && (
+                      <div className="form-group" style={{marginBottom:0}}>
+                        <label>Mão de obra (R$)</label>
+                        <input type="number" step="0.01" min="0" placeholder="0,00" value={rapida.valor_mo} onChange={e=>setRapida(r=>({...r,valor_mo:e.target.value}))} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="form-actions">
+                  <button type="button" className="btn btn-outline" onClick={()=>setModal(null)}>Cancelar</button>
+                  <button type="submit" className="btn btn-primary" disabled={rapidaSaving}>
+                    {rapidaSaving ? 'Criando…' : '⚡ Criar OS'}
+                  </button>
                 </div>
               </form>
             </div>

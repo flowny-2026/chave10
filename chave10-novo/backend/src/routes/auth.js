@@ -125,10 +125,26 @@ router.post('/register', registerLimiter, async (req, res) => {
   try {
     const existe = await queryOne('SELECT id FROM usuarios WHERE email=$1', [email]);
     if (existe) {
-      // Resposta gen�rica � n�o revela se o e-mail existe (anti-enumera��o)
-      // Gera um token falso com delay similar para manter timing constante
+      // Se o usuário existe mas não tem oficina, pode continuar o onboarding com token real.
+      // Se já tem oficina, resposta genérica (anti-enumeração) — não revela que o e-mail existe.
+      const existeComOficina = await queryOne(
+        'SELECT u.id FROM usuarios u WHERE u.email=$1 AND u.oficina_id IS NOT NULL',
+        [email]
+      );
+      if (existeComOficina) {
+        // Conta completa — resposta genérica com delay para evitar timing-based enumeration
+        await new Promise(r => setTimeout(r, 80 + Math.random() * 40));
+        return res.status(201).json({ token: 'pending', needsOficina: false, message: 'Verifique seu e-mail para continuar' });
+      }
+      // Conta incompleta (sem oficina) — emite JWT real para o usuário continuar onboarding.
+      // Não valida senha aqui: o usuário pode estar voltando após uma sessão expirada.
+      const tokenReal = jwt.sign(
+        { id: existe.id, perfil: 'admin_oficina', oficina_id: null, nome: existe.nome },
+        SECRET,
+        { expiresIn: '30d' }
+      );
       await new Promise(r => setTimeout(r, 80 + Math.random() * 40));
-      return res.status(201).json({ token: 'pending', needsOficina: true, message: 'Verifique seu e-mail para continuar' });
+      return res.status(201).json({ token: tokenReal, needsOficina: true });
     }
 
     const hash = bcrypt.hashSync(senhaRaw, 12);
@@ -346,7 +362,7 @@ router.post('/complete-oficina', sensitiveOpsLimiter, authMiddleware, validateLo
         if (codigoRow && codigoRow.indicador_oficina_id !== oficina.id) {
           await run(
             `INSERT INTO referral_indicacoes(indicador_id, oficina_id, codigo_usado, status)
-             VALUES($1,$2,$3,'cadastro') ON CONFLICT (oficina_id) DO NOTHING`,
+             VALUES($1,$2,$3,'trial') ON CONFLICT (oficina_id) DO UPDATE SET status='trial'`,
             [codigoRow.indicador_id, oficina.id, codigoIndicacao]
           );
           // Salva o código usado na oficina (imutável)

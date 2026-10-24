@@ -239,7 +239,7 @@ export default function PainelIndicador() {
 
             {/* KPIs */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))',
-              gap: 12, marginBottom: 24 }}>
+              gap: 12, marginBottom: 16 }}>
               <KPI label="Cliques"           value={t.cliques    || 0} />
               <KPI label="Cadastros"         value={t.indicacoes || 0} />
               <KPI label="Testes iniciados"  value={t.trials     || 0} />
@@ -247,6 +247,87 @@ export default function PainelIndicador() {
               <KPI label="Comissão pendente" value={fmt.currency(t.comissao_pendente)}  highlight />
               <KPI label="Comissão aprovada" value={fmt.currency(t.comissao_aprovada)}  highlight />
               <KPI label="Comissão paga"     value={fmt.currency(t.comissao_paga)}      highlight />
+            </div>
+
+            {/* Resumo financeiro */}
+            {(() => {
+              const totalAcumulado = (parseFloat(t.comissao_pendente)||0) + (parseFloat(t.comissao_aprovada)||0) + (parseFloat(t.comissao_paga)||0);
+              const aReceber       = (parseFloat(t.comissao_pendente)||0) + (parseFloat(t.comissao_aprovada)||0);
+              const COMISSAO_UNIT  = 24.95;
+              return (
+                <div style={{ background: 'linear-gradient(135deg, #1E3A5F 0%, #0f2040 100%)', borderRadius: 14, padding: '20px 24px', marginBottom: 16, color: '#fff' }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em', color: 'rgba(255,255,255,.55)', marginBottom: 14 }}>
+                    Resumo financeiro
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16 }}>
+                    <div>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,.55)', marginBottom: 4 }}>Total acumulado</div>
+                      <div style={{ fontFamily: 'Poppins,sans-serif', fontSize: 26, fontWeight: 900, color: '#F97316' }}>{fmt.currency(totalAcumulado)}</div>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', marginTop: 2 }}>Pendente + Aprovada + Paga</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,.55)', marginBottom: 4 }}>A receber</div>
+                      <div style={{ fontFamily: 'Poppins,sans-serif', fontSize: 26, fontWeight: 900, color: '#fbbf24' }}>{fmt.currency(aReceber)}</div>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', marginTop: 2 }}>Aguardando repasse</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,.55)', marginBottom: 4 }}>Já recebido</div>
+                      <div style={{ fontFamily: 'Poppins,sans-serif', fontSize: 26, fontWeight: 900, color: '#4ade80' }}>{fmt.currency(t.comissao_paga || 0)}</div>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', marginTop: 2 }}>Repasses realizados</div>
+                    </div>
+                    <div style={{ borderLeft: '1px solid rgba(255,255,255,.1)', paddingLeft: 16 }}>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,.55)', marginBottom: 4 }}>Por cliente pagante</div>
+                      <div style={{ fontFamily: 'Poppins,sans-serif', fontSize: 26, fontWeight: 900, color: '#fff' }}>{fmt.currency(COMISSAO_UNIT)}</div>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', marginTop: 2 }}>Fixo por indicação confirmada</div>
+                    </div>
+                  </div>
+                  {totalAcumulado > 0 && (
+                    <div style={{ marginTop: 16 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'rgba(255,255,255,.45)', marginBottom: 5 }}>
+                        <span>Progresso de recebimento</span>
+                        <span>{Math.round(((parseFloat(t.comissao_paga)||0) / totalAcumulado) * 100)}% recebido</span>
+                      </div>
+                      <div style={{ height: 6, background: 'rgba(255,255,255,.12)', borderRadius: 10, overflow: 'hidden' }}>
+                        <div style={{ height: '100%', borderRadius: 10, background: 'linear-gradient(90deg,#4ade80,#22c55e)', width: `${Math.min(100, ((parseFloat(t.comissao_paga)||0)/totalAcumulado)*100)}%`, transition: 'width .6s ease' }} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Como funciona a comissão */}
+            <div style={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: 16, padding: '20px 24px', marginBottom: 20 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#111827', marginBottom: 12 }}>Como funciona sua comissão</div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 360, fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ background: '#F9FAFB' }}>
+                      {['Etapa', 'Situação', 'Comissão'].map((h, i) => (
+                        <th key={h} style={{ padding: '8px 12px', textAlign: i === 2 ? 'right' : 'left', fontWeight: 700, color: '#6B7280', fontSize: 11, textTransform: 'uppercase' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { etapa: 'Clicou no seu link',           situacao: 'Clique registrado',   valor: '—',               cor: '#9CA3AF' },
+                      { etapa: 'Se cadastrou no Chave 10',     situacao: 'Cadastro / Teste',     valor: '—',               cor: '#9CA3AF' },
+                      { etapa: 'Pagou a 1ª mensalidade',       situacao: 'Cliente pagante',      valor: fmt.currency(24.95), cor: '#F97316' },
+                      { etapa: 'Comissão aprovada pelo admin', situacao: 'Aprovada',             valor: fmt.currency(24.95), cor: '#2563eb' },
+                      { etapa: 'Repasse realizado para você',  situacao: 'Paga ✓',               valor: fmt.currency(24.95), cor: '#16a34a' },
+                    ].map((row, i) => (
+                      <tr key={i} style={{ borderTop: '1px solid #F3F4F6' }}>
+                        <td style={{ padding: '10px 12px', color: '#374151' }}>{row.etapa}</td>
+                        <td style={{ padding: '10px 12px' }}><span style={{ fontSize: 12, fontWeight: 600, color: row.cor }}>{row.situacao}</span></td>
+                        <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, color: row.cor }}>{row.valor}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 10, lineHeight: 1.6 }}>
+                A comissão de R$&nbsp;24,95 é paga uma única vez por cliente indicado (50% da 1ª mensalidade de R$&nbsp;49,90). Não há recorrência nas mensalidades seguintes.
+              </div>
             </div>
 
             {/* Histórico */}

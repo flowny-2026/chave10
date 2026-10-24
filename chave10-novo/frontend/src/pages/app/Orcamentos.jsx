@@ -13,12 +13,17 @@ const fmt = {
 const STATUS_CLASS = { pendente:'badge-orange', aprovado:'badge-green', rejeitado:'badge-red' };
 const STATUS_LABEL = { pendente:'Pendente', aprovado:'Aprovado', rejeitado:'Rejeitado' };
 const PECA_EMPTY = { nome:'', qtd:'1', valor_unit:'', cliente_fornece: false };
+const MO_EMPTY   = { descricao:'', valor:'' };
 
 function novaPeca() { return { ...PECA_EMPTY, id: Date.now() + Math.random() }; }
+function novaMO()   { return { ...MO_EMPTY,   id: Date.now() + Math.random() }; }
 
-function calcTotal(pecas, valor_mo, desconto) {
+function calcTotal(pecas, mo_itens, desconto) {
   const totalPecas = pecas.reduce((s,p)=>s+(parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1),0);
-  const subtotal = (parseFloat(valor_mo)||0) + totalPecas;
+  const totalMO    = Array.isArray(mo_itens)
+    ? mo_itens.reduce((s,m)=>s+(parseFloat(m.valor)||0),0)
+    : (parseFloat(mo_itens)||0);
+  const subtotal = totalMO + totalPecas;
   return subtotal - (parseFloat(desconto)||0);
 }
 
@@ -32,7 +37,9 @@ function gerarHTMLOrcamento(orc, clientes, veiculos, oficina, t) {
   const v = veiculos.find(x=>x.id===orc.veiculo_id);
   const pecas = orc.pecas_itens || [];
   const totalPecas = pecas.reduce((s,p)=>s+(parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1),0);
-  const subtotal = (parseFloat(orc.valor_mo)||0) + totalPecas;
+  const moItens    = orc.mo_itens || [];
+  const totalMO    = moItens.length > 0 ? moItens.reduce((s,m)=>s+(parseFloat(m.valor)||0),0) : (parseFloat(orc.valor_mo)||0);
+  const subtotal = totalMO + totalPecas;
   const total = subtotal - (parseFloat(orc.desconto)||0);
   // cnpj/cpf fica em observacoes quando salvo pelo admin, ou em cnpj_cpf se salvo pela config
   const docFiscal = oficina?.cnpj_cpf || oficina?.observacoes || '';
@@ -113,7 +120,15 @@ function gerarHTMLOrcamento(orc, clientes, veiculos, oficina, t) {
 
   <div class="section">
     <div class="section-title">Valores</div>
-    <div class="total-row"><span>Mão de obra</span><span>${fmt.currency(orc.valor_mo)}</span></div>
+    ${moItens.length > 0 ? `
+    <table style="margin-bottom:8px">
+      <thead><tr><th>Serviço / Mão de obra</th><th style="text-align:right">Valor</th></tr></thead>
+      <tbody>
+        ${moItens.map(m=>`<tr><td>${m.descricao||'—'}</td><td style="text-align:right">${fmt.currency(m.valor)}</td></tr>`).join('')}
+      </tbody>
+    </table>
+    <div class="total-row"><span>Total mão de obra</span><span>${fmt.currency(totalMO)}</span></div>
+    ` : `<div class="total-row"><span>Mão de obra</span><span>${fmt.currency(orc.valor_mo)}</span></div>`}
     <div class="total-row"><span>Total ${t.pecas.toLowerCase()}</span><span>${fmt.currency(totalPecas)}</span></div>
     ${(parseFloat(orc.desconto)||0)>0?`<div class="total-row" style="color:#dc2626"><span>Desconto</span><span>- ${fmt.currency(orc.desconto)}</span></div>`:''}
     <div class="total-final"><span style="font-size:15px;font-weight:700">TOTAL</span><span class="val">${fmt.currency(total)}</span></div>
@@ -139,7 +154,7 @@ export default function AppOrcamentos() {
   const [search, setSearch]     = useState('');
   const [statusFiltro, setStatusFiltro] = useState('');
   const [modal, setModal]       = useState(null);
-  const [form, setForm]         = useState({ cliente_id:'', veiculo_id:'', descricao:'', servicos:'', pecas_itens:[novaPeca()], valor_mo:'', desconto:'', status:'pendente', validade:'', obs:'' });
+  const [form, setForm]         = useState({ cliente_id:'', veiculo_id:'', descricao:'', servicos:'', pecas_itens:[novaPeca()], mo_itens:[novaMO()], valor_mo:'', desconto:'', status:'pendente', validade:'', obs:'' });
   const [editing, setEditing]   = useState(null);
   const [viewing, setViewing]   = useState(null);
   const [viewFotos, setViewFotos] = useState([]);
@@ -179,18 +194,20 @@ export default function AppOrcamentos() {
   }, []);
 
   function openCreate() {
-    setForm({ cliente_id:'', veiculo_id:'', descricao:'', servicos:'', pecas_itens:[novaPeca()], valor_mo:'', desconto:'', status:'pendente', validade:'', obs:'' });
+    setForm({ cliente_id:'', veiculo_id:'', descricao:'', servicos:'', pecas_itens:[novaPeca()], mo_itens:[novaMO()], valor_mo:'', desconto:'', status:'pendente', validade:'', obs:'' });
     setEditing(null); setPendingPhotos([]); setModal('form');
   }
 
   function openEdit(orc) {
     const pecas = orc.pecas_itens && orc.pecas_itens.length ? orc.pecas_itens : [novaPeca()];
+    const moIt  = orc.mo_itens && orc.mo_itens.length ? orc.mo_itens.map(m=>({...m,id:m.id||Date.now()+Math.random()})) : (orc.valor_mo ? [{ ...novaMO(), descricao:'Mão de obra', valor: String(orc.valor_mo) }] : [novaMO()]);
     setForm({
       cliente_id: orc.cliente_id||'',
       veiculo_id: orc.veiculo_id||'',
       descricao:  orc.descricao||'',
       servicos:   orc.servicos||'',
       pecas_itens: pecas.map(p=>({...p, id: p.id||Date.now()+Math.random()})),
+      mo_itens:   moIt,
       valor_mo:   orc.valor_mo||'',
       desconto:   orc.desconto||'',
       status:     orc.status||'pendente',
@@ -220,15 +237,24 @@ export default function AppOrcamentos() {
   function addPeca() { setForm(f=>({...f, pecas_itens:[...f.pecas_itens, novaPeca()]})); }
   function removePeca(id) { setForm(f=>({...f, pecas_itens: f.pecas_itens.filter(p=>p.id!==id)})); }
 
+  // ── Mão de obra detalhada ─────────────────────────────────────────
+  function setMO(id, field, val) { setForm(f=>({...f, mo_itens: f.mo_itens.map(m=>m.id===id?{...m,[field]:val}:m)})); }
+  function addMO()    { setForm(f=>({...f, mo_itens:[...f.mo_itens, novaMO()]})); }
+  function removeMO(id) { setForm(f=>({...f, mo_itens: f.mo_itens.filter(m=>m.id!==id)})); }
+  const totalMOForm = (form.mo_itens||[]).reduce((s,m)=>s+(parseFloat(m.valor)||0),0);
+
   async function save(e) {
     e.preventDefault();
     try {
       const pecasValidas = form.pecas_itens.filter(p=>p.nome.trim());
+      const moValidas    = (form.mo_itens||[]).filter(m=>m.descricao.trim()||parseFloat(m.valor)>0);
+      const totalMO      = moValidas.reduce((s,m)=>s+(parseFloat(m.valor)||0),0);
       const payload = {
         ...form,
         cliente_id: form.cliente_id||null,
         veiculo_id: form.veiculo_id||null,
-        valor_mo:   parseFloat(form.valor_mo)||0,
+        valor_mo:   totalMO,
+        mo_itens:   moValidas,
         desconto:   parseFloat(form.desconto)||0,
         pecas_itens: pecasValidas,
       };
@@ -360,9 +386,10 @@ export default function AppOrcamentos() {
     const c = clientes.find(x=>x.id===orc.cliente_id);
     if (!c?.telefone) { showToast('Cliente sem telefone','error'); return; }
     const pecas = orc.pecas_itens || [];
+    const moItens = orc.mo_itens || [];
+    const totalMO = moItens.length > 0 ? moItens.reduce((s,m)=>s+(parseFloat(m.valor)||0),0) : (parseFloat(orc.valor_mo)||0);
     const totalPecas = pecas.reduce((s,p)=>s+(parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1),0);
-    const subtotal = (parseFloat(orc.valor_mo)||0)+totalPecas;
-    const total = subtotal - (parseFloat(orc.desconto)||0);
+    const total = totalMO + totalPecas - (parseFloat(orc.desconto)||0);
     const v = veiculos.find(x=>x.id===orc.veiculo_id);
     const oficina = (() => { try { return JSON.parse(localStorage.getItem('c10_oficina'))||{}; } catch { return {}; } })();
     let msg = `*${orc.numero||'Orçamento'} — ${oficina.nome||'Chave 10'}*\n`;
@@ -374,7 +401,13 @@ export default function AppOrcamentos() {
       msg += `\n*${tw.pecas}:*\n`;
       pecas.filter(p=>p.nome).forEach(p=>{ msg += `• ${p.qtd||1}x ${p.nome} — ${fmt.currency((parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1))}\n`; });
     }
-    msg += `\n*Mão de obra:* ${fmt.currency(orc.valor_mo)}`;
+    if (moItens.length > 0) {
+      msg += `\n*Mão de obra:*\n`;
+      moItens.forEach(m=>{ msg += `• ${m.descricao||'Serviço'} — ${fmt.currency(m.valor)}\n`; });
+      msg += `*Total mão de obra: ${fmt.currency(totalMO)}*`;
+    } else {
+      msg += `\n*Mão de obra:* ${fmt.currency(orc.valor_mo)}`;
+    }
     msg += `\n*Total ${tw.pecas.toLowerCase()}:* ${fmt.currency(totalPecas)}`;
     if ((parseFloat(orc.desconto)||0)>0) msg += `\n*Desconto:* - ${fmt.currency(orc.desconto)}`;
     msg += `\n*TOTAL: ${fmt.currency(total)}*`;
@@ -389,7 +422,7 @@ export default function AppOrcamentos() {
     return matchSearch && matchStatus;
   });
 
-  const totalForm = calcTotal(form.pecas_itens, form.valor_mo, form.desconto);
+  const totalForm = calcTotal(form.pecas_itens, form.mo_itens, form.desconto);
 
   return (
     <div>
@@ -565,7 +598,37 @@ export default function AppOrcamentos() {
                 )}
 
                 <div className="form-grid">
-                  {!isFuncionario && <div className="form-group"><label>Mão de obra (R$)</label><input type="number" step="0.01" min="0" value={form.valor_mo} onChange={e=>setForm(f=>({...f,valor_mo:e.target.value}))} placeholder="0,00" /></div>}
+                  {!isFuncionario && (
+                  <div className="form-group full">
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+                      <label style={{marginBottom:0,fontWeight:700}}>Mão de obra</label>
+                      <button type="button" className="btn btn-outline btn-sm" onClick={addMO}>+ Adicionar serviço</button>
+                    </div>
+                    <div style={{background:'var(--gray-50)',borderRadius:'var(--r-sm)',overflow:'hidden',border:'1px solid var(--gray-200)'}}>
+                      {(form.mo_itens||[]).map((m)=>(
+                        <div key={m.id} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 10px',borderBottom:'1px solid var(--gray-200)'}}>
+                          <input
+                            placeholder="Descrição do serviço (ex: Troca de óleo)"
+                            value={m.descricao}
+                            onChange={e=>setMO(m.id,'descricao',e.target.value)}
+                            style={{flex:1,padding:'7px 10px',fontSize:13}}
+                          />
+                          <input
+                            type="number" step="0.01" min="0"
+                            placeholder="R$ 0,00"
+                            value={m.valor}
+                            onChange={e=>setMO(m.id,'valor',e.target.value)}
+                            style={{width:110,padding:'7px 10px',fontSize:13,textAlign:'right'}}
+                          />
+                          <button type="button" onClick={()=>removeMO(m.id)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--danger)',fontSize:18,flexShrink:0}} disabled={(form.mo_itens||[]).length===1}>×</button>
+                        </div>
+                      ))}
+                      <div style={{display:'flex',justifyContent:'flex-end',padding:'8px 10px',fontSize:12,fontWeight:600,color:'var(--gray-600)'}}>
+                        Total mão de obra: <strong style={{marginLeft:8,color:'var(--gray-900)'}}>{fmt.currency(totalMOForm)}</strong>
+                      </div>
+                    </div>
+                  </div>
+                  )}
                   {!isFuncionario && <div className="form-group"><label>Desconto (R$)</label><input type="number" step="0.01" min="0" value={form.desconto} onChange={e=>setForm(f=>({...f,desconto:e.target.value}))} placeholder="0,00" /></div>}
                   {!isFuncionario && (
                   <div className="form-group">
@@ -655,9 +718,10 @@ export default function AppOrcamentos() {
       {/* Modal Ver */}
       {modal==='ver' && viewing && (()=>{
         const pecas = viewing.pecas_itens || [];
+        const moItensView = viewing.mo_itens || [];
+        const totalMOView = moItensView.length > 0 ? moItensView.reduce((s,m)=>s+(parseFloat(m.valor)||0),0) : (parseFloat(viewing.valor_mo)||0);
         const totalPecas = pecas.reduce((s,p)=>s+(parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1),0);
-        const subtotal = (parseFloat(viewing.valor_mo)||0)+totalPecas;
-        const total = subtotal - (parseFloat(viewing.desconto)||0);
+        const total = totalMOView + totalPecas - (parseFloat(viewing.desconto)||0);
         return (
           <div className="modal-overlay open">
             <div className="modal" style={{maxWidth:620}}>
@@ -713,10 +777,25 @@ export default function AppOrcamentos() {
                 {!isFuncionario && (
                 <>
                 <div className="os-view-totais">
-                  <div className="os-view-total-item">
-                    <span>Mão de obra</span>
-                    <span>{fmt.currency(viewing.valor_mo)}</span>
-                  </div>
+                  {moItensView.length > 0 ? (
+                    moItensView.map((m,i)=>(
+                      <div key={i} className="os-view-total-item">
+                        <span>{m.descricao||'Mão de obra'}</span>
+                        <span>{fmt.currency(m.valor)}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="os-view-total-item">
+                      <span>Mão de obra</span>
+                      <span>{fmt.currency(viewing.valor_mo)}</span>
+                    </div>
+                  )}
+                  {moItensView.length > 1 && (
+                    <div className="os-view-total-item" style={{fontWeight:700}}>
+                      <span>Total mão de obra</span>
+                      <span>{fmt.currency(totalMOView)}</span>
+                    </div>
+                  )}
                   <div className="os-view-total-item">
                     <span>Total {t.pecas.toLowerCase()}</span>
                     <span>{fmt.currency(totalPecas)}</span>

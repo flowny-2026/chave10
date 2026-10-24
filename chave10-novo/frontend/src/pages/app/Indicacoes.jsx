@@ -235,7 +235,7 @@ export default function AppIndicacoes() {
       </div>
 
       {/* ── Cards de indicadores ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 16 }}>
         <Card label="Cliques"              value={t.cliques   || 0} />
         <Card label="Cadastros"            value={t.indicacoes || 0} />
         <Card label="Testes iniciados"     value={t.trials    || 0} />
@@ -243,6 +243,119 @@ export default function AppIndicacoes() {
         <Card label="Comissão pendente"    value={fmt.currency(t.comissao_pendente)}  highlight />
         <Card label="Comissão aprovada"    value={fmt.currency(t.comissao_aprovada)}  highlight />
         <Card label="Comissão paga"        value={fmt.currency(t.comissao_paga)}      highlight />
+      </div>
+
+      {/* ── Resumo financeiro ── */}
+      {(() => {
+        const totalAcumulado = (parseFloat(t.comissao_pendente)||0) + (parseFloat(t.comissao_aprovada)||0) + (parseFloat(t.comissao_paga)||0);
+        const aReceber       = (parseFloat(t.comissao_pendente)||0) + (parseFloat(t.comissao_aprovada)||0);
+        const COMISSAO_UNIT  = 24.95;
+        return (
+          <div style={{ background: 'linear-gradient(135deg, #1E3A5F 0%, #0f2040 100%)', borderRadius: 14, padding: '20px 24px', marginBottom: 16, color: '#fff' }}>
+            <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em', color: 'rgba(255,255,255,.55)', marginBottom: 14 }}>
+              Resumo financeiro
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16 }}>
+              {/* Total acumulado */}
+              <div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,.55)', marginBottom: 4 }}>Total acumulado (todas as comissões)</div>
+                <div style={{ fontFamily: 'Poppins,sans-serif', fontSize: 26, fontWeight: 900, color: '#F97316' }}>
+                  {fmt.currency(totalAcumulado)}
+                </div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', marginTop: 2 }}>
+                  Pendente + Aprovada + Paga
+                </div>
+              </div>
+              {/* A receber */}
+              <div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,.55)', marginBottom: 4 }}>A receber (pendente + aprovada)</div>
+                <div style={{ fontFamily: 'Poppins,sans-serif', fontSize: 26, fontWeight: 900, color: '#fbbf24' }}>
+                  {fmt.currency(aReceber)}
+                </div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', marginTop: 2 }}>
+                  Aguardando repasse
+                </div>
+              </div>
+              {/* Já recebido */}
+              <div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,.55)', marginBottom: 4 }}>Já recebido</div>
+                <div style={{ fontFamily: 'Poppins,sans-serif', fontSize: 26, fontWeight: 900, color: '#4ade80' }}>
+                  {fmt.currency(t.comissao_paga || 0)}
+                </div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', marginTop: 2 }}>
+                  Repasses realizados
+                </div>
+              </div>
+              {/* Próximo ganho */}
+              <div style={{ borderLeft: '1px solid rgba(255,255,255,.1)', paddingLeft: 16 }}>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,.55)', marginBottom: 4 }}>Valor por cliente pagante</div>
+                <div style={{ fontFamily: 'Poppins,sans-serif', fontSize: 26, fontWeight: 900, color: '#fff' }}>
+                  {fmt.currency(COMISSAO_UNIT)}
+                </div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', marginTop: 2 }}>
+                  Fixo por indicação confirmada
+                </div>
+              </div>
+            </div>
+
+            {/* Barra de progresso: pago vs total */}
+            {totalAcumulado > 0 && (
+              <div style={{ marginTop: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'rgba(255,255,255,.45)', marginBottom: 5 }}>
+                  <span>Progresso de recebimento</span>
+                  <span>{totalAcumulado > 0 ? Math.round(((parseFloat(t.comissao_paga)||0) / totalAcumulado) * 100) : 0}% recebido</span>
+                </div>
+                <div style={{ height: 6, background: 'rgba(255,255,255,.12)', borderRadius: 10, overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%', borderRadius: 10,
+                    background: 'linear-gradient(90deg, #4ade80, #22c55e)',
+                    width: `${totalAcumulado > 0 ? Math.min(100, ((parseFloat(t.comissao_paga)||0) / totalAcumulado) * 100) : 0}%`,
+                    transition: 'width .6s ease',
+                  }} />
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* ── Como funciona a comissão ── */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--gray-800)', marginBottom: 12 }}>
+          Como funciona sua comissão
+        </div>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 360, fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: 'var(--gray-50)' }}>
+                <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 700, color: 'var(--gray-500)', fontSize: 11, textTransform: 'uppercase' }}>Etapa</th>
+                <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 700, color: 'var(--gray-500)', fontSize: 11, textTransform: 'uppercase' }}>Situação</th>
+                <th style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--gray-500)', fontSize: 11, textTransform: 'uppercase' }}>Comissão</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                { etapa: 'Clicou no seu link',           situacao: 'Clique registrado',         valor: '—',                       cor: 'var(--gray-400)' },
+                { etapa: 'Se cadastrou no Chave 10',     situacao: 'Cadastro / Teste',           valor: '—',                       cor: 'var(--gray-400)' },
+                { etapa: 'Pagou a 1ª mensalidade',       situacao: 'Cliente pagante',            valor: fmt.currency(24.95),       cor: '#F97316'         },
+                { etapa: 'Comissão aprovada pelo admin', situacao: 'Aprovada',                   valor: fmt.currency(24.95),       cor: '#2563eb'         },
+                { etapa: 'Repasse realizado para você',  situacao: 'Paga ✓',                     valor: fmt.currency(24.95),       cor: '#16a34a'         },
+              ].map((row, i) => (
+                <tr key={i} style={{ borderTop: '1px solid var(--gray-100)' }}>
+                  <td style={{ padding: '10px 12px', color: 'var(--gray-700)' }}>{row.etapa}</td>
+                  <td style={{ padding: '10px 12px' }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: row.cor }}>{row.situacao}</span>
+                  </td>
+                  <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, color: row.cor }}>{row.valor}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--gray-400)', marginTop: 10, lineHeight: 1.6 }}>
+          A comissão de R$&nbsp;24,95 é paga uma única vez por cliente indicado (50% da 1ª mensalidade de R$&nbsp;49,90).
+          Não há recorrência nas mensalidades seguintes.
+        </div>
       </div>
 
       {/* ── Histórico de indicações ── */}
