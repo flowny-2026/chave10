@@ -249,7 +249,7 @@ export default function AppIndicacoes() {
       {(() => {
         const totalAcumulado = (parseFloat(t.comissao_pendente)||0) + (parseFloat(t.comissao_aprovada)||0) + (parseFloat(t.comissao_paga)||0);
         const aReceber       = (parseFloat(t.comissao_pendente)||0) + (parseFloat(t.comissao_aprovada)||0);
-        const COMISSAO_UNIT  = 24.95;
+        // usa comissaoPorCliente que já considera o tipo (influenciador vs demais)
         return (
           <div style={{ background: 'linear-gradient(135deg, #1E3A5F 0%, #0f2040 100%)', borderRadius: 14, padding: '20px 24px', marginBottom: 16, color: '#fff' }}>
             <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em', color: 'rgba(255,255,255,.55)', marginBottom: 14 }}>
@@ -286,14 +286,14 @@ export default function AppIndicacoes() {
                   Repasses realizados
                 </div>
               </div>
-              {/* Próximo ganho */}
+              {/* Valor por cliente — usa o valor correto do perfil */}
               <div style={{ borderLeft: '1px solid rgba(255,255,255,.1)', paddingLeft: 16 }}>
                 <div style={{ fontSize: 11, color: 'rgba(255,255,255,.55)', marginBottom: 4 }}>Valor por cliente pagante</div>
                 <div style={{ fontFamily: 'Poppins,sans-serif', fontSize: 26, fontWeight: 900, color: '#fff' }}>
-                  {fmt.currency(COMISSAO_UNIT)}
+                  {fmt.currency(comissaoPorCliente)}
                 </div>
                 <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', marginTop: 2 }}>
-                  Fixo por indicação confirmada
+                  {pctComissao} da 1ª mensalidade
                 </div>
               </div>
             </div>
@@ -335,11 +335,11 @@ export default function AppIndicacoes() {
             </thead>
             <tbody>
               {[
-                { etapa: 'Clicou no seu link',           situacao: 'Clique registrado',         valor: '—',                       cor: 'var(--gray-400)' },
-                { etapa: 'Se cadastrou no Chave 10',     situacao: 'Cadastro / Teste',           valor: '—',                       cor: 'var(--gray-400)' },
-                { etapa: 'Pagou a 1ª mensalidade',       situacao: 'Cliente pagante',            valor: fmt.currency(24.95),       cor: '#F97316'         },
-                { etapa: 'Comissão aprovada pelo admin', situacao: 'Aprovada',                   valor: fmt.currency(24.95),       cor: '#2563eb'         },
-                { etapa: 'Repasse realizado para você',  situacao: 'Paga ✓',                     valor: fmt.currency(24.95),       cor: '#16a34a'         },
+                { etapa: 'Clicou no seu link',           situacao: 'Clique registrado',         valor: '—',                               cor: 'var(--gray-400)' },
+                { etapa: 'Se cadastrou no Chave 10',     situacao: 'Cadastro / Teste',           valor: '—',                               cor: 'var(--gray-400)' },
+                { etapa: 'Pagou a 1ª mensalidade',       situacao: 'Cliente pagante',            valor: fmt.currency(comissaoPorCliente),  cor: '#F97316'         },
+                { etapa: 'Comissão aprovada pelo admin', situacao: 'Aprovada',                   valor: fmt.currency(comissaoPorCliente),  cor: '#2563eb'         },
+                { etapa: 'Repasse realizado para você',  situacao: 'Paga ✓',                     valor: fmt.currency(comissaoPorCliente),  cor: '#16a34a'         },
               ].map((row, i) => (
                 <tr key={i} style={{ borderTop: '1px solid var(--gray-100)' }}>
                   <td style={{ padding: '10px 12px', color: 'var(--gray-700)' }}>{row.etapa}</td>
@@ -353,7 +353,7 @@ export default function AppIndicacoes() {
           </table>
         </div>
         <div style={{ fontSize: 11, color: 'var(--gray-400)', marginTop: 10, lineHeight: 1.6 }}>
-          A comissão de R$&nbsp;24,95 é paga uma única vez por cliente indicado (50% da 1ª mensalidade de R$&nbsp;49,90).
+          A comissão de <strong>{fmt.currency(comissaoPorCliente)}</strong> ({pctComissao} da 1ª mensalidade de {fmt.currency(49.90)}) é paga uma única vez por cliente indicado.
           Não há recorrência nas mensalidades seguintes.
         </div>
       </div>
