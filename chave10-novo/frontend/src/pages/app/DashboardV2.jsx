@@ -8,6 +8,7 @@ import { useOnboarding } from '../../hooks/useOnboarding';
 import '../../styles/dashboardPremium.css';
 import { useSegmento } from '../../hooks/useSegmento';
 import PeriodFilter from '../../components/PeriodFilter';
+import VersiculoDiario from '../../components/VersiculoDiario';
 import {
   StatCard, GraficoFaturamento, GraficoOSStatus, GraficoReceitasDespesas,
   TopClientes, UltimasOS, ResumoLinha,
@@ -253,6 +254,9 @@ export default function DashboardV2() {
           {t.novaOs}
         </button>
       </div>
+
+      {/* ── VERSÍCULO DO DIA ────────────────────────────────── */}
+      <VersiculoDiario />
 
       {/* ── POPUP ATENÇÃO HOJE ─────────────────────────────── */}
       {showAtencaoPopup && (
