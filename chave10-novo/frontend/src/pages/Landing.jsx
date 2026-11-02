@@ -269,6 +269,56 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* VERSÍCULO DO CHAVE 10 */}
+      <section style={{
+        background: 'var(--lp-navy-dark,#0a1525)',
+        padding: '56px 24px',
+        textAlign: 'center',
+        borderTop: '1px solid rgba(249,115,22,.15)',
+        borderBottom: '1px solid rgba(249,115,22,.15)',
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        {/* glow sutil */}
+        <div style={{
+          position: 'absolute', top: '50%', left: '50%',
+          transform: 'translate(-50%,-50%)',
+          width: 600, height: 300, borderRadius: '50%',
+          background: 'radial-gradient(ellipse, rgba(249,115,22,0.07) 0%, transparent 70%)',
+          pointerEvents: 'none',
+        }} />
+        <div className="lp-container" style={{ position: 'relative', zIndex: 1, maxWidth: 720 }}>
+          {/* Ícone de chave decorativo */}
+          <div style={{ marginBottom: 20 }}>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
+              stroke="rgba(249,115,22,0.6)" strokeWidth="1.5"
+              strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+            </svg>
+          </div>
+
+          <p style={{
+            fontFamily: 'Georgia, serif',
+            fontSize: 'clamp(1.05rem, 2.2vw, 1.35rem)',
+            fontStyle: 'italic',
+            color: 'rgba(255,255,255,.85)',
+            lineHeight: 1.8,
+            margin: '0 0 18px',
+            letterSpacing: '.01em',
+          }}>
+            "Isto diz o Santo, o Verdadeiro, aquele que tem a <span style={{ color: '#F97316', fontStyle: 'normal', fontWeight: 700 }}>chave de Davi</span>, que abre, e ninguém fechará, e que fecha, e ninguém abrirá."
+          </p>
+
+          <span style={{
+            fontSize: 13, fontWeight: 700, letterSpacing: '.08em',
+            textTransform: 'uppercase',
+            color: '#F97316',
+          }}>
+            Apocalipse 3:7
+          </span>
+        </div>
+      </section>
+
       {/* FUNCIONALIDADES */}
       <section className="lp-features">
         <div className="lp-container">
