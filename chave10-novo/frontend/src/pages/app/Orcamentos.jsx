@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../../api';
 import FotoUploader from '../../components/FotoUploader';
 import { useSegmento, getTermosSegmento } from '../../hooks/useSegmento';
@@ -145,6 +146,7 @@ function gerarHTMLOrcamento(orc, clientes, veiculos, oficina, t) {
 
 export default function AppOrcamentos() {
   const t = useSegmento();
+  const navigate = useNavigate();
   // Funcionário e mecânico não veem valores financeiros
   const isFuncionario = (() => { try { const p = JSON.parse(localStorage.getItem('c10_user'))?.perfil; return p === 'funcionario' || p === 'mecanico'; } catch { return false; } })();
   const [lista, setLista]       = useState([]);
@@ -318,11 +320,15 @@ export default function AppOrcamentos() {
   }
 
   async function setStatus(id, status) {
-    await api.app.orcamentos.setStatus(id, status);
+    const res = await api.app.orcamentos.setStatus(id, status);
     load();
-    // Atualiza viewing imediatamente para refletir o novo status sem fechar o modal
-    setViewing(v => v && v.id === id ? { ...v, status } : v);
-    showToast('Status atualizado!');
+    // Atualiza viewing imediatamente para refletir o novo status e os_id sem fechar o modal
+    setViewing(v => v && v.id === id ? { ...v, status, os_id: res?.os_id || v.os_id } : v);
+    if (status === 'aprovado' && res?.os_id) {
+      showToast('Orçamento aprovado! OS criada automaticamente.');
+    } else {
+      showToast('Status atualizado!');
+    }
   }
 
   async function remove(id) {
@@ -836,6 +842,11 @@ export default function AppOrcamentos() {
                   <button className="btn btn-primary" onClick={()=>openEdit(viewing)}><IcoEdit /> Editar</button>
                   {viewing.status==='pendente'&&<button className="btn btn-success" onClick={()=>setStatus(viewing.id,'aprovado')}>Aprovar</button>}
                   {viewing.status==='pendente'&&<button className="btn btn-outline" style={{color:'var(--danger)',borderColor:'var(--danger)'}} onClick={()=>setStatus(viewing.id,'rejeitado')}>Rejeitar</button>}
+                  {viewing.status==='aprovado'&&viewing.os_id&&(
+                    <button className="btn btn-success" onClick={()=>{ setModal(null); navigate('/app/os?q='+viewing.os_id); }}>
+                      📋 Ver OS
+                    </button>
+                  )}
                   {viewing.status!=='pendente'&&<button className="btn btn-outline" onClick={()=>setStatus(viewing.id,'pendente')}>↩ Reabrir</button>}
                 </div>
               </div>

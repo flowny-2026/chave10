@@ -554,7 +554,7 @@ function validateEstoque(req, res, next) {
   next();
 }
 
-const FORMAS_PAGAMENTO_OS = ['pix', 'dinheiro', 'debito', 'credito'];
+const FORMAS_PAGAMENTO_OS = ['pix', 'dinheiro', 'debito', 'credito', 'boleto'];
 
 /** Middleware: valida pagamento de OS — rejeita campos extras */
 function validatePagamentoOS(req, res, next) {

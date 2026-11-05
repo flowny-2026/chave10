@@ -328,7 +328,7 @@ export default function AppOS() {
   }
   const [viewing, setViewing]   = useState(null);
   const [toast, setToast]       = useState({ msg:'', type:'' });
-  const [pagForm, setPagForm]   = useState({ os_id:null, forma:'', valor_total:0, parcelas:1, bandeira:'', taxa_maquininha:'', observacao:'' });
+  const [pagForm, setPagForm]   = useState({ os_id:null, forma:'', valor_total:0, parcelas:1, bandeira:'', taxa_maquininha:'', observacao:'', boleto_vencimento:'', boleto_recebido_em:'' });
   const [pendingPhotos, setPendingPhotos] = useState([]); // fotos selecionadas antes de salvar
 
   // Handler para selecionar fotos no formulário (antes de salvar)
@@ -584,7 +584,7 @@ export default function AppOS() {
     const os = osList.find(o => o.id === id);
     if (!os) return;
     const total = (parseFloat(os.valor_mo)||0) + (parseFloat(os.valor_pecas)||0) || parseFloat(os.valor||0);
-    setPagForm({ os_id: id, forma: '', valor_total: total, parcelas: 1, bandeira: '', taxa_maquininha: '', observacao: '' });
+    setPagForm({ os_id: id, forma: '', valor_total: total, parcelas: 1, bandeira: '', taxa_maquininha: '', observacao: '', boleto_vencimento: '', boleto_recebido_em: '' });
     setModal('pagamento');
   }
 
@@ -1238,7 +1238,7 @@ export default function AppOS() {
                   <div style={{marginBottom:16}}>
                     <div style={{fontSize:11,fontWeight:700,color:'var(--gray-400)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:8}}>💳 Pagamento registrado</div>
                     {viewPagamentos.map(pag => {
-                      const formaLabel = {pix:'PIX',dinheiro:'Dinheiro',debito:'Débito',credito:'Crédito'}[pag.forma]||pag.forma;
+                      const formaLabel = {pix:'PIX',dinheiro:'Dinheiro',debito:'Débito',credito:'Crédito',boleto:'Boleto'}[pag.forma]||pag.forma;
                       return (
                         <div key={pag.id} style={{background:'var(--gray-50)',borderRadius:'var(--r-sm)',padding:'12px 14px',border:'1px solid var(--gray-200)',marginBottom:8}}>
                           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
@@ -1341,17 +1341,33 @@ export default function AppOS() {
                     })()}
                   </div>
 
-                  {/* Configuração de garantia */}
+                  {/* Configuração de garantia — opt-in por OS */}
                   {!isFuncionario && !isMecanico && (
                     <details style={{marginBottom:16,background:'var(--gray-50)',borderRadius:'var(--r-sm,6px)',border:'1px solid var(--gray-200)'}}>
                       <summary style={{padding:'10px 14px',cursor:'pointer',fontSize:12,fontWeight:600,color:'var(--gray-700)',userSelect:'none'}}>
-                        🛡️ Configurar garantia desta OS (opcional)
+                        🛡️ {comprovante.os.garantia_ativa ? 'Garantia configurada' : 'Informar garantia (opcional)'}
                       </summary>
-                      <GarantiaForm osId={comprovante.os.id} os={comprovante.os} oficina={comprovante.oficina} onSave={async()=>{
-                        const d = await api.app.os.comprovante(comprovante.os.id);
-                        setComprovante(d);
-                        showToast('Garantia salva');
-                      }} />
+                      {/* Toggle para ativar/desativar garantia */}
+                      <div style={{padding:'8px 14px',borderBottom:'1px solid var(--gray-200)',display:'flex',alignItems:'center',gap:10}}>
+                        <label style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',fontSize:13,color:'var(--gray-700)'}}>
+                          <input type="checkbox"
+                            checked={!!comprovante.os.garantia_ativa}
+                            onChange={async e => {
+                              await api.app.os.garantia(comprovante.os.id, { garantia_ativa: e.target.checked, garantia_prazo_dias: e.target.checked ? (comprovante.os.garantia_prazo_dias || comprovante.oficina.garantia_padrao_dias || 90) : 0 });
+                              const d = await api.app.os.comprovante(comprovante.os.id);
+                              setComprovante(d);
+                            }}
+                          />
+                          Informar garantia nesta OS
+                        </label>
+                      </div>
+                      {comprovante.os.garantia_ativa && (
+                        <GarantiaForm osId={comprovante.os.id} os={comprovante.os} oficina={comprovante.oficina} onSave={async()=>{
+                          const d = await api.app.os.comprovante(comprovante.os.id);
+                          setComprovante(d);
+                          showToast('Garantia salva');
+                        }} />
+                      )}
                     </details>
                   )}
 
@@ -1418,6 +1434,7 @@ export default function AppOS() {
                       {v:'dinheiro',label:'Dinheiro'},
                       {v:'debito',label:'Débito'},
                       {v:'credito',label:'Crédito'},
+                      {v:'boleto',label:'Boleto'},
                     ].map(f=>(
                       <button key={f.v} type="button"
                         className={`pay-method-btn${pagForm.forma===f.v?' pay-method-btn--active':''}`}
@@ -1509,6 +1526,27 @@ export default function AppOS() {
                         </div>
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* Opções de boleto */}
+                {pagForm.forma==='boleto' && (
+                  <div style={{background:'var(--gray-50)',borderRadius:'var(--r-sm)',padding:16,marginBottom:16,border:'1px solid var(--gray-200)'}}>
+                    <div className="form-grid" style={{gap:12}}>
+                      <div className="form-group">
+                        <label>Vencimento do boleto</label>
+                        <input type="date" value={pagForm.boleto_vencimento||''} onChange={e=>setPagForm(p=>({...p,boleto_vencimento:e.target.value}))} />
+                      </div>
+                      <div className="form-group">
+                        <label>Data de recebimento <span style={{fontSize:11,color:'var(--gray-400)'}}>(preencha se já recebeu)</span></label>
+                        <input type="date" value={pagForm.boleto_recebido_em||''} onChange={e=>setPagForm(p=>({...p,boleto_recebido_em:e.target.value}))} />
+                      </div>
+                    </div>
+                    <div style={{fontSize:12,color:'var(--gray-500)',marginTop:8}}>
+                      {pagForm.boleto_recebido_em
+                        ? '✓ Boleto será registrado como recebido.'
+                        : '⏳ Boleto ficará pendente até a confirmação do recebimento.'}
+                    </div>
                   </div>
                 )}
 

@@ -121,6 +121,7 @@ export const api = {
     config: {
       get:     ()                    => get('/app/config'),
       save:    (data)                => put('/app/config', data),
+      setTaxaCliente: (repassar)     => patch('/app/config/taxa-cliente', { repassar_taxa_cliente: repassar }),
     },
     meta: {
       get:     ()                    => get('/app/meta'),
@@ -191,11 +192,24 @@ export const api = {
       list:    ()                    => get('/app/parcelas-receber'),
       marcarRecebido: (id)           => patch('/app/parcelas-receber/'+id+'/recebido', {}),
     },
-    posVenda: {
-      list:    ()                    => get('/app/pos-venda'),
+    fornecedores: {
+      list:    ()                    => get('/app/fornecedores'),
+      create:  (data)                => post('/app/fornecedores', data),
+      update:  (id, data)            => put('/app/fornecedores/'+id, data),
+      remove:  (id)                  => del('/app/fornecedores/'+id),
+    },
+    categoriasDespesas: {
+      list:    ()                    => get('/app/categorias-despesas'),
+      create:  (data)                => post('/app/categorias-despesas', data),
+      update:  (id, data)            => put('/app/categorias-despesas/'+id, data),
+      remove:  (id)                  => del('/app/categorias-despesas/'+id),
     },
     pagamentosOS: {
-      list:    ()                    => get('/app/pagamentos-os'),
+      list:              ()          => get('/app/pagamentos-os'),
+      confirmarBoleto:   (id, data)  => patch('/app/pagamentos-os/'+id+'/boleto-recebido', data),
+    },
+    posVenda: {
+      list:    ()                    => get('/app/pos-venda'),
     },
     mecanicos: {
       list:    ()                    => get('/app/mecanicos'),

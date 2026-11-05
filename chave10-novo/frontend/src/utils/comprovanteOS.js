@@ -90,8 +90,12 @@ export function gerarComprovanteHTML(os, oficina, pagamentos = []) {
   const saldoPend   = Math.max(0, totalGeral - totalPago);
 
   // ─── Garantia ─────────────────────────────────────────────
-  // Prioridade: garantia da OS > padrão da oficina
-  const garantiaDias = os.garantia_prazo_dias || oficina.garantia_padrao_dias || 0;
+  // Só exibe garantia se garantia_ativa=true na OS (opt-in)
+  // Retrocompat: OS antigas sem a flag mostram se tiver prazo definido
+  const garantiaAtiva = os.garantia_ativa === true ||
+    (os.garantia_ativa === null || os.garantia_ativa === undefined
+      ? (os.garantia_prazo_dias > 0) : false);
+  const garantiaDias = garantiaAtiva ? (os.garantia_prazo_dias || oficina.garantia_padrao_dias || 0) : 0;
   const garantiaCond = os.garantia_condicoes  || oficina.garantia_padrao_condicoes || null;
   const garantiaIni  = os.garantia_data_inicio ||
     (os.data_conclusao ? os.data_conclusao.split('T')[0] : null) ||

@@ -645,6 +645,74 @@ async function initDB() {
   }
 
   console.log('✅ Banco PostgreSQL inicializado');
+
+  // ── MELHORIAS 2026 ────────────────────────────────────────────
+  // Todas idempotentes. Dados existentes preservados.
+
+  // 1. Garantia opcional na OS — flag para controlar se foi ativada
+  await pool.query(`ALTER TABLE ordens_servico ADD COLUMN IF NOT EXISTS garantia_ativa BOOLEAN NOT NULL DEFAULT false;`).catch(() => {});
+
+  // 2. Taxa da maquininha — configuração por oficina
+  await pool.query(`ALTER TABLE oficinas ADD COLUMN IF NOT EXISTS repassar_taxa_cliente BOOLEAN NOT NULL DEFAULT false;`).catch(() => {});
+
+  // 3. Boleto como forma de pagamento
+  // Adiciona 'boleto' ao CHECK de pagamentos_os sem recriar a tabela
+  await pool.query(`
+    DO $$
+    DECLARE cname text;
+    BEGIN
+      SELECT conname INTO cname
+      FROM pg_constraint
+      WHERE conrelid = 'pagamentos_os'::regclass AND contype = 'c'
+        AND pg_get_constraintdef(oid) ILIKE '%forma%';
+      IF cname IS NOT NULL THEN
+        EXECUTE 'ALTER TABLE pagamentos_os DROP CONSTRAINT ' || quote_ident(cname);
+      END IF;
+      ALTER TABLE pagamentos_os
+        ADD CONSTRAINT pagamentos_os_forma_check
+        CHECK (forma IN ('pix','dinheiro','debito','credito','boleto'));
+    END $$;
+  `).catch(() => {});
+  // Campos específicos do boleto
+  await pool.query(`ALTER TABLE pagamentos_os ADD COLUMN IF NOT EXISTS boleto_vencimento TEXT;`).catch(() => {});
+  await pool.query(`ALTER TABLE pagamentos_os ADD COLUMN IF NOT EXISTS boleto_recebido_em TEXT;`).catch(() => {});
+  await pool.query(`ALTER TABLE pagamentos_os ADD COLUMN IF NOT EXISTS boleto_pendente BOOLEAN NOT NULL DEFAULT false;`).catch(() => {});
+
+  // 4. Fornecedores
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS fornecedores (
+      id           SERIAL PRIMARY KEY,
+      oficina_id   INTEGER NOT NULL REFERENCES oficinas(id) ON DELETE CASCADE,
+      nome         TEXT NOT NULL,
+      cnpj_cpf     TEXT,
+      telefone     TEXT,
+      email        TEXT,
+      obs          TEXT,
+      ativo        BOOLEAN NOT NULL DEFAULT true,
+      criado_em    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `).catch(() => {});
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_fornecedores_oficina ON fornecedores(oficina_id, ativo)`).catch(() => {});
+  // Vincula fornecedor à despesa
+  await pool.query(`ALTER TABLE despesas ADD COLUMN IF NOT EXISTS fornecedor_id INTEGER REFERENCES fornecedores(id) ON DELETE SET NULL;`).catch(() => {});
+
+  // 5. Categorias de despesas editáveis por oficina
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS categorias_despesas (
+      id         SERIAL PRIMARY KEY,
+      oficina_id INTEGER NOT NULL REFERENCES oficinas(id) ON DELETE CASCADE,
+      nome       TEXT NOT NULL,
+      icone      TEXT DEFAULT '📦',
+      ativo      BOOLEAN NOT NULL DEFAULT true,
+      criado_em  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE(oficina_id, nome)
+    );
+  `).catch(() => {});
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_cat_despesas_oficina ON categorias_despesas(oficina_id, ativo)`).catch(() => {});
+  // Vincula despesa à categoria (mantém campo texto para compatibilidade)
+  await pool.query(`ALTER TABLE despesas ADD COLUMN IF NOT EXISTS categoria_id INTEGER REFERENCES categorias_despesas(id) ON DELETE SET NULL;`).catch(() => {});
+
+  console.log('✅ Melhorias 2026 aplicadas ao banco');
 }
 
 module.exports = { pool, query, queryOne, run, initDB };

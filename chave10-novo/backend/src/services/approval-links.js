@@ -297,6 +297,14 @@ async function approveBudget(token, signatureData = null, ipAddress = null) {
       log.warn('notificacao_aprovacao_falhou', { erro: notifErr.message });
     }
 
+    // Converte o orçamento aprovado em OS automaticamente
+    try {
+      const { converterOrcamentoAprovado } = require('./orcamentoConversor');
+      await converterOrcamentoAprovado(link.orcamento_id, link.oficina_id);
+    } catch (convErr) {
+      log.warn('converter_orcamento_os_link', { erro: convErr.message });
+    }
+
     return {
       success: true,
       message: 'Orçamento aprovado com sucesso!',

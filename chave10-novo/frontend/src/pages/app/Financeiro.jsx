@@ -11,7 +11,7 @@ const fmt = {
 };
 const CATEGORIAS = ['Aluguel','Energia','Água','Internet','Folha de pagamento','Peças/Estoque','Ferramentas','Boleto/Financiamento','Impostos','Marketing','Combustível','Manutenção','Outros'];
 const CAT_ICONS = {'Aluguel':'🏠','Energia':'⚡','Água':'💧','Internet':'🌐','Folha de pagamento':'👥','Peças/Estoque':'🔩','Ferramentas':'🔧','Boleto/Financiamento':'📄','Impostos':'🏛️','Marketing':'📣','Combustível':'⛽','Manutenção':'🛠️','Outros':'📦'};
-const EMPTY_DESP = { descricao:'', categoria:'Outros', valor:'', data:new Date().toISOString().split('T')[0], vencimento:'', pago:false, obs:'' };
+const EMPTY_DESP = { descricao:'', categoria:'Outros', valor:'', data:new Date().toISOString().split('T')[0], vencimento:'', pago:false, obs:'', fornecedor_id:'' };
 
 function Toast({ msg, type }) {
   if (!msg) return null;
@@ -86,6 +86,25 @@ export default function AppFinanceiro() {
     } catch { showToast('Erro ao marcar','error'); }
   }
 
+  const [categoriasDinamicas, setCategoriasDinamicas] = useState([]);
+  const [fornecedores, setFornecedores] = useState([]);
+  const [modalCat, setModalCat] = useState(false);
+  const [modalForn, setModalForn] = useState(false);
+  const [formCat, setFormCat] = useState({nome:'',icone:'📦'});
+  const [editingCat, setEditingCat] = useState(null);
+  const [formForn, setFormForn] = useState({nome:'',cnpj_cpf:'',telefone:'',email:'',obs:''});
+  const [editingForn, setEditingForn] = useState(null);
+
+  // Categorias: usa as dinâmicas se existirem, senão fallback estático
+  const categoriasDisponiveis = categoriasDinamicas.filter(c=>c.ativo).map(c=>c.nome).length > 0
+    ? categoriasDinamicas.filter(c=>c.ativo).map(c=>c.nome)
+    : CATEGORIAS;
+
+  useEffect(()=>{
+    api.app.categoriasDespesas?.list().then(d=>setCategoriasDinamicas(d||[])).catch(()=>{});
+    api.app.fornecedores?.list().then(d=>setFornecedores(d||[])).catch(()=>{});
+  },[]);
+
   useEffect(()=>{ loadOrdens(); loadParcelas(); loadPagamentosOS(); },[]);
   useEffect(()=>{ loadDespesas(); },[periodoTipo, filtroCustom, dataInicio, dataFim]);
 
@@ -98,6 +117,45 @@ export default function AppFinanceiro() {
       else await api.app.despesas.create(payload);
       setModal(false); loadDespesas(); showToast(editing?'Despesa atualizada!':'Despesa cadastrada!');
     } catch { showToast('Erro ao salvar','error'); }
+  }
+
+  async function saveCat(e) {
+    e.preventDefault();
+    try {
+      if (editingCat) await api.app.categoriasDespesas.update(editingCat, formCat);
+      else await api.app.categoriasDespesas.create(formCat);
+      setModalCat(false); setFormCat({nome:'',icone:'📦'}); setEditingCat(null);
+      const d = await api.app.categoriasDespesas.list(); setCategoriasDinamicas(d||[]);
+      showToast('Categoria salva!');
+    } catch(err){ showToast(err?.error||'Erro ao salvar','error'); }
+  }
+
+  async function removeCat(id) {
+    try {
+      await api.app.categoriasDespesas.remove(id);
+      const d = await api.app.categoriasDespesas.list(); setCategoriasDinamicas(d||[]);
+      showToast('Categoria excluída');
+    } catch(err){ showToast(err?.error||'Categoria em uso — não é possível excluir','error'); }
+  }
+
+  async function saveForn(e) {
+    e.preventDefault();
+    try {
+      if (editingForn) await api.app.fornecedores.update(editingForn, formForn);
+      else await api.app.fornecedores.create(formForn);
+      setModalForn(false); setFormForn({nome:'',cnpj_cpf:'',telefone:'',email:'',obs:''}); setEditingForn(null);
+      const d = await api.app.fornecedores.list(); setFornecedores(d||[]);
+      showToast('Fornecedor salvo!');
+    } catch(err){ showToast(err?.error||'Erro ao salvar','error'); }
+  }
+
+  async function removeForn(id) {
+    if(!window.confirm('Desativar este fornecedor?')) return;
+    try {
+      await api.app.fornecedores.remove(id);
+      const d = await api.app.fornecedores.list(); setFornecedores(d||[]);
+      showToast('Fornecedor desativado');
+    } catch { showToast('Erro','error'); }
   }
 
   async function marcarPago(id) {
@@ -171,6 +229,8 @@ export default function AppFinanceiro() {
             </div>
           )}
           <button className="btn btn-primary btn-sm" onClick={()=>{setForm({...EMPTY_DESP,data:new Date().toISOString().split('T')[0]});setEditing(null);setModal(true);}}>+ Nova despesa</button>
+          <button className="btn btn-outline btn-sm" onClick={()=>setModalForn(true)}>Fornecedores</button>
+          <button className="btn btn-outline btn-sm" onClick={()=>setModalCat(true)}>Categorias</button>
         </div>
       </div>
 
@@ -436,7 +496,14 @@ export default function AppFinanceiro() {
                   <div className="form-group">
                     <label>Categoria *</label>
                     <select value={form.categoria} onChange={e=>setForm(f=>({...f,categoria:e.target.value}))}>
-                      {CATEGORIAS.map(c=><option key={c} value={c}>{c}</option>)}
+                      {categoriasDisponiveis.map(c=><option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Fornecedor</label>
+                    <select value={form.fornecedor_id||''} onChange={e=>setForm(f=>({...f,fornecedor_id:e.target.value||''}))}>
+                      <option value="">Sem fornecedor</option>
+                      {fornecedores.map(f=><option key={f.id} value={f.id}>{f.nome}</option>)}
                     </select>
                   </div>
                   <div className="form-group">
@@ -468,6 +535,68 @@ export default function AppFinanceiro() {
                   <button type="submit" className="btn btn-primary">Salvar</button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Fornecedor */}
+      {modalForn && (
+        <div className="modal-overlay open">
+          <div className="modal" style={{maxWidth:480}}>
+            <div className="modal-header">
+              <h2>{editingForn?'Editar fornecedor':'Novo fornecedor'}</h2>
+              <button className="modal-close" onClick={()=>{setModalForn(false);setEditingForn(null);setFormForn({nome:'',cnpj_cpf:'',telefone:'',email:'',obs:''});}}>✕</button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={saveForn}>
+                <div className="form-grid">
+                  <div className="form-group full"><label>Nome / Razão social *</label><input value={formForn.nome} onChange={e=>setFormForn(f=>({...f,nome:e.target.value}))} required autoFocus /></div>
+                  <div className="form-group"><label>CNPJ / CPF</label><input value={formForn.cnpj_cpf} onChange={e=>setFormForn(f=>({...f,cnpj_cpf:e.target.value}))} placeholder="00.000.000/0001-00" /></div>
+                  <div className="form-group"><label>Telefone</label><input value={formForn.telefone} onChange={e=>setFormForn(f=>({...f,telefone:e.target.value}))} placeholder="(00) 00000-0000" /></div>
+                  <div className="form-group full"><label>E-mail</label><input type="email" value={formForn.email} onChange={e=>setFormForn(f=>({...f,email:e.target.value}))} /></div>
+                  <div className="form-group full"><label>Observações</label><textarea value={formForn.obs} onChange={e=>setFormForn(f=>({...f,obs:e.target.value}))} /></div>
+                </div>
+                <div className="form-actions">
+                  <button type="button" className="btn btn-outline" onClick={()=>{setModalForn(false);setEditingForn(null);}}>Cancelar</button>
+                  <button type="submit" className="btn btn-primary">Salvar</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Categorias */}
+      {modalCat && (
+        <div className="modal-overlay open">
+          <div className="modal" style={{maxWidth:440}}>
+            <div className="modal-header">
+              <h2>Categorias de despesas</h2>
+              <button className="modal-close" onClick={()=>setModalCat(false)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={saveCat} style={{marginBottom:20}}>
+                <div className="form-grid">
+                  <div className="form-group"><label>Ícone</label><input value={formCat.icone} onChange={e=>setFormCat(f=>({...f,icone:e.target.value}))} style={{width:60}} maxLength={2} /></div>
+                  <div className="form-group"><label>Nome *</label><input value={formCat.nome} onChange={e=>setFormCat(f=>({...f,nome:e.target.value}))} required autoFocus /></div>
+                </div>
+                <div className="form-actions">
+                  {editingCat&&<button type="button" className="btn btn-outline" onClick={()=>{setEditingCat(null);setFormCat({nome:'',icone:'📦'});}}>Cancelar edição</button>}
+                  <button type="submit" className="btn btn-primary">{editingCat?'Salvar':'Adicionar'}</button>
+                </div>
+              </form>
+              <div style={{maxHeight:280,overflowY:'auto'}}>
+                {categoriasDinamicas.map(c=>(
+                  <div key={c.id} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 0',borderBottom:'1px solid var(--gray-100)'}}>
+                    <span style={{fontSize:18}}>{c.icone}</span>
+                    <span style={{flex:1,fontSize:14,color:c.ativo?'var(--gray-800)':'var(--gray-400)',textDecoration:c.ativo?'none':'line-through'}}>{c.nome}</span>
+                    <button className="btn btn-outline btn-sm" onClick={()=>{setEditingCat(c.id);setFormCat({nome:c.nome,icone:c.icone||'📦'});}}>Editar</button>
+                    {c.ativo&&<button className="btn btn-outline btn-sm" onClick={()=>removeCat(c.id)} style={{color:'var(--danger)'}}>Excluir</button>}
+                  </div>
+                ))}
+                {categoriasDinamicas.length===0&&<p style={{color:'var(--gray-400)',fontSize:13}}>Nenhuma categoria personalizada. Usando categorias padrão.</p>}
+              </div>
             </div>
           </div>
         </div>
