@@ -7,7 +7,7 @@ import { useOnboarding } from '../../hooks/useOnboarding';
 import { api } from '../../api';
 import { SEGMENTOS } from '../../config/segmentos';
 
-const EMPTY = { nome: '', responsavel: '', documento: '', email: '', endereco: '', telefone: '', whatsapp: '', logo: null, segmento: 'carro' };
+const EMPTY = { nome: '', responsavel: '', documento: '', email: '', endereco: '', telefone: '', whatsapp: '', logo: null, segmento: 'carro', repassar_taxa_cliente: false };
 
 function F({ label, type = 'text', placeholder, value, onChange, half }) {
   return (
@@ -257,6 +257,42 @@ export default function AppConfiguracoes() {
                 })}
               </div>
             </div>
+          </div>
+
+          {/* ── Configurações financeiras ── */}
+          <div className="form-group full" style={{ borderTop: '1px solid var(--gray-100)', paddingTop: 20, marginTop: 8 }}>
+            <label style={{ fontSize: 14, fontWeight: 700, color: 'var(--gray-800)', marginBottom: 12, display: 'block' }}>
+              Configurações de pagamento
+            </label>
+
+            {/* Toggle: repassar taxa da maquininha */}
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: 14, cursor: 'pointer',
+              background: 'var(--gray-50)', border: '1px solid var(--gray-200)',
+              borderRadius: 'var(--r-sm)', padding: '14px 16px' }}>
+              {/* Toggle visual */}
+              <div onClick={() => setOf(o => ({ ...o, repassar_taxa_cliente: !o.repassar_taxa_cliente }))}
+                style={{
+                  flexShrink: 0, width: 44, height: 24, borderRadius: 12, marginTop: 2,
+                  background: of.repassar_taxa_cliente ? 'var(--accent, #F97316)' : 'var(--gray-300)',
+                  position: 'relative', transition: 'background .2s', cursor: 'pointer',
+                }}>
+                <div style={{
+                  position: 'absolute', top: 3, left: of.repassar_taxa_cliente ? 23 : 3,
+                  width: 18, height: 18, borderRadius: '50%', background: '#fff',
+                  transition: 'left .2s', boxShadow: '0 1px 3px rgba(0,0,0,.2)',
+                }} />
+              </div>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--gray-800)', marginBottom: 4 }}>
+                  Repassar taxa da maquininha ao cliente
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--gray-500)', lineHeight: 1.55 }}>
+                  {of.repassar_taxa_cliente
+                    ? 'Ativado — o valor cobrado do cliente incluirá a taxa. Exemplo: serviço R$ 500 + taxa 5% = R$ 525 para o cliente. Sua receita: R$ 500.'
+                    : 'Desativado — o cliente paga o valor do serviço. A taxa é absorvida pela oficina. Exemplo: serviço R$ 500, você recebe R$ 475.'}
+                </div>
+              </div>
+            </label>
           </div>
 
           <div className="form-actions" style={{ marginTop: 8 }}>

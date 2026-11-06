@@ -1405,7 +1405,8 @@ router.put('/config', naoFuncionario, validateLogoUpload, async (req,res) => {
         endereco    = $6,
         logo        = COALESCE($7, logo),
         observacoes = $8,
-        segmento    = COALESCE($9, segmento)
+        segmento    = COALESCE($9, segmento),
+        repassar_taxa_cliente = COALESCE($11, repassar_taxa_cliente)
        WHERE id = $10`,
       [
         nome,
@@ -1418,6 +1419,7 @@ router.put('/config', naoFuncionario, validateLogoUpload, async (req,res) => {
         documento   || null,
         segmento    || null,
         oid(req),
+        req.body?.repassar_taxa_cliente !== undefined ? !!req.body.repassar_taxa_cliente : null,
       ]
     );
 
