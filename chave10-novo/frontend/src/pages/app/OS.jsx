@@ -200,6 +200,10 @@ export default function AppOS() {
   // Funcionário e mecânico não veem valores financeiros
   const isFuncionario = (() => { try { const p = JSON.parse(localStorage.getItem('c10_user'))?.perfil; return p === 'funcionario' || p === 'mecanico'; } catch { return false; } })();
   const isMecanico    = (() => { try { return JSON.parse(localStorage.getItem('c10_user'))?.perfil === 'mecanico'; } catch { return false; } })();
+  // Configuração da oficina: repassar taxa da maquininha ao cliente
+  const [repassarTaxaCliente, setRepassarTaxaCliente] = useState(
+    () => { try { return JSON.parse(localStorage.getItem('c10_oficina'))?.repassar_taxa_cliente === true; } catch { return false; } }
+  );
   const [searchParams] = useSearchParams();
   const [osList, setOsList]     = useState([]);
   const [clientes, setClientes] = useState([]);
@@ -424,6 +428,13 @@ export default function AppOS() {
       api.app.mecanicos.ativos().catch(() => []),
       api.app.estoque.list('peca').catch(() => []),
     ]).then(([c,v,m,e])=>{ setClientes(c); setVeiculos(v); setMecanicos(m||[]); setEstoquePecas(Array.isArray(e)?e:[]); }).catch(()=>{});
+    // Carrega config da oficina para saber se repassar taxa ao cliente
+    api.app.config.get().then(cfg => {
+      if (cfg) {
+        localStorage.setItem('c10_oficina', JSON.stringify(cfg));
+        setRepassarTaxaCliente(cfg.repassar_taxa_cliente === true);
+      }
+    }).catch(() => {});
     load();
   }, []);
 
@@ -592,7 +603,13 @@ export default function AppOS() {
     e.preventDefault();
     if (!pagForm.forma) { showToast('Selecione a forma de pagamento','error'); return; }
     try {
-      await api.app.os.pagamento(pagForm.os_id, pagForm);
+      // Se repassar taxa ao cliente: o valor cobrado ao cliente é valor_os + taxa
+      // O backend calcula valor_liquido = valor_total - taxa, que fica = valor_os (correto)
+      const taxaPct = parseFloat(pagForm.taxa_maquininha) || 0;
+      const payload = (repassarTaxaCliente && taxaPct > 0 && (pagForm.forma === 'credito' || pagForm.forma === 'debito'))
+        ? { ...pagForm, valor_total: pagForm.valor_total + (pagForm.valor_total * taxaPct / 100) }
+        : pagForm;
+      await api.app.os.pagamento(pagForm.os_id, payload);
       await load(statusFiltro);
       // Atualiza o viewing com o novo status
       setViewing(v => v ? { ...v, status: 'finalizado' } : v);
@@ -652,6 +669,14 @@ export default function AppOS() {
   const taxaCalculada = pagForm.taxa_maquininha && pagForm.valor_total
     ? pagForm.valor_total - (pagForm.valor_total * parseFloat(pagForm.taxa_maquininha) / 100)
     : pagForm.valor_total;
+
+  // Quando repassar taxa ao cliente: total cobrado = valor_os + taxa
+  // Quando não repassar: total cobrado = valor_os (taxa sai da oficina)
+  const taxaValor = pagForm.taxa_maquininha && parseFloat(pagForm.taxa_maquininha) > 0
+    ? pagForm.valor_total * parseFloat(pagForm.taxa_maquininha) / 100
+    : 0;
+  const totalComTaxa   = pagForm.valor_total + taxaValor;   // o que o cliente paga quando repassa
+  const liquidoOficina = pagForm.valor_total - taxaValor;   // o que a oficina recebe quando NÃO repassa
   async function reabrir(id) {
     await api.app.os.setStatus(id, 'em_andamento');
     await load(statusFiltro);
@@ -1424,6 +1449,11 @@ export default function AppOS() {
                   <span style={{fontSize:13,fontWeight:600,color:'var(--brand)'}}>Valor da OS</span>
                   <span style={{fontFamily:'Poppins,sans-serif',fontSize:22,fontWeight:800,color:'var(--brand)'}}>{fmt.currency(pagForm.valor_total)}</span>
                 </div>
+                {repassarTaxaCliente && (pagForm.forma==='credito'||pagForm.forma==='debito') && taxaValor > 0 && (
+                  <div style={{background:'#fff7ed',border:'1px solid rgba(249,115,22,.3)',borderRadius:'var(--r-sm)',padding:'10px 14px',marginBottom:16,fontSize:12,color:'#c05c0a',fontWeight:600}}>
+                    ⚡ Taxa repassada ao cliente — o total cobrado será {fmt.currency(totalComTaxa)}
+                  </div>
+                )}
 
                 {/* Formas de pagamento */}
                 <div style={{marginBottom:16}}>
@@ -1453,7 +1483,7 @@ export default function AppOS() {
                         <label>Parcelas</label>
                         <select value={pagForm.parcelas} onChange={e=>setPagForm(p=>({...p,parcelas:parseInt(e.target.value)}))}>
                           {[1,2,3,4,5,6,7,8,9,10].map(n=>(
-                            <option key={n} value={n}>{n}x de {fmt.currency(pagForm.valor_total/n)}</option>
+                            <option key={n} value={n}>{n}x de {fmt.currency((repassarTaxaCliente ? totalComTaxa : pagForm.valor_total)/n)}</option>
                           ))}
                         </select>
                       </div>
@@ -1474,20 +1504,38 @@ export default function AppOS() {
                         <input type="number" step="0.01" min="0" max="99" placeholder="Ex: 3.5" value={pagForm.taxa_maquininha} onChange={e=>setPagForm(p=>({...p,taxa_maquininha:e.target.value}))} />
                       </div>
                     </div>
-                    {pagForm.taxa_maquininha && parseFloat(pagForm.taxa_maquininha) > 0 && (
-                      <div style={{marginTop:12,padding:'10px 12px',background:'#fff',borderRadius:'var(--r-sm)',border:'1px solid var(--gray-200)'}}>
-                        <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--gray-500)',marginBottom:4}}>
-                          <span>Taxa ({pagForm.taxa_maquininha}%)</span>
-                          <span style={{color:'var(--danger)'}}>- {fmt.currency(pagForm.valor_total * parseFloat(pagForm.taxa_maquininha) / 100)}</span>
+                    {taxaValor > 0 && (
+                      <div style={{marginTop:12,padding:'12px 14px',background:'#fff',borderRadius:'var(--r-sm)',border:`1px solid ${repassarTaxaCliente ? 'var(--accent)' : 'var(--gray-200)'}`}}>
+                        <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--gray-500)',marginBottom:6}}>
+                          <span>Serviço</span>
+                          <span>{fmt.currency(pagForm.valor_total)}</span>
                         </div>
-                        <div style={{display:'flex',justifyContent:'space-between',fontSize:14,fontWeight:700}}>
-                          <span>Você recebe</span>
-                          <span style={{color:'var(--success)'}}>{fmt.currency(taxaCalculada)}</span>
+                        <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:repassarTaxaCliente?'var(--accent)':'var(--danger)',marginBottom:6}}>
+                          <span>Taxa maquininha ({pagForm.taxa_maquininha}%)</span>
+                          <span style={{fontWeight:700}}>{repassarTaxaCliente ? '+ ' : '- '}{fmt.currency(taxaValor)}</span>
                         </div>
+                        <div style={{display:'flex',justifyContent:'space-between',fontSize:14,fontWeight:800,borderTop:'1px solid var(--gray-200)',paddingTop:6}}>
+                          {repassarTaxaCliente ? (
+                            <>
+                              <span style={{color:'var(--accent)'}}>Total cobrado do cliente</span>
+                              <span style={{color:'var(--accent)'}}>{fmt.currency(totalComTaxa)}</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>Você recebe</span>
+                              <span style={{color:'var(--success)'}}>{fmt.currency(liquidoOficina)}</span>
+                            </>
+                          )}
+                        </div>
+                        {repassarTaxaCliente && (
+                          <div style={{fontSize:11,color:'var(--gray-400)',marginTop:4}}>
+                            Receita da oficina: {fmt.currency(pagForm.valor_total)}
+                          </div>
+                        )}
                         {pagForm.parcelas > 1 && (
                           <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--gray-500)',marginTop:4}}>
-                            <span>{pagForm.parcelas}x parcelas de</span>
-                            <span>{fmt.currency(taxaCalculada / pagForm.parcelas)}</span>
+                            <span>{pagForm.parcelas}x de</span>
+                            <span style={{fontWeight:600}}>{fmt.currency((repassarTaxaCliente ? totalComTaxa : liquidoOficina) / pagForm.parcelas)}</span>
                           </div>
                         )}
                       </div>
@@ -1514,21 +1562,27 @@ export default function AppOS() {
                         <input type="number" step="0.01" min="0" max="99" placeholder="Ex: 1.5" value={pagForm.taxa_maquininha} onChange={e=>setPagForm(p=>({...p,taxa_maquininha:e.target.value}))} />
                       </div>
                     </div>
-                    {pagForm.taxa_maquininha && parseFloat(pagForm.taxa_maquininha) > 0 && (
-                      <div style={{marginTop:12,padding:'10px 12px',background:'#fff',borderRadius:'var(--r-sm)',border:'1px solid var(--gray-200)'}}>
-                        <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--gray-500)',marginBottom:4}}>
+                    {taxaValor > 0 && (
+                      <div style={{marginTop:12,padding:'12px 14px',background:'#fff',borderRadius:'var(--r-sm)',border:`1px solid ${repassarTaxaCliente ? 'var(--accent)' : 'var(--gray-200)'}`}}>
+                        <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--gray-500)',marginBottom:6}}>
+                          <span>Serviço</span><span>{fmt.currency(pagForm.valor_total)}</span>
+                        </div>
+                        <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:repassarTaxaCliente?'var(--accent)':'var(--danger)',marginBottom:6}}>
                           <span>Taxa ({pagForm.taxa_maquininha}%)</span>
-                          <span style={{color:'var(--danger)'}}>- {fmt.currency(pagForm.valor_total * parseFloat(pagForm.taxa_maquininha) / 100)}</span>
+                          <span style={{fontWeight:700}}>{repassarTaxaCliente ? '+ ' : '- '}{fmt.currency(taxaValor)}</span>
                         </div>
-                        <div style={{display:'flex',justifyContent:'space-between',fontSize:14,fontWeight:700}}>
-                          <span>Você recebe</span>
-                          <span style={{color:'var(--success)'}}>{fmt.currency(taxaCalculada)}</span>
+                        <div style={{display:'flex',justifyContent:'space-between',fontSize:14,fontWeight:800,borderTop:'1px solid var(--gray-200)',paddingTop:6}}>
+                          {repassarTaxaCliente ? (
+                            <><span style={{color:'var(--accent)'}}>Total cobrado do cliente</span><span style={{color:'var(--accent)'}}>{fmt.currency(totalComTaxa)}</span></>
+                          ) : (
+                            <><span>Você recebe</span><span style={{color:'var(--success)'}}>{fmt.currency(liquidoOficina)}</span></>
+                          )}
                         </div>
+                        {repassarTaxaCliente && <div style={{fontSize:11,color:'var(--gray-400)',marginTop:4}}>Receita da oficina: {fmt.currency(pagForm.valor_total)}</div>}
                       </div>
                     )}
                   </div>
                 )}
-
                 {/* Opções de boleto */}
                 {pagForm.forma==='boleto' && (
                   <div style={{background:'var(--gray-50)',borderRadius:'var(--r-sm)',padding:16,marginBottom:16,border:'1px solid var(--gray-200)'}}>
