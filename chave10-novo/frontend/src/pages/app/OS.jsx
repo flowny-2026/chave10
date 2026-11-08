@@ -333,6 +333,7 @@ export default function AppOS() {
   const [viewing, setViewing]   = useState(null);
   const [toast, setToast]       = useState({ msg:'', type:'' });
   const [pagForm, setPagForm]   = useState({ os_id:null, forma:'', valor_total:0, parcelas:1, bandeira:'', taxa_maquininha:'', observacao:'', boleto_vencimento:'', boleto_recebido_em:'' });
+  const [pagSaving, setPagSaving] = useState(false);
   const [pendingPhotos, setPendingPhotos] = useState([]); // fotos selecionadas antes de salvar
 
   // Handler para selecionar fotos no formulário (antes de salvar)
@@ -602,22 +603,20 @@ export default function AppOS() {
   async function confirmarPagamento(e) {
     e.preventDefault();
     if (!pagForm.forma) { showToast('Selecione a forma de pagamento','error'); return; }
+    if (pagSaving) return;
+    setPagSaving(true);
     try {
-      // Se repassar taxa ao cliente: o valor cobrado ao cliente é valor_os + taxa
-      // O backend calcula valor_liquido = valor_total - taxa, que fica = valor_os (correto)
       const taxaPct = parseFloat(pagForm.taxa_maquininha) || 0;
       const payload = (repassarTaxaOs && taxaPct > 0 && (pagForm.forma === 'credito' || pagForm.forma === 'debito'))
         ? { ...pagForm, valor_total: pagForm.valor_total + (pagForm.valor_total * taxaPct / 100) }
         : pagForm;
       await api.app.os.pagamento(pagForm.os_id, payload);
       await load(statusFiltro);
-      // Atualiza o viewing com o novo status
       setViewing(v => v ? { ...v, status: 'finalizado' } : v);
-      // Fecha modal de pagamento e abre modal de comprovante
       setModal('comprovante');
-      // Carrega dados completos do comprovante em background
       abrirComprovante(pagForm.os_id);
     } catch (err) { showToast(err.error||'Erro ao registrar pagamento','error'); }
+    finally { setPagSaving(false); }
   }
 
   /**
@@ -1666,7 +1665,9 @@ export default function AppOS() {
 
                 <div className="form-actions">
                   <button type="button" className="btn btn-outline" onClick={()=>setModal(null)}>Cancelar</button>
-                  <button type="submit" className="btn btn-primary" disabled={!pagForm.forma}>Confirmar pagamento e finalizar</button>
+                  <button type="submit" className="btn btn-primary" disabled={!pagForm.forma || pagSaving}>
+                    {pagSaving ? 'Registrando…' : 'Confirmar pagamento e finalizar'}
+                  </button>
                 </div>
               </form>
             </div>
