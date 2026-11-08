@@ -167,13 +167,30 @@ export default function AcompanharOS() {
           </div>
         )}
 
-        {/* Serviço */}
+        {/* Problema relatado */}
         {os.descricao && (
           <div style={s.section}>
-            <div style={s.sectionTitle}>🔩 Serviço</div>
+            <div style={s.sectionTitle}>🔍 Problema relatado</div>
             <div style={s.infoRow}>{os.descricao}</div>
           </div>
         )}
+
+        {/* Serviços realizados */}
+        {os.servicos && (() => {
+          let lista = [];
+          try { lista = JSON.parse(os.servicos); } catch { lista = []; }
+          const textos = Array.isArray(lista)
+            ? lista.map(s => s.nome || s.descricao || s).filter(Boolean)
+            : [];
+          return textos.length > 0 ? (
+            <div style={s.section}>
+              <div style={s.sectionTitle}>🔧 Serviços realizados</div>
+              {textos.map((t, i) => (
+                <div key={i} style={{...s.infoRow, marginBottom: i < textos.length-1 ? 4 : 0}}>• {t}</div>
+              ))}
+            </div>
+          ) : null;
+        })()}
 
         {/* Mecânico */}
         {os.mecanico_nome && (

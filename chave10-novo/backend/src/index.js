@@ -443,7 +443,7 @@ app.get('/api/public/os/:token', osTrackingLimiter, async (req, res) => {
     const { queryOne: pgOne, query: pgQ } = require('./db');
     const os = await pgOne(
       `SELECT os.id, os.numero, os.status, os.data, os.data_conclusao,
-              os.descricao, os.observacao,
+              os.descricao, os.servicos, os.observacao,
               c.nome  AS cliente_nome,
               v.modelo AS veiculo_modelo, v.marca AS veiculo_marca,
               v.placa, v.ano,
@@ -467,7 +467,8 @@ app.get('/api/public/os/:token', osTrackingLimiter, async (req, res) => {
       status:       os.status,
       data:         os.data,
       data_conclusao: os.data_conclusao,
-      descricao:    os.descricao,
+      descricao:    os.descricao,   // problema relatado
+      servicos:     os.servicos,    // serviços realizados
       observacao:   os.observacao,
       cliente_nome: os.cliente_nome,
       veiculo: {
