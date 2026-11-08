@@ -1507,8 +1507,7 @@ export default function AppOS() {
                       </div>
                     </div>
                     {/* Checkbox: repassar taxa ao cliente — por OS */}
-                    {taxaValor > 0 && (
-                      <label style={{display:'flex',alignItems:'center',gap:10,cursor:'pointer',marginBottom:8,
+                    <label style={{display:'flex',alignItems:'center',gap:10,cursor:'pointer',marginBottom:8,
                         padding:'10px 12px',background:'var(--gray-50)',borderRadius:'var(--r-sm)',
                         border:`1px solid ${repassarTaxaOs?'var(--accent)':'var(--gray-200)'}`,transition:'border-color .15s'}}>
                         <input type="checkbox" checked={!!repassarTaxaOs}
@@ -1518,10 +1517,9 @@ export default function AppOS() {
                           Repassar taxa ao cliente
                         </span>
                         <span style={{fontSize:12,color:'var(--gray-500)',marginLeft:'auto'}}>
-                          {repassarTaxaOs ? `+${fmt.currency(taxaValor)}` : 'taxa por conta da oficina'}
+                          {repassarTaxaOs && taxaValor > 0 ? `+${fmt.currency(taxaValor)}` : 'taxa por conta da oficina'}
                         </span>
                       </label>
-                    )}
                     {taxaValor > 0 && (
                       <div style={{marginTop:12,padding:'12px 14px',background:'#fff',borderRadius:'var(--r-sm)',border:`1px solid ${repassarTaxaCliente ? 'var(--accent)' : 'var(--gray-200)'}`}}>
                         <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--gray-500)',marginBottom:6}}>
@@ -1581,8 +1579,8 @@ export default function AppOS() {
                       </div>
                     </div>
                     {/* Checkbox: repassar taxa ao cliente — por OS */}
-                    {taxaValor > 0 && (
-                      <label style={{display:'flex',alignItems:'center',gap:10,cursor:'pointer',marginBottom:8,
+                    {/* Checkbox: repassar taxa ao cliente — por OS */}
+                    <label style={{display:'flex',alignItems:'center',gap:10,cursor:'pointer',marginBottom:8,
                         padding:'10px 12px',background:'var(--gray-50)',borderRadius:'var(--r-sm)',
                         border:`1px solid ${repassarTaxaOs?'var(--accent)':'var(--gray-200)'}`,transition:'border-color .15s'}}>
                         <input type="checkbox" checked={!!repassarTaxaOs}
@@ -1592,10 +1590,9 @@ export default function AppOS() {
                           Repassar taxa ao cliente
                         </span>
                         <span style={{fontSize:12,color:'var(--gray-500)',marginLeft:'auto'}}>
-                          {repassarTaxaOs ? `+${fmt.currency(taxaValor)}` : 'taxa por conta da oficina'}
+                          {repassarTaxaOs && taxaValor > 0 ? `+${fmt.currency(taxaValor)}` : 'taxa por conta da oficina'}
                         </span>
                       </label>
-                    )}
                     {taxaValor > 0 && (
                       <div style={{marginTop:12,padding:'12px 14px',background:'#fff',borderRadius:'var(--r-sm)',border:`1px solid ${repassarTaxaOs ? 'var(--accent)' : 'var(--gray-200)'}`}}>
                         <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--gray-500)',marginBottom:6}}>
