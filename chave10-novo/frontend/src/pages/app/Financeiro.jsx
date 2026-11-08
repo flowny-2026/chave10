@@ -86,6 +86,7 @@ export default function AppFinanceiro() {
     } catch { showToast('Erro ao marcar','error'); }
   }
 
+  const [abaAtiva, setAbaAtiva] = useState('visao-geral'); // 'visao-geral' | 'fornecedores'
   const [categoriasDinamicas, setCategoriasDinamicas] = useState([]);
   const [fornecedores, setFornecedores] = useState([]);
   const [modalCat, setModalCat] = useState(false);
@@ -229,12 +230,23 @@ export default function AppFinanceiro() {
             </div>
           )}
           <button className="btn btn-primary btn-sm" onClick={()=>{setForm({...EMPTY_DESP,data:new Date().toISOString().split('T')[0]});setEditing(null);setModal(true);}}>+ Nova despesa</button>
-          <button className="btn btn-outline btn-sm" onClick={()=>setModalForn(true)}>Fornecedores</button>
           <button className="btn btn-outline btn-sm" onClick={()=>setModalCat(true)}>Categorias</button>
         </div>
       </div>
 
-      {/* Cards resumo */}
+      {/* Abas */}
+      <div style={{display:'flex',gap:0,borderBottom:'2px solid var(--gray-200)',marginBottom:24}}>
+        {[{key:'visao-geral',label:'Visão Geral'},{key:'fornecedores',label:'Fornecedores'}].map(tab=>(
+          <button key={tab.key} onClick={()=>setAbaAtiva(tab.key)} style={{
+            padding:'10px 22px',border:'none',background:'none',cursor:'pointer',fontSize:14,
+            fontWeight: abaAtiva===tab.key ? 700 : 500,
+            color: abaAtiva===tab.key ? 'var(--brand)' : 'var(--gray-500)',
+            borderBottom: abaAtiva===tab.key ? '2px solid var(--brand)' : '2px solid transparent',
+            marginBottom:-2, transition:'color .15s',
+          }}>{tab.label}</button>
+        ))}
+      </div>
+      {abaAtiva === 'visao-geral' && <>
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:16,marginBottom:24}}>
         <KPICard
           title="Receita do Mês"
@@ -477,6 +489,56 @@ export default function AppFinanceiro() {
           </div>
         )}
       </div>
+
+      </> /* fim visao-geral */}
+
+      {abaAtiva === 'fornecedores' && (
+        <div className="card">
+          <div className="card-header" style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+            <div className="card-title">Fornecedores</div>
+            <button className="btn btn-primary btn-sm" onClick={()=>{setFormForn({nome:'',cnpj_cpf:'',telefone:'',email:'',obs:''});setEditingForn(null);setModalForn(true);}}>+ Novo fornecedor</button>
+          </div>
+          {fornecedores.length ? (
+            <div className="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nome / Razão social</th>
+                    <th>CNPJ / CPF</th>
+                    <th>Telefone</th>
+                    <th>E-mail</th>
+                    <th>Observações</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {fornecedores.map(f=>(
+                    <tr key={f.id}>
+                      <td><strong>{f.nome}</strong></td>
+                      <td>{f.cnpj_cpf||'—'}</td>
+                      <td>{f.telefone||'—'}</td>
+                      <td>{f.email||'—'}</td>
+                      <td style={{maxWidth:180,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.obs||'—'}</td>
+                      <td>
+                        <div style={{display:'flex',gap:4}}>
+                          <button className="btn btn-ghost btn-sm" title="Editar" onClick={()=>{setFormForn({nome:f.nome,cnpj_cpf:f.cnpj_cpf||'',telefone:f.telefone||'',email:f.email||'',obs:f.obs||''});setEditingForn(f.id);setModalForn(true);}}><IcoEdit /></button>
+                          <button className="btn btn-ghost btn-sm" title="Desativar" style={{color:'var(--danger)'}} onClick={()=>removeForn(f.id)}><IcoTrash /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="empty-state" style={{padding:40}}>
+              <div className="empty-icon">🏭</div>
+              <p>Nenhum fornecedor cadastrado</p>
+              <button className="btn btn-primary" style={{marginTop:16}} onClick={()=>{setFormForn({nome:'',cnpj_cpf:'',telefone:'',email:'',obs:''});setEditingForn(null);setModalForn(true);}}>+ Cadastrar primeiro fornecedor</button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Modal despesa */}
       {modal && (
