@@ -807,6 +807,12 @@ export default function AppOS() {
                             <button className="btn btn-outline btn-sm" onClick={()=>openView(os)} title="Ver"><IcoView /></button>
                             <button className="btn btn-outline btn-sm" onClick={()=>imprimir(os)} title="Imprimir"><IcoPrint /></button>
                             <button className="btn btn-outline btn-sm" onClick={()=>enviarWhatsApp(os)} title="WhatsApp"><IcoWhatsApp /></button>
+                            {os.token_publico && (
+                              <button className="btn btn-outline btn-sm" title="Compartilhar link com cliente"
+                                onClick={()=>{const url=`${window.location.origin}/acompanhar/${os.token_publico}`;navigator.clipboard?.writeText(url).then(()=>showToast('Link copiado!')).catch(()=>showToast(url));}}>
+                                🔗
+                              </button>
+                            )}
                             {os.status==='finalizado'&&!isFuncionario&&(
                               <button className="btn btn-outline btn-sm" onClick={()=>{setModal('comprovante');abrirComprovante(os.id);}} title="Comprovante">📄</button>
                             )}
@@ -1304,6 +1310,12 @@ export default function AppOS() {
                   <button className="btn btn-outline" onClick={()=>setModal(null)}>Fechar</button>
                   <button className="btn btn-outline" onClick={()=>imprimir(viewing)}><IcoPrint /> Imprimir</button>
                   <button className="btn btn-outline" onClick={()=>enviarWhatsApp(viewing)}><IcoWhatsApp /> WhatsApp</button>
+                  {viewing.token_publico && (
+                    <button className="btn btn-outline" title="Copiar link de acompanhamento"
+                      onClick={()=>{const url=`${window.location.origin}/acompanhar/${viewing.token_publico}`;navigator.clipboard?.writeText(url).then(()=>showToast('Link copiado! Envie ao cliente.')).catch(()=>showToast(url));}}>
+                      🔗 Link cliente
+                    </button>
+                  )}
                   {viewing.status==='finalizado'&&!isFuncionario&&(
                     <button className="btn btn-outline" onClick={()=>{setModal('comprovante');abrirComprovante(viewing.id);}}>📄 Comprovante</button>
                   )}

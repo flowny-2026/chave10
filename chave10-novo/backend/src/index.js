@@ -424,6 +424,72 @@ app.post('/api/public/referral/cadastro', loginLimiter, async (req, res) => {
   }
 });
 
+// ── ACOMPANHAMENTO PÚBLICO DE OS ─────────────────────────────
+// Cliente acessa sem login via /acompanhar/:token (frontend)
+const osTrackingLimiter = require('express-rate-limit')({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Muitas requisições. Tente novamente em 15 minutos.' },
+});
+app.get('/api/public/os/:token', osTrackingLimiter, async (req, res) => {
+  const { token } = req.params;
+  // Valida formato: base64url de 32 chars (24 bytes → 32 base64url)
+  if (!token || typeof token !== 'string' || !/^[A-Za-z0-9_-]{20,64}$/.test(token)) {
+    return res.status(400).json({ error: 'Link inválido' });
+  }
+  try {
+    const { queryOne: pgOne, query: pgQ } = require('./db');
+    const os = await pgOne(
+      `SELECT os.id, os.numero, os.status, os.data, os.data_conclusao,
+              os.descricao, os.observacao,
+              c.nome  AS cliente_nome,
+              v.modelo AS veiculo_modelo, v.marca AS veiculo_marca,
+              v.placa, v.ano,
+              of.nome AS oficina_nome, of.telefone AS oficina_telefone,
+              of.whatsapp AS oficina_whatsapp, of.logo AS oficina_logo,
+              of.endereco AS oficina_endereco,
+              u.nome AS mecanico_nome
+       FROM ordens_servico os
+       LEFT JOIN clientes  c  ON c.id  = os.cliente_id
+       LEFT JOIN veiculos  v  ON v.id  = os.veiculo_id
+       JOIN  oficinas  of ON of.id = os.oficina_id
+       LEFT JOIN usuarios  u  ON u.id  = os.mecanico_id
+       WHERE os.token_publico = $1`,
+      [token]
+    );
+    if (!os) return res.status(404).json({ error: 'OS não encontrada' });
+
+    // Não expõe dados financeiros — somente o que o cliente precisa ver
+    res.json({
+      numero:       os.numero,
+      status:       os.status,
+      data:         os.data,
+      data_conclusao: os.data_conclusao,
+      descricao:    os.descricao,
+      observacao:   os.observacao,
+      cliente_nome: os.cliente_nome,
+      veiculo: {
+        modelo: os.veiculo_modelo,
+        marca:  os.veiculo_marca,
+        placa:  os.placa,
+        ano:    os.veiculo_ano,
+      },
+      mecanico_nome: os.mecanico_nome,
+      oficina: {
+        nome:      os.oficina_nome,
+        telefone:  os.oficina_whatsapp || os.oficina_telefone,
+        logo:      os.oficina_logo,
+        endereco:  os.oficina_endereco,
+      },
+    });
+  } catch (err) {
+    require('./utils/logger').error('public_os_tracking', err);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
 // ── ROTAS ─────────────────────────────────────────────────────
 // loginLimiter aplicado em /api/auth — cobre /login, /register, /google e /google-register.
 // Cada rota sensível dentro do auth router tem seu limiter específico (ver routes/auth.js).

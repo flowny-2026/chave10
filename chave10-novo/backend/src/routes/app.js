@@ -503,8 +503,13 @@ router.post('/os', validateOS, checkClienteVeiculoOwnership, async (req,res) => 
       `, [id,mecIdValido,r.id,pctSvc||0,pctPec||0,valorMO,valorPecas,comSvc||0,comPec||0,comTotal]);
     }
 
+    // Gera token público para o cliente acompanhar a OS
+    const crypto = require('crypto');
+    const tokenPub = crypto.randomBytes(24).toString('base64url');
+    await run('UPDATE ordens_servico SET token_publico=$1 WHERE id=$2', [tokenPub, r.id]).catch(()=>{});
+
     audit(req, ACOES.CRIAR_OS, 'ordens_servico', r.id, { numero, cliente_id, veiculo_id, data: data||new Date().toISOString().split('T')[0], mecanico_id: mecIdValido });
-    res.status(201).json({id:r.id,numero});
+    res.status(201).json({id:r.id,numero,token_publico:tokenPub});
   } catch(err){log.error('app_post_os',err);res.status(500).json({error:'Erro interno'});}
 });
 

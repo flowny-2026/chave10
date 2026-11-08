@@ -235,6 +235,13 @@ export const api = {
 };
 
 // Métodos públicos (sem autenticação)
+export async function getOsPublica(token) {
+  const res = await fetch(BASE.replace('/api', '') + '/api/public/os/' + token);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw { ...data, status: res.status };
+  return data;
+}
+
 export async function registrarCliqueReferral(codigo) {
   try {
     await fetch((import.meta.env.VITE_API_URL || 'http://localhost:3001/api') + '/public/referral/clique', {

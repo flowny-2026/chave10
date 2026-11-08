@@ -712,6 +712,18 @@ async function initDB() {
   // Vincula despesa à categoria (mantém campo texto para compatibilidade)
   await pool.query(`ALTER TABLE despesas ADD COLUMN IF NOT EXISTS categoria_id INTEGER REFERENCES categorias_despesas(id) ON DELETE SET NULL;`).catch(() => {});
 
+  // 6. Acompanhamento público de OS pelo cliente (token por OS)
+  // Token gerado uma vez, imutável, sem expiração — vinculado à OS
+  await pool.query(`ALTER TABLE ordens_servico ADD COLUMN IF NOT EXISTS token_publico TEXT UNIQUE;`).catch(() => {});
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_os_token_publico ON ordens_servico(token_publico) WHERE token_publico IS NOT NULL;`).catch(() => {});
+
+  // Preenche token para OSes existentes sem token (uma só vez, em background)
+  pool.query(`
+    UPDATE ordens_servico
+    SET token_publico = encode(gen_random_bytes(24), 'base64url')
+    WHERE token_publico IS NULL
+  `).catch(() => {});
+
   console.log('✅ Melhorias 2026 aplicadas ao banco');
 }
 
