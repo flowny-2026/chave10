@@ -1310,12 +1310,23 @@ export default function AppOS() {
                   <button className="btn btn-outline" onClick={()=>setModal(null)}>Fechar</button>
                   <button className="btn btn-outline" onClick={()=>imprimir(viewing)}><IcoPrint /> Imprimir</button>
                   <button className="btn btn-outline" onClick={()=>enviarWhatsApp(viewing)}><IcoWhatsApp /> WhatsApp</button>
-                  {viewing.token_publico && (
-                    <button className="btn btn-outline" title="Copiar link de acompanhamento"
-                      onClick={()=>{const url=`${window.location.origin}/acompanhar/${viewing.token_publico}`;navigator.clipboard?.writeText(url).then(()=>showToast('Link copiado! Envie ao cliente.')).catch(()=>showToast(url));}}>
-                      🔗 Link cliente
-                    </button>
-                  )}
+                  <button className="btn btn-outline" title="Copiar link de acompanhamento para o cliente"
+                    onClick={async()=>{
+                      try {
+                        let token = viewing.token_publico;
+                        if (!token) {
+                          const r = await api.app.os.link(viewing.id);
+                          token = r.token;
+                          setViewing(v => v ? {...v, token_publico: token} : v);
+                          setOsList(l => l.map(o => o.id===viewing.id ? {...o, token_publico:token} : o));
+                        }
+                        const url = `${window.location.origin}/acompanhar/${token}`;
+                        await navigator.clipboard?.writeText(url);
+                        showToast('🔗 Link copiado! Envie ao cliente.');
+                      } catch { showToast('Erro ao gerar link','error'); }
+                    }}>
+                    🔗 Link cliente
+                  </button>
                   {viewing.status==='finalizado'&&!isFuncionario&&(
                     <button className="btn btn-outline" onClick={()=>{setModal('comprovante');abrirComprovante(viewing.id);}}>📄 Comprovante</button>
                   )}

@@ -633,6 +633,22 @@ router.put('/os/:id', validateId, checkOwns('ordens_servico'), validateOS, check
   } catch(err){log.error('app_put_os',err);res.status(500).json({error:'Erro interno'});}
 });
 
+// GET /os/:id/link — retorna (ou gera) o token público de acompanhamento da OS
+router.get('/os/:id/link', validateId, checkOwns('ordens_servico'), async (req,res) => {
+  try {
+    const crypto = require('crypto');
+    let os = await queryOne('SELECT id, token_publico FROM ordens_servico WHERE id=$1 AND oficina_id=$2', [req.params.id, oid(req)]);
+    if (!os) return res.status(404).json({error:'OS não encontrada'});
+    if (!os.token_publico) {
+      const token = crypto.randomBytes(24).toString('base64url');
+      await run('UPDATE ordens_servico SET token_publico=$1 WHERE id=$2 AND oficina_id=$3', [token, req.params.id, oid(req)]);
+      os.token_publico = token;
+    }
+    const publicUrl = process.env.PUBLIC_URL || 'http://localhost:5173';
+    res.json({ token: os.token_publico, link: `${publicUrl}/acompanhar/${os.token_publico}` });
+  } catch(err){ res.status(500).json({error:'Erro interno'}); }
+});
+
 // PATCH /os/:id/status — checkOwns garante pertencimento
 router.patch('/os/:id/status', validateId, checkOwns('ordens_servico'), async (req,res) => {
   try {
