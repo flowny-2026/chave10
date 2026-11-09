@@ -571,6 +571,22 @@ app.get('/seed-demo-60k', async (req, res) => {
   }
 });
 
+// ── SEED FULL 50K — popula conta demo com faturamento ~R$50.000 ──
+app.get('/seed-full-50k', async (req, res) => {
+  const chave    = req.query.chave;
+  const SEED_KEY = process.env.SEED_KEY;
+  if (!SEED_KEY) return res.status(503).json({ error: 'Seed desabilitado em produção' });
+  if (chave !== SEED_KEY) return res.status(403).json({ error: 'Chave inválida' });
+  try {
+    const seed = require('./scripts/seed-full-50k');
+    await seed();
+    res.json({ ok: true, message: 'Seed 50k aplicado! 15 clientes, 27 OS, agendamentos, estoque e mais.' });
+  } catch (err) {
+    require('./utils/logger').error('seed_full_50k', err);
+    res.status(500).json({ error: err.message || 'Erro ao aplicar seed' });
+  }
+});
+
 // ── 404 — ROTAS NÃO ENCONTRADAS ──────────────────────────────
 // Deve ficar DEPOIS de todas as rotas e ANTES do errorHandler.
 app.use(notFoundHandler);
