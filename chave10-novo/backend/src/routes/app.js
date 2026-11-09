@@ -329,16 +329,15 @@ router.get('/dashboard-resumo', naoFuncionario, naoMecanico, async (req, res) =>
 
     // ── Resumo do mês/período ──
     const resumo = {
-      servicos:   +pecasVendidasRow.mo,      // mão de obra (serviços)
-      pecas:      +pecasVendidasRow.pecas,   // peças vendidas
+      servicos:   +pecasVendidasRow.mo,
+      pecas:      +pecasVendidasRow.pecas,
       receitas:   faturamento,
       despesas:   despesas,
       lucro:      lucro,
     };
 
-    res.json({
-      periodo: { inicio, fim, dias: durDias, agrupamento: durDias <= 62 ? 'diario' : 'mensal' },
     const respostaResumo = {
+      periodo: { inicio, fim, dias: durDias, agrupamento: durDias <= 62 ? 'diario' : 'mensal' },
       cards,
       serie,
       osPorStatus,
