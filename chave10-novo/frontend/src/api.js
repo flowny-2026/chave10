@@ -193,6 +193,10 @@ export const api = {
       list:    ()                    => get('/app/parcelas-receber'),
       marcarRecebido: (id)           => patch('/app/parcelas-receber/'+id+'/recebido', {}),
     },
+    boletosPendentes: {
+      list:    ()                    => get('/app/boletos-pendentes'),
+      confirmar: (id, data)          => patch('/app/pagamentos-os/'+id+'/boleto-recebido', data),
+    },
     fornecedores: {
       list:    ()                    => get('/app/fornecedores'),
       create:  (data)                => post('/app/fornecedores', data),

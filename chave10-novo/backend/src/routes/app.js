@@ -1131,7 +1131,7 @@ router.post('/os/:id/pagamento', validateId, checkOwns('ordens_servico'), valida
   } catch(err){log.error('app_pagamento_os',err);res.status(500).json({error:'Erro interno'});}
 });
 
-// Parcelas a receber
+// Parcelas a receber (cartão parcelado)
 router.get('/parcelas-receber', validatePagination, async (req,res) => {
   try {
     const { limit, offset } = req.pagination;
@@ -1150,6 +1150,23 @@ router.patch('/parcelas-receber/:id/recebido', validateId, checkOwns('parcelas_r
     if(result.rowCount === 0) return res.status(404).json({error:'Parcela não encontrada'});
     res.json({ok:true});
   } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// GET /boletos-pendentes — boletos não recebidos (pagamentos_os com boleto_pendente=true)
+router.get('/boletos-pendentes', async (req,res) => {
+  try {
+    const rows = await query(
+      `SELECT p.id, p.os_id, p.valor_total, p.valor_liquido, p.boleto_vencimento, p.data_pagamento,
+              c.nome as cliente_nome, os.numero as os_numero
+       FROM pagamentos_os p
+       LEFT JOIN clientes c ON c.id = p.cliente_id
+       LEFT JOIN ordens_servico os ON os.id = p.os_id
+       WHERE p.oficina_id=$1 AND p.boleto_pendente=true
+       ORDER BY p.boleto_vencimento ASC NULLS LAST, p.data_pagamento ASC`,
+      [oid(req)]
+    );
+    res.json(rows);
+  } catch(err){ res.status(500).json({error:'Erro interno'}); }
 });
 
 // GET /os/:id/pagamentos — checkOwns garante que a OS pertence à oficina antes de listar pagamentos

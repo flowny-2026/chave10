@@ -26,6 +26,7 @@ export default function AppFinanceiro() {
   const [ordens, setOrdens]     = useState([]);
   const [despesas, setDespesas] = useState([]);
   const [parcelas, setParcelas] = useState([]);
+  const [boletosPendentes, setBoletosPendentes] = useState([]);
   const [pagamentosOS, setPagamentosOS] = useState([]);
   const [modal, setModal]       = useState(false);
   const [form, setForm]         = useState(EMPTY_DESP);
@@ -71,6 +72,13 @@ export default function AppFinanceiro() {
     } catch { setParcelas([]); }
   }
 
+  async function loadBoletosPendentes() {
+    try {
+      const data = await api.app.boletosPendentes.list();
+      setBoletosPendentes(Array.isArray(data)?data:[]);
+    } catch { setBoletosPendentes([]); }
+  }
+
   async function loadPagamentosOS() {
     try {
       const data = await api.app.pagamentosOS.list();
@@ -106,7 +114,7 @@ export default function AppFinanceiro() {
     api.app.fornecedores?.list().then(d=>setFornecedores(d||[])).catch(()=>{});
   },[]);
 
-  useEffect(()=>{ loadOrdens(); loadParcelas(); loadPagamentosOS(); },[]);
+  useEffect(()=>{ loadOrdens(); loadParcelas(); loadBoletosPendentes(); loadPagamentosOS(); },[]);
   useEffect(()=>{ loadDespesas(); },[periodoTipo, filtroCustom, dataInicio, dataFim]);
 
   async function saveDespesa(e) {
@@ -385,15 +393,19 @@ export default function AppFinanceiro() {
         </div>
       </div>
 
-      {/* Parcelas a receber */}
-      {parcelas.filter(p=>!p.recebido).length > 0 && (
+      {/* Valores a receber: parcelas de cartão + boletos pendentes */}
+      {(parcelas.filter(p=>!p.recebido).length > 0 || boletosPendentes.length > 0) && (
         <div className="card" style={{marginBottom:20}}>
           <div className="card-header">
-            <div className="card-title">Parcelas a receber</div>
-            <span style={{fontSize:12,color:'var(--gray-400)'}}>{parcelas.filter(p=>!p.recebido).length} pendente(s)</span>
+            <div className="card-title">Valores a receber</div>
+            <span style={{fontSize:12,color:'var(--gray-400)'}}>
+              {parcelas.filter(p=>!p.recebido).length + boletosPendentes.length} pendente(s)
+            </span>
           </div>
           {(() => {
             const hojeStr = new Date().toISOString().split('T')[0];
+
+            // Parcelas de cartão pendentes
             const pendentes = parcelas.filter(p=>!p.recebido).sort((a,b)=>a.data_recebimento.localeCompare(b.data_recebimento));
             const parcelasHoje = pendentes.filter(p=>p.data_recebimento===hojeStr);
             const parcelasAtrasadas = pendentes.filter(p=>p.data_recebimento<hojeStr);
@@ -401,19 +413,28 @@ export default function AppFinanceiro() {
             const totalHoje = parcelasHoje.reduce((s,p)=>s+parseFloat(p.valor||0),0);
             const totalAtrasado = parcelasAtrasadas.reduce((s,p)=>s+parseFloat(p.valor||0),0);
 
+            // Boletos vencidos
+            const boletosVencidos = boletosPendentes.filter(b=>b.boleto_vencimento && b.boleto_vencimento < hojeStr);
+            const totalBoletosVencidos = boletosVencidos.reduce((s,b)=>s+parseFloat(b.valor_liquido||b.valor_total||0),0);
+
             return (
               <div>
-                {/* Alerta do dia */}
-                {(parcelasHoje.length > 0 || parcelasAtrasadas.length > 0) && (
+                {/* Alertas */}
+                {(parcelasHoje.length > 0 || parcelasAtrasadas.length > 0 || boletosVencidos.length > 0) && (
                   <div className="fin-alerta" style={{borderRadius:'var(--r-sm)',padding:'12px 16px',marginBottom:16}}>
                     {parcelasHoje.length > 0 && (
-                      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:parcelasAtrasadas.length?8:0}}>
+                      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
                         <span className="fin-alerta-hoje" style={{fontSize:13,fontWeight:600}}>Hoje você recebe <strong>{fmt.currency(totalHoje)}</strong> ({parcelasHoje.length} parcela{parcelasHoje.length>1?'s':''})</span>
                       </div>
                     )}
                     {parcelasAtrasadas.length > 0 && (
-                      <div style={{display:'flex',alignItems:'center',gap:8}}>
+                      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
                         <span className="fin-alerta-atraso" style={{fontSize:13,fontWeight:600}}>{parcelasAtrasadas.length} parcela{parcelasAtrasadas.length>1?'s':''} atrasada{parcelasAtrasadas.length>1?'s':''} — {fmt.currency(totalAtrasado)}</span>
+                      </div>
+                    )}
+                    {boletosVencidos.length > 0 && (
+                      <div style={{display:'flex',alignItems:'center',gap:8}}>
+                        <span className="fin-alerta-atraso" style={{fontSize:13,fontWeight:600}}>{boletosVencidos.length} boleto{boletosVencidos.length>1?'s':''} vencido{boletosVencidos.length>1?'s':''} — {fmt.currency(totalBoletosVencidos)}</span>
                       </div>
                     )}
                   </div>
@@ -421,21 +442,55 @@ export default function AppFinanceiro() {
 
                 <div className="table-wrapper">
                   <table>
-                    <thead><tr><th>Data</th><th>Cliente</th><th>OS</th><th>Parcela</th><th>Valor</th><th>Status</th><th></th></tr></thead>
+                    <thead>
+                      <tr>
+                        <th>Tipo</th><th>Vencimento / Data</th><th>Cliente</th><th>OS</th><th>Detalhe</th><th>Valor</th><th>Status</th><th></th>
+                      </tr>
+                    </thead>
                     <tbody>
+                      {/* Parcelas de cartão */}
                       {[...parcelasAtrasadas, ...parcelasHoje, ...parcelasProximas].map(p => {
                         const isHoje = p.data_recebimento === hojeStr;
                         const isAtrasado = p.data_recebimento < hojeStr;
                         const rowClass = isHoje ? 'fin-row-hoje' : isAtrasado ? 'fin-row-atrasado' : '';
                         return (
-                          <tr key={p.id} className={rowClass}>
-                            <td className="fin-cell-data" style={{fontWeight:isHoje||isAtrasado?700:400,whiteSpace:'nowrap'}}>{fmt.date(p.data_recebimento)}</td>
-                            <td style={{maxWidth:120,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.cliente_nome||'—'}</td>
+                          <tr key={`parc-${p.id}`} className={rowClass}>
+                            <td><span className="badge badge-gray">💳 Cartão</span></td>
+                            <td style={{whiteSpace:'nowrap',fontWeight:isHoje||isAtrasado?700:400}}>{fmt.date(p.data_recebimento)}</td>
+                            <td style={{maxWidth:110,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.cliente_nome||'—'}</td>
                             <td><strong style={{color:'var(--brand)'}}>#{String(p.os_id).padStart(4,'0')}</strong></td>
-                            <td>{p.numero_parcela}ª</td>
+                            <td style={{fontSize:12,color:'var(--gray-500)'}}>{p.numero_parcela}ª parcela</td>
                             <td><strong style={{color:'var(--success)',whiteSpace:'nowrap'}}>{fmt.currency(p.valor)}</strong></td>
                             <td>{isAtrasado?<span className="badge badge-red">Atrasado</span>:isHoje?<span className="badge badge-green">Hoje</span>:<span className="badge badge-gray">Agendado</span>}</td>
-                            <td><button className="btn btn-success btn-sm" onClick={()=>marcarRecebido(p.id)} title="Marcar como recebido">✓</button></td>
+                            <td><button className="btn btn-success btn-sm" onClick={()=>marcarRecebido(p.id)} title="Marcar recebido">✓</button></td>
+                          </tr>
+                        );
+                      })}
+                      {/* Boletos pendentes */}
+                      {boletosPendentes.map(b => {
+                        const venc = b.boleto_vencimento;
+                        const isVencido = venc && venc < hojeStr;
+                        const isHoje = venc === hojeStr;
+                        const rowClass = isVencido ? 'fin-row-atrasado' : isHoje ? 'fin-row-hoje' : '';
+                        return (
+                          <tr key={`bol-${b.id}`} className={rowClass}>
+                            <td><span className="badge badge-gray">📄 Boleto</span></td>
+                            <td style={{whiteSpace:'nowrap',fontWeight:isVencido||isHoje?700:400}}>{venc?fmt.date(venc):'—'}</td>
+                            <td style={{maxWidth:110,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{b.cliente_nome||'—'}</td>
+                            <td><strong style={{color:'var(--brand)'}}>#{b.os_numero||String(b.os_id).padStart(4,'0')}</strong></td>
+                            <td style={{fontSize:12,color:'var(--gray-500)'}}>Boleto pendente</td>
+                            <td><strong style={{color:'var(--success)',whiteSpace:'nowrap'}}>{fmt.currency(b.valor_liquido||b.valor_total)}</strong></td>
+                            <td>{isVencido?<span className="badge badge-red">Vencido</span>:isHoje?<span className="badge badge-green">Hoje</span>:venc?<span className="badge badge-gray">Aguardando</span>:<span className="badge badge-yellow">Sem venc.</span>}</td>
+                            <td>
+                              <button className="btn btn-success btn-sm" title="Confirmar recebimento"
+                                onClick={async()=>{
+                                  try {
+                                    await api.app.boletosPendentes.confirmar(b.id, {recebido_em: hojeStr});
+                                    loadBoletosPendentes();
+                                    showToast('Boleto confirmado!');
+                                  } catch(err){ showToast(err?.error||'Erro','error'); }
+                                }}>✓</button>
+                            </td>
                           </tr>
                         );
                       })}
