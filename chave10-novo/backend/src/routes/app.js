@@ -22,11 +22,36 @@ router.use(authMiddleware, oficinaSelf);
 // oficina_id vem SEMPRE do JWT — nunca do body/query/params
 const oid = req => req.user.oficina_id;
 
+// ── Cache em memória para endpoints pesados ───────────────────
+// TTL de 60s — isolado por oficina_id + chave.
+// Evita queries repetidas ao DB quando múltiplos usuários da mesma
+// oficina carregam o dashboard ao mesmo tempo.
+const _dashCache = new Map();
+function dashCacheGet(key) {
+  const entry = _dashCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.ts > 60_000) { _dashCache.delete(key); return null; }
+  return entry.data;
+}
+function dashCacheSet(key, data) {
+  _dashCache.set(key, { data, ts: Date.now() });
+  if (_dashCache.size > 200) {
+    // limpa entradas mais antigas
+    const sorted = [..._dashCache.entries()].sort((a,b) => a[1].ts - b[1].ts);
+    sorted.slice(0, 100).forEach(([k]) => _dashCache.delete(k));
+  }
+}
+
 // DASHBOARD
 router.get('/dashboard', async (req,res) => {
   try {
     const id=oid(req), hoje=new Date().toISOString().split('T')[0], mesInicio=hoje.substring(0,7)+'-01';
     const isFuncionario = req.user?.perfil === 'funcionario';
+
+    // Cache 60s — dashboard é a rota mais acessada e mais pesada
+    const cacheKey = `dashboard:${id}:${isFuncionario ? 'func' : 'full'}:${hoje}`;
+    const cached = dashCacheGet(cacheKey);
+    if (cached) return res.json(cached);
 
     const [emAnd,finHoje,fatMes,totCli] = await Promise.all([
       queryOne("SELECT COUNT(*) n FROM ordens_servico WHERE oficina_id=$1 AND status='em_andamento'",[id]),
@@ -147,7 +172,9 @@ router.get('/dashboard', async (req,res) => {
       }));
     }
 
-    res.json({stats, recentes:recentesFiltradas, faturamentoMensal, painelDoDia});
+    const resposta = {stats, recentes:recentesFiltradas, faturamentoMensal, painelDoDia};
+    dashCacheSet(cacheKey, resposta);
+    res.json(resposta);
   } catch(err){log.error('app_dashboard',err);res.status(500).json({error:'Erro interno'});}
 });
 
@@ -166,6 +193,11 @@ router.get('/dashboard-resumo', naoFuncionario, naoMecanico, async (req, res) =>
     if (!inicio || !dateRegex.test(inicio)) inicio = hoje.substring(0, 7) + '-01';
     if (!fim || !dateRegex.test(fim)) fim = hoje;
     if (inicio > fim) { const tmp = inicio; inicio = fim; fim = tmp; }
+
+    // Cache 60s — dashboard-resumo tem 10+ queries paralelas
+    const cacheKey = `dashboard-resumo:${id}:${inicio}:${fim}`;
+    const cached = dashCacheGet(cacheKey);
+    if (cached) return res.json(cached);
 
     // Período anterior de mesma duração (para comparação)
     const dInicio = new Date(inicio + 'T00:00:00');
@@ -306,13 +338,16 @@ router.get('/dashboard-resumo', naoFuncionario, naoMecanico, async (req, res) =>
 
     res.json({
       periodo: { inicio, fim, dias: durDias, agrupamento: durDias <= 62 ? 'diario' : 'mensal' },
+    const respostaResumo = {
       cards,
       serie,
       osPorStatus,
       topClientes,
       ultimasOS,
       resumo,
-    });
+    };
+    dashCacheSet(cacheKey, respostaResumo);
+    res.json(respostaResumo);
   } catch (err) {
     log.error('app_dashboard_resumo', err);
     res.status(500).json({ error: 'Erro ao carregar resumo do dashboard' });
@@ -509,6 +544,8 @@ router.post('/os', validateOS, checkClienteVeiculoOwnership, async (req,res) => 
     await run('UPDATE ordens_servico SET token_publico=$1 WHERE id=$2', [tokenPub, r.id]).catch(()=>{});
 
     audit(req, ACOES.CRIAR_OS, 'ordens_servico', r.id, { numero, cliente_id, veiculo_id, data: data||new Date().toISOString().split('T')[0], mecanico_id: mecIdValido });
+    // Invalida cache do dashboard desta oficina
+    for (const k of _dashCache.keys()) { if (k.startsWith(`dashboard:${id}:`) || k.startsWith(`dashboard-resumo:${id}:`)) _dashCache.delete(k); }
     res.status(201).json({id:r.id,numero,token_publico:tokenPub});
   } catch(err){log.error('app_post_os',err);res.status(500).json({error:'Erro interno'});}
 });
@@ -665,6 +702,9 @@ router.patch('/os/:id/status', validateId, checkOwns('ordens_servico'), async (r
       await gerarLembreteAutomatico(oid(req), req.params.id);
     }
     audit(req, ACOES.ALTERAR_STATUS_OS, 'ordens_servico', req.params.id, { novo_status: status });
+    // Invalida cache do dashboard ao mudar status de OS
+    const oidVal = oid(req);
+    for (const k of _dashCache.keys()) { if (k.startsWith(`dashboard:${oidVal}:`) || k.startsWith(`dashboard-resumo:${oidVal}:`)) _dashCache.delete(k); }
     res.json({ok:true});
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
@@ -1126,6 +1166,9 @@ router.post('/os/:id/pagamento', validateId, checkOwns('ordens_servico'), valida
 
     // Gera lembrete de retorno (troca de óleo/revisão), se aplicável
     await gerarLembreteAutomatico(id, osId);
+
+    // Invalida cache do dashboard ao finalizar OS com pagamento
+    for (const k of _dashCache.keys()) { if (k.startsWith(`dashboard:${id}:`) || k.startsWith(`dashboard-resumo:${id}:`)) _dashCache.delete(k); }
 
     res.status(201).json({id: r.id, valor_liquido: valorLiquido, parcelas: nParcelas, valor_parcela: valorParcela});
   } catch(err){log.error('app_pagamento_os',err);res.status(500).json({error:'Erro interno'});}
