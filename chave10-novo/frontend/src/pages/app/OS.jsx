@@ -467,7 +467,7 @@ export default function AppOS() {
         return {
           ...p,
           nome,
-          valor_unit: (match && semValor && !p.cliente_fornece) ? String(match.preco ?? '') : p.valor_unit,
+          valor_unit: (match && semValor && !p.cliente_fornece) ? String(match.preco_venda || match.preco || '') : p.valor_unit,
         };
       }),
     }));

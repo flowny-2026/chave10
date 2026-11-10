@@ -552,22 +552,70 @@ export default function Layout({ area }) {
 
   const [open, setOpen] = useState(false);
   const [notiCount, setNotiCount] = useState(0);
+  const [notiToast, setNotiToast] = useState(null); // { titulo, tipo }
   const navigate = useNavigate();
   const user = getUser();
-  
+  const prevNotiCountRef = useRef(null); // null = primeira carga
+
   // Hook para manter a sessão ativa e verificar expiração
   useAuth();
+
+  // ── Som de notificação via Web Audio API ─────────────────────
+  function tocarSomNotificacao() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      // Dois beeps suaves — como um app de mensagens
+      [0, 180].forEach(delay => {
+        const osc  = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, ctx.currentTime + delay / 1000);
+        osc.frequency.exponentialRampToValueAtTime(660, ctx.currentTime + delay / 1000 + 0.12);
+        gain.gain.setValueAtTime(0.25, ctx.currentTime + delay / 1000);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay / 1000 + 0.25);
+        osc.start(ctx.currentTime + delay / 1000);
+        osc.stop(ctx.currentTime + delay / 1000 + 0.3);
+      });
+    } catch { /* browser sem suporte a Web Audio */ }
+  }
 
   // Polling de notificações a cada 30s
   useEffect(() => {
     if (area !== 'app') return;
     let active = true;
+
     async function checkNotis() {
       try {
         const res = await api.get('/app/notificacoes');
-        if (active) setNotiCount(res.naoLidas || 0);
+        if (!active) return;
+        const novas = res.naoLidas || 0;
+        const anterior = prevNotiCountRef.current;
+
+        // Primeira carga — só registra, não toca som
+        if (anterior === null) {
+          prevNotiCountRef.current = novas;
+          setNotiCount(novas);
+          return;
+        }
+
+        // Chegou notificação nova
+        if (novas > anterior) {
+          tocarSomNotificacao();
+          // Pega a mais recente para mostrar no toast
+          const mais_nova = (res.notificacoes || []).find(n => !n.lido);
+          if (mais_nova) {
+            setNotiToast({ titulo: mais_nova.titulo, tipo: mais_nova.tipo });
+            setTimeout(() => setNotiToast(null), 5000);
+          }
+        }
+
+        prevNotiCountRef.current = novas;
+        setNotiCount(novas);
       } catch {}
     }
+
     checkNotis();
     const interval = setInterval(checkNotis, 30000);
     return () => { active = false; clearInterval(interval); };
@@ -910,6 +958,45 @@ export default function Layout({ area }) {
           onEnd={endTour}
         />
       )}
+
+      {/* Toast de nova notificação */}
+      {notiToast && (
+        <div
+          onClick={() => { navigate('/app/notificacoes'); setNotiToast(null); }}
+          style={{
+            position: 'fixed', bottom: 24, right: 24, zIndex: 9999,
+            background: '#1f2937', color: '#fff',
+            borderRadius: 12, padding: '14px 18px',
+            boxShadow: '0 8px 32px rgba(0,0,0,.3)',
+            display: 'flex', alignItems: 'center', gap: 12,
+            cursor: 'pointer', maxWidth: 340, minWidth: 260,
+            animation: 'slideInRight .3s ease',
+          }}
+        >
+          <span style={{ fontSize: 22, flexShrink: 0 }}>
+            {notiToast.tipo === 'estoque_minimo' ? '📦' :
+             notiToast.tipo === 'orcamento_aprovado' ? '✅' :
+             notiToast.tipo === 'orcamento_recusado' ? '❌' : '🔔'}
+          </span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 2 }}>Nova notificação</div>
+            <div style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.3, wordBreak: 'break-word' }}>
+              {notiToast.titulo}
+            </div>
+          </div>
+          <button
+            onClick={e => { e.stopPropagation(); setNotiToast(null); }}
+            style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: 16, flexShrink: 0, padding: 0 }}
+          >✕</button>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes slideInRight {
+          from { transform: translateX(120%); opacity: 0; }
+          to   { transform: translateX(0);    opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 }

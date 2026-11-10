@@ -699,6 +699,7 @@ router.patch('/os/:id/status', validateId, checkOwns('ordens_servico'), async (r
     if (status === 'finalizado') {
       await garantirComissaoOS(oid(req), req.params.id);
       await gerarLembreteAutomatico(oid(req), req.params.id);
+      await baixarEstoqueOS(oid(req), req.params.id);
     }
     audit(req, ACOES.ALTERAR_STATUS_OS, 'ordens_servico', req.params.id, { novo_status: status });
     // Invalida cache do dashboard ao mudar status de OS
@@ -825,6 +826,77 @@ router.get('/lembretes', naoMecanico, async (req,res) => {
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
+// ── Baixa estoque ao finalizar OS ────────────────────────────
+// Lê pecas_itens da OS, desconta quantidade de cada item no estoque
+// (apenas itens que não são "cliente_fornece") e cria notificação
+// de alerta se a quantidade cair ao nível mínimo ou abaixo.
+// Idempotente: a coluna estoque_baixado_os_id evita baixas duplicadas.
+async function baixarEstoqueOS(oficinaId, osId) {
+  try {
+    // Verifica se já foi baixado (evita duplicata ao chamar de pagamento + status)
+    const jaFez = await queryOne(
+      "SELECT id FROM ordens_servico WHERE id=$1 AND oficina_id=$2 AND estoque_baixado=true",
+      [osId, oficinaId]
+    );
+    if (jaFez) return;
+
+    const os = await queryOne(
+      "SELECT pecas_itens FROM ordens_servico WHERE id=$1 AND oficina_id=$2",
+      [osId, oficinaId]
+    );
+    if (!os?.pecas_itens) return;
+
+    let itens = [];
+    try { itens = JSON.parse(os.pecas_itens); } catch { return; }
+    if (!Array.isArray(itens) || itens.length === 0) return;
+
+    // Marca como baixado antes de processar (evita race condition)
+    await run("UPDATE ordens_servico SET estoque_baixado=true WHERE id=$1 AND oficina_id=$2", [osId, oficinaId]);
+
+    for (const item of itens) {
+      if (!item.nome?.trim() || item.cliente_fornece) continue;
+      const qtd = parseInt(item.qtd) || 1;
+
+      // Busca item no estoque pelo nome (case-insensitive)
+      const estItem = await queryOne(
+        "SELECT id, nome, quantidade, estoque_min FROM estoque WHERE oficina_id=$1 AND LOWER(nome)=LOWER($2) AND quantidade > 0 LIMIT 1",
+        [oficinaId, item.nome.trim()]
+      );
+      if (!estItem) continue;
+
+      const novaQtd = Math.max(0, estItem.quantidade - qtd);
+      await run(
+        "UPDATE estoque SET quantidade=$1 WHERE id=$2 AND oficina_id=$3",
+        [novaQtd, estItem.id, oficinaId]
+      );
+
+      // Alerta de estoque mínimo — só cria se não existe alerta recente (últimas 24h)
+      const min = parseInt(estItem.estoque_min) || 0;
+      if (min > 0 && novaQtd <= min) {
+        const nivel = novaQtd === 0 ? 'zerado' : 'mínimo';
+        const jaTemAlerta = await queryOne(
+          `SELECT id FROM notificacoes WHERE oficina_id=$1 AND tipo='estoque_minimo'
+           AND mensagem LIKE $2 AND created_at > NOW() - INTERVAL '24 hours'`,
+          [oficinaId, `%${estItem.nome}%`]
+        );
+        if (!jaTemAlerta) {
+          await run(
+            `INSERT INTO notificacoes(oficina_id, tipo, titulo, mensagem, link)
+             VALUES($1, 'estoque_minimo', $2, $3, '/app/estoque')`,
+            [
+              oficinaId,
+              `Estoque ${nivel === 'zerado' ? 'zerado' : 'no mínimo'}: ${estItem.nome}`,
+              `${estItem.nome} está com ${novaQtd} unidade(s) em estoque${nivel === 'zerado' ? ' — ZERADO!' : ` (mínimo: ${min})`}. Faça a reposição.`,
+            ]
+          );
+        }
+      }
+    }
+  } catch (e) {
+    log.warn?.('baixar_estoque_falhou', { osId, erro: e.message });
+  }
+}
+
 // POST /lembretes — valida que veiculo_id (se informado) pertence à oficina
 router.post('/lembretes', naoMecanico, validateLembrete, checkVeiculoOwnership, async (req,res) => {
   try {
@@ -881,7 +953,7 @@ router.get('/estoque', async (req,res) => {
     const rows = await query(q,p);
     // Omite preços para funcionários
     if(isFuncionario) {
-      res.json(rows.map(({preco, data_compra, ...rest}) => rest));
+      res.json(rows.map(({preco, custo, margem, preco_venda, data_compra, ...rest}) => rest));
     } else {
       res.json(rows);
     }
@@ -890,13 +962,18 @@ router.get('/estoque', async (req,res) => {
 
 router.post('/estoque', validateEstoque, async (req,res) => {
   try {
-    const {nome,categoria,tipo,marca,aplicacao,quantidade,estoque_min,preco,data_compra,obs,codigo_barras}=req.body;
+    const {nome,categoria,tipo,marca,aplicacao,quantidade,estoque_min,preco,custo,margem,data_compra,obs,codigo_barras}=req.body;
     const isFuncionario = req.user?.perfil === 'funcionario';
     if(!nome) return res.status(400).json({error:'Nome obrigatório'});
-    // Funcionários não podem definir preços
-    const precoFinal = isFuncionario ? 0 : (preco||0);
+    const precoFinal     = isFuncionario ? 0 : (preco||0);
+    const custoFinal     = isFuncionario ? 0 : (custo||0);
+    const margemFinal    = isFuncionario ? 0 : (margem||0);
+    const precoVendaFinal = isFuncionario ? 0 : parseFloat((custoFinal * (1 + margemFinal / 100)).toFixed(2));
     const dataCompraFinal = isFuncionario ? null : (data_compra||null);
-    const r=await queryOne("INSERT INTO estoque(oficina_id,nome,categoria,tipo,marca,aplicacao,quantidade,estoque_min,preco,data_compra,obs,codigo_barras) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id",[oid(req),nome,categoria||'peca',tipo||null,marca||null,aplicacao||null,quantidade||0,estoque_min||0,precoFinal,dataCompraFinal,obs||null,codigo_barras||null]);
+    const r=await queryOne(
+      "INSERT INTO estoque(oficina_id,nome,categoria,tipo,marca,aplicacao,quantidade,estoque_min,preco,custo,margem,preco_venda,data_compra,obs,codigo_barras) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id",
+      [oid(req),nome,categoria||'peca',tipo||null,marca||null,aplicacao||null,quantidade||0,estoque_min||0,precoFinal,custoFinal,margemFinal,precoVendaFinal,dataCompraFinal,obs||null,codigo_barras||null]
+    );
     res.status(201).json({id:r.id});
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
@@ -904,11 +981,32 @@ router.post('/estoque', validateEstoque, async (req,res) => {
 // PUT /estoque/:id — checkOwns confirma pertencimento
 router.put('/estoque/:id', validateId, checkOwns('estoque'), validateEstoque, async (req,res) => {
   try {
-    const {nome,categoria,tipo,marca,aplicacao,quantidade,estoque_min,preco,data_compra,obs,codigo_barras}=req.body;
+    const {nome,categoria,tipo,marca,aplicacao,quantidade,estoque_min,preco,custo,margem,data_compra,obs,codigo_barras}=req.body;
     const isFuncionario = req.user?.perfil === 'funcionario';
-    const precoFinal = isFuncionario ? null : (preco!=null?preco:null);
+    const precoFinal      = isFuncionario ? null : (preco!=null?preco:null);
+    const custoFinal      = isFuncionario ? null : (custo!=null?custo:null);
+    const margemFinal     = isFuncionario ? null : (margem!=null?margem:null);
+    // Recalcula preco_venda se custo ou margem foram enviados
+    const precoVendaFinal = (custoFinal!=null && margemFinal!=null)
+      ? parseFloat(((custoFinal||0) * (1 + (margemFinal||0) / 100)).toFixed(2))
+      : null;
     const dataCompraFinal = isFuncionario ? null : (data_compra||null);
-    const result = await run("UPDATE estoque SET nome=COALESCE($1,nome),categoria=COALESCE($2,categoria),tipo=COALESCE($3,tipo),marca=COALESCE($4,marca),aplicacao=COALESCE($5,aplicacao),quantidade=COALESCE($6,quantidade),estoque_min=COALESCE($7,estoque_min),preco=COALESCE($8,preco),data_compra=COALESCE($9,data_compra),obs=COALESCE($10,obs),codigo_barras=COALESCE($11,codigo_barras) WHERE id=$12 AND oficina_id=$13",[nome,categoria||null,tipo||null,marca||null,aplicacao||null,quantidade!=null?quantidade:null,estoque_min!=null?estoque_min:null,precoFinal,dataCompraFinal,obs||null,codigo_barras||null,req.params.id,oid(req)]);
+    const result = await run(
+      `UPDATE estoque SET
+         nome=COALESCE($1,nome), categoria=COALESCE($2,categoria), tipo=COALESCE($3,tipo),
+         marca=COALESCE($4,marca), aplicacao=COALESCE($5,aplicacao),
+         quantidade=COALESCE($6,quantidade), estoque_min=COALESCE($7,estoque_min),
+         preco=COALESCE($8,preco), custo=COALESCE($9,custo),
+         margem=COALESCE($10,margem), preco_venda=COALESCE($11,preco_venda),
+         data_compra=COALESCE($12,data_compra), obs=COALESCE($13,obs),
+         codigo_barras=COALESCE($14,codigo_barras)
+       WHERE id=$15 AND oficina_id=$16`,
+      [nome,categoria||null,tipo||null,marca||null,aplicacao||null,
+       quantidade!=null?quantidade:null, estoque_min!=null?estoque_min:null,
+       precoFinal, custoFinal, margemFinal, precoVendaFinal,
+       dataCompraFinal, obs||null, codigo_barras||null,
+       req.params.id, oid(req)]
+    );
     if(result.rowCount === 0) return res.status(404).json({error:'Item não encontrado'});
     res.json({ok:true});
   } catch(err){res.status(500).json({error:'Erro interno'});}
@@ -1165,6 +1263,9 @@ router.post('/os/:id/pagamento', validateId, checkOwns('ordens_servico'), valida
 
     // Gera lembrete de retorno (troca de óleo/revisão), se aplicável
     await gerarLembreteAutomatico(id, osId);
+
+    // Baixa estoque das peças usadas + alerta de estoque mínimo
+    await baixarEstoqueOS(id, osId);
 
     // Invalida cache do dashboard ao finalizar OS com pagamento
     for (const k of _dashCache.keys()) { if (k.startsWith(`dashboard:${id}:`) || k.startsWith(`dashboard-resumo:${id}:`)) _dashCache.delete(k); }

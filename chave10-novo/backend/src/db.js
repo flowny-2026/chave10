@@ -724,6 +724,14 @@ async function initDB() {
     WHERE token_publico IS NULL
   `).catch(() => {});
 
+  // 7. Estoque — custo, margem de lucro e preço de venda
+  await pool.query(`ALTER TABLE estoque ADD COLUMN IF NOT EXISTS custo REAL DEFAULT 0;`).catch(() => {});
+  await pool.query(`ALTER TABLE estoque ADD COLUMN IF NOT EXISTS margem REAL DEFAULT 0;`).catch(() => {});
+  await pool.query(`ALTER TABLE estoque ADD COLUMN IF NOT EXISTS preco_venda REAL DEFAULT 0;`).catch(() => {});
+
+  // 8. OS — flag para evitar baixa dupla de estoque
+  await pool.query(`ALTER TABLE ordens_servico ADD COLUMN IF NOT EXISTS estoque_baixado BOOLEAN NOT NULL DEFAULT false;`).catch(() => {});
+
   console.log('✅ Melhorias 2026 aplicadas ao banco');
 }
 

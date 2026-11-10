@@ -5,7 +5,7 @@ import KPICard from '../../components/KPICard';
 import { IcoEdit, IcoTrash } from '../../components/ActionIcons';
 
 const fmt = { currency: v => 'R$ ' + parseFloat(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.') };
-const EMPTY = { nome:'', categoria:'peca', tipo:'', marca:'', aplicacao:'', quantidade:'', estoque_min:'', preco:'', data_compra:'', obs:'' };
+const EMPTY = { nome:'', categoria:'peca', tipo:'', marca:'', aplicacao:'', quantidade:'', estoque_min:'', preco:'', custo:'', margem:'', preco_venda:'', data_compra:'', obs:'' };
 
 function Toast({ msg, type }) {
   if (!msg) return null;
@@ -38,7 +38,7 @@ export default function AppEstoque() {
   useEffect(()=>{ load(); },[]);
 
   function openCreate(cat='peca') { setForm({...EMPTY,categoria:cat}); setEditing(null); setModal(true); }
-  function openEdit(i) { setForm({nome:i.nome||'',categoria:i.categoria||'peca',tipo:i.tipo||'',marca:i.marca||'',aplicacao:i.aplicacao||'',quantidade:i.quantidade||'',estoque_min:i.estoque_min||'',preco:i.preco||'',data_compra:i.data_compra||'',obs:i.obs||''}); setEditing(i.id); setModal(true); }
+  function openEdit(i) { setForm({nome:i.nome||'',categoria:i.categoria||'peca',tipo:i.tipo||'',marca:i.marca||'',aplicacao:i.aplicacao||'',quantidade:i.quantidade||'',estoque_min:i.estoque_min||'',preco:i.preco||'',custo:i.custo||'',margem:i.margem||'',preco_venda:i.preco_venda||'',data_compra:i.data_compra||'',obs:i.obs||''}); setEditing(i.id); setModal(true); }
 
   // Trata código de barras detectado — busca item existente ou pré-preenche novo
   function handleBarcode(codigo) {
@@ -59,7 +59,15 @@ export default function AppEstoque() {
     e.preventDefault();
     if (!form.nome.trim()) { showToast('Nome é obrigatório','error'); return; }
     try {
-      const payload = {...form, quantidade:parseInt(form.quantidade)||0, estoque_min:parseInt(form.estoque_min)||0, preco:parseFloat(form.preco)||0, codigo_barras:form.codigo_barras||null};
+      const payload = {
+        ...form,
+        quantidade:  parseInt(form.quantidade)||0,
+        estoque_min: parseInt(form.estoque_min)||0,
+        preco:       parseFloat(form.preco)||0,
+        custo:       parseFloat(form.custo)||0,
+        margem:      parseFloat(form.margem)||0,
+        codigo_barras: form.codigo_barras||null,
+      };
       if (editing) await api.app.estoque.update(editing, payload);
       else await api.app.estoque.create(payload);
       setModal(false); load(); showToast(editing?'Item atualizado!':'Item salvo!');
@@ -74,13 +82,13 @@ export default function AppEstoque() {
 
   const pecas = itens.filter(i=>i.categoria==='peca');
   const ferr  = itens.filter(i=>i.categoria==='ferramenta');
-  const valPecas = pecas.reduce((s,i)=>s+parseFloat(i.preco||0)*parseInt(i.quantidade||1),0);
-  const valFerr  = ferr.reduce((s,i)=>s+parseFloat(i.preco||0)*parseInt(i.quantidade||1),0);
+  const valPecas = pecas.reduce((s,i)=>s+parseFloat(i.custo||i.preco||0)*parseInt(i.quantidade||1),0);
+  const valFerr  = ferr.reduce((s,i)=>s+parseFloat(i.custo||i.preco||0)*parseInt(i.quantidade||1),0);
   const valTotal = valPecas + valFerr;
   const baixo = pecas.filter(i=>parseInt(i.quantidade||0)<=parseInt(i.estoque_min||0)&&parseInt(i.estoque_min||0)>0);
   const zerado = pecas.filter(i=>parseInt(i.quantidade||0)===0);
 
-  const top5 = [...itens].map(i=>({...i,valorTotal:parseFloat(i.preco||0)*parseInt(i.quantidade||1)})).sort((a,b)=>b.valorTotal-a.valorTotal).slice(0,5);
+  const top5 = [...itens].map(i=>({...i,valorTotal:parseFloat(i.custo||i.preco||0)*parseInt(i.quantidade||1)})).sort((a,b)=>b.valorTotal-a.valorTotal).slice(0,5);
 
   const listaFiltrada = itens.filter(i=>{
     const matchCat = catFiltro==='todos'||i.categoria===catFiltro;
@@ -344,7 +352,23 @@ export default function AppEstoque() {
                     <div className="form-group"><label>Quantidade em estoque</label><input type="number" min="0" value={form.quantidade} onChange={e=>setForm(f=>({...f,quantidade:e.target.value}))} placeholder="0" /></div>
                     <div className="form-group"><label>Estoque mínimo</label><input type="number" min="0" value={form.estoque_min} onChange={e=>setForm(f=>({...f,estoque_min:e.target.value}))} placeholder="Ex: 2" /></div>
                   </>}
-                  {!isFuncionario && <div className="form-group"><label>{form.categoria==='peca'?'Preço unitário (R$)':'Valor (R$)'}</label><input type="number" step="0.01" min="0" value={form.preco} onChange={e=>setForm(f=>({...f,preco:e.target.value}))} placeholder="0,00" /></div>}
+                  {!isFuncionario && <>
+                    <div className="form-group"><label>Custo (R$)</label><input type="number" step="0.01" min="0" value={form.custo} onChange={e=>{const c=e.target.value;const pv=c&&form.margem?parseFloat((parseFloat(c)*(1+(parseFloat(form.margem)||0)/100)).toFixed(2)):'';setForm(f=>({...f,custo:c,preco_venda:pv||f.preco_venda}));}} placeholder="0,00" /></div>
+                    <div className="form-group"><label>Margem de lucro (%)</label><input type="number" step="0.1" min="0" max="10000" value={form.margem} onChange={e=>{const m=e.target.value;const pv=m&&form.custo?parseFloat((parseFloat(form.custo)*(1+(parseFloat(m)||0)/100)).toFixed(2)):'';setForm(f=>({...f,margem:m,preco_venda:pv||f.preco_venda}));}} placeholder="Ex: 30" /></div>
+                    <div className="form-group">
+                      <label>Preço de venda (R$)
+                        <span style={{fontSize:11,color:'var(--gray-400)',fontWeight:400,marginLeft:6}}>calculado automaticamente</span>
+                      </label>
+                      <input type="number" step="0.01" min="0"
+                        value={form.custo && form.margem
+                          ? parseFloat((parseFloat(form.custo||0)*(1+(parseFloat(form.margem||0))/100)).toFixed(2))
+                          : (form.preco_venda||'')}
+                        readOnly
+                        style={{background:'var(--gray-50)',cursor:'default',fontWeight:700,color:'var(--success)'}}
+                        placeholder="Preencha custo e margem" />
+                    </div>
+                    <div className="form-group"><label>Preço unitário (R$) <span style={{fontSize:11,color:'var(--gray-400)',fontWeight:400}}>legado</span></label><input type="number" step="0.01" min="0" value={form.preco} onChange={e=>setForm(f=>({...f,preco:e.target.value}))} placeholder="0,00" /></div>
+                  </>}
                   <div className="form-group"><label>Data de compra</label><input type="date" value={form.data_compra} onChange={e=>setForm(f=>({...f,data_compra:e.target.value}))} /></div>
                   <div className="form-group full"><label>Observações</label><textarea value={form.obs} onChange={e=>setForm(f=>({...f,obs:e.target.value}))} placeholder="Anotações adicionais..." /></div>
                 </div>

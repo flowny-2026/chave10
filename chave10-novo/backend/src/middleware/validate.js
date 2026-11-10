@@ -516,6 +516,20 @@ function validateEstoque(req, res, next) {
     if (preco === null) return res.status(400).json({ error: 'Preço inválido' });
   }
 
+  let custo;
+  if (req.body.custo !== undefined && req.body.custo !== null && req.body.custo !== '') {
+    custo = money(req.body.custo);
+    if (custo === null) return res.status(400).json({ error: 'Custo inválido' });
+  }
+
+  let margem;
+  if (req.body.margem !== undefined && req.body.margem !== null && req.body.margem !== '') {
+    margem = parseFloat(req.body.margem);
+    if (isNaN(margem) || margem < 0 || margem > 10000) {
+      return res.status(400).json({ error: 'Margem inválida (0 a 10000%)' });
+    }
+  }
+
   let estoque_min;
   if (req.body.estoque_min !== undefined && req.body.estoque_min !== null) {
     estoque_min = parseInt(req.body.estoque_min, 10);
@@ -547,6 +561,8 @@ function validateEstoque(req, res, next) {
     ...(quantidade    !== undefined && { quantidade }),
     ...(estoque_min   !== undefined && { estoque_min }),
     ...(preco         !== undefined && { preco }),
+    ...(custo         !== undefined && { custo }),
+    ...(margem        !== undefined && { margem }),
     ...(data_compra   !== undefined && { data_compra }),
     ...(obs           !== undefined && { obs }),
     ...(codigo_barras !== undefined && { codigo_barras }),
