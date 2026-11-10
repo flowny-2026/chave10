@@ -383,7 +383,11 @@ export function montarMsgWhatsApp(os, oficina, pagamentos = []) {
   const saldo      = Math.max(0, totalGeral - totalPago);
 
   const osNumero = os.numero || String(os.id).padStart(4, '0');
-  const garantiaDias = os.garantia_prazo_dias || oficina.garantia_padrao_dias || 0;
+  // Só mostra garantia se foi explicitamente ativada nesta OS
+  const garantiaAtivaMsg = os.garantia_ativa === true ||
+    (os.garantia_ativa === null || os.garantia_ativa === undefined
+      ? (os.garantia_prazo_dias > 0) : false);
+  const garantiaDias = garantiaAtivaMsg ? (os.garantia_prazo_dias || oficina.garantia_padrao_dias || 0) : 0;
   const prazoTxt = prazoTexto(garantiaDias);
 
   let msg = `*${oficina.nome || 'Oficina'}* — Comprovante de Serviço\n`;

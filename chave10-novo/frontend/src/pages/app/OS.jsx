@@ -1379,7 +1379,10 @@ export default function AppOS() {
                       const totalMO    = parseFloat(comprovante.os.valor_mo)    || 0;
                       const totalPecas = parseFloat(comprovante.os.valor_pecas) || 0;
                       const total      = totalMO + totalPecas;
-                      const garantiaDias = comprovante.os.garantia_prazo_dias || comprovante.oficina.garantia_padrao_dias || 0;
+                      // Só mostra garantia se foi explicitamente ativada nesta OS
+                      const garantiaDias = comprovante.os.garantia_ativa
+                        ? (comprovante.os.garantia_prazo_dias || comprovante.oficina.garantia_padrao_dias || 0)
+                        : 0;
                       return (
                         <div style={{marginTop:10,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                           <span style={{fontSize:12,color:'var(--gray-500)'}}>
@@ -1405,9 +1408,24 @@ export default function AppOS() {
                           <input type="checkbox"
                             checked={!!comprovante.os.garantia_ativa}
                             onChange={async e => {
-                              await api.app.os.garantia(comprovante.os.id, { garantia_ativa: e.target.checked, garantia_prazo_dias: e.target.checked ? (comprovante.os.garantia_prazo_dias || comprovante.oficina.garantia_padrao_dias || 90) : 0 });
-                              const d = await api.app.os.comprovante(comprovante.os.id);
-                              setComprovante(d);
+                              const ativo = e.target.checked;
+                              // Atualização otimista — reflete imediatamente na UI
+                              setComprovante(prev => ({...prev, os: {...prev.os, garantia_ativa: ativo}}));
+                              try {
+                                await api.app.os.garantia(comprovante.os.id, {
+                                  garantia_ativa: ativo,
+                                  garantia_prazo_dias: ativo
+                                    ? (comprovante.os.garantia_prazo_dias || comprovante.oficina.garantia_padrao_dias || 90)
+                                    : 0,
+                                });
+                                const d = await api.app.os.comprovante(comprovante.os.id);
+                                setComprovante(d);
+                                showToast(ativo ? 'Garantia ativada nesta OS' : 'Garantia removida');
+                              } catch {
+                                // Reverte se falhar
+                                setComprovante(prev => ({...prev, os: {...prev.os, garantia_ativa: !ativo}}));
+                                showToast('Erro ao salvar garantia', 'error');
+                              }
                             }}
                           />
                           Informar garantia nesta OS
