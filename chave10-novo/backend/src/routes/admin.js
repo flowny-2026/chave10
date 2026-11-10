@@ -135,7 +135,7 @@ router.post('/usuarios', validateUsuario, async (req,res) => {
     const {oficina_id,nome,email,senha,perfil}=req.body;
     if(perfil==='master_admin') return res.status(403).json({error:'Não permitido'});
     const perfilFinal = ['admin_oficina','funcionario'].includes(perfil) ? perfil : 'funcionario';
-    const hash=bcrypt.hashSync(senha,12);
+    const hash=bcrypt.hashSync(senha, 10);
     const r=await queryOne("INSERT INTO usuarios(oficina_id,nome,email,senha_hash,perfil) VALUES($1,$2,$3,$4,$5) RETURNING id",[oficina_id||null,nome,email,hash,perfilFinal]);
     log.info('usuario_criado',{id:r.id,nome,perfil:perfilFinal,oficina_id});
     audit(req, ACOES.CRIAR_USUARIO, 'usuarios', r.id, { nome, email, perfil: perfilFinal, oficina_id });
@@ -298,7 +298,7 @@ router.post('/trocar-senha', sensitiveOpsLimiter, async (req,res) => {
       return res.status(401).json({error:'Senha atual incorreta'});
     }
 
-    const novoHash = bcrypt.hashSync(senha_nova, 12);
+    const novoHash = bcrypt.hashSync(senha_nova, 10);
     await run('UPDATE usuarios SET senha_hash=$1 WHERE id=$2', [novoHash, admin.id]);
 
     log.info('senha_admin_alterada', {admin_id: admin.id, email: admin.email});
@@ -317,7 +317,7 @@ router.patch('/usuarios/:id/redefinir-senha', sensitiveOpsLimiter, validateId, v
     const usuario = await queryOne('SELECT id, perfil, nome, email FROM usuarios WHERE id=$1', [req.params.id]);
     if (!usuario) return res.status(404).json({ error: 'Usuário não encontrado' });
     if (usuario.perfil === 'master_admin') return res.status(403).json({ error: 'Não é possível redefinir a senha do admin master por aqui' });
-    const hash = bcrypt.hashSync(nova_senha, 12);
+    const hash = bcrypt.hashSync(nova_senha, 10);
     await run('UPDATE usuarios SET senha_hash=$1 WHERE id=$2', [hash, req.params.id]);
     log.info('senha_redefinida_pelo_admin', { usuario_id: usuario.id, email: usuario.email, admin_id: req.user.id });
     audit(req, ACOES.REDEFINIR_SENHA, 'usuarios', usuario.id, { email: usuario.email, perfil: usuario.perfil });

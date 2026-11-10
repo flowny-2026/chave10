@@ -26,7 +26,7 @@ router.post('/login', validateLogin, async (req, res) => {
     const usuario = await queryOne('SELECT * FROM usuarios WHERE email=$1 AND ativo=1', [email]);
 
     // Hash fake garante tempo de resposta constante mesmo para emails inexistentes (timing-safe)
-    const hashFake = '$2a$12$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012345';
+    const hashFake = '$2a$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012345';
     const hashAlvo = usuario?.senha_hash || hashFake;
     const senhaOk  = await bcrypt.compare(senha, hashAlvo);
 
@@ -147,7 +147,7 @@ router.post('/register', registerLimiter, async (req, res) => {
       return res.status(201).json({ token: tokenReal, needsOficina: true });
     }
 
-    const hash = bcrypt.hashSync(senhaRaw, 12);
+    const hash = bcrypt.hashSync(senhaRaw, 10);
     const r = await queryOne(
       "INSERT INTO usuarios(oficina_id, nome, email, senha_hash, perfil, ativo) VALUES(NULL, $1, $2, $3, 'admin_oficina', 1) RETURNING id",
       [nome, email, hash]
@@ -181,7 +181,7 @@ router.post('/google', googleAuthLimiter, async (req, res) => {
 
     // Usu�rio n�o existe � cria conta nova e pede dados da oficina
     if (!usuario) {
-      const hash = bcrypt.hashSync(require('crypto').randomBytes(32).toString('hex'), 12);
+      const hash = bcrypt.hashSync(require('crypto').randomBytes(32).toString('hex'), 10);
       const r = await queryOne(
         "INSERT INTO usuarios(oficina_id, nome, email, senha_hash, perfil, ativo) VALUES(NULL, $1, $2, $3, 'admin_oficina', 1) RETURNING id",
         [nome, email, hash]
@@ -272,7 +272,7 @@ router.post('/google-register', googleAuthLimiter, registerLimiter, async (req, 
     }
 
     // Cria novo usu�rio sem oficina � senha aleat�ria (login s� via Google)
-    const hash = bcrypt.hashSync(require('crypto').randomBytes(32).toString('hex'), 12);
+    const hash = bcrypt.hashSync(require('crypto').randomBytes(32).toString('hex'), 10);
     const r = await queryOne(
       "INSERT INTO usuarios(oficina_id, nome, email, senha_hash, perfil, ativo) VALUES(NULL, $1, $2, $3, 'admin_oficina', 1) RETURNING id",
       [nome, email, hash]

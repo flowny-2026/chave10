@@ -377,7 +377,7 @@ app.post('/api/public/referral/cadastro', loginLimiter, async (req, res) => {
       return res.status(409).json({ error: 'Este e-mail já está cadastrado.' });
     }
 
-    const hash = bcrypt.hashSync(senha, 12);
+    const hash = bcrypt.hashSync(senha, 10);
 
     // Cria usuário com perfil 'indicador' (sem oficina_id)
     const usuario = await pgOne(

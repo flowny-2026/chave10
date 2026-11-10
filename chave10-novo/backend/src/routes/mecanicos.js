@@ -117,7 +117,7 @@ router.post('/', apenasAdmin, async (req, res) => {
       return res.status(409).json({ error: 'E-mail já cadastrado no sistema' });
     }
 
-    const hash = bcrypt.hashSync(senha, 12);
+    const hash = bcrypt.hashSync(senha, 10);
     const r = await queryOne(
       "INSERT INTO usuarios(oficina_id, nome, email, senha_hash, telefone, perfil, ativo) VALUES($1,$2,$3,$4,$5,'mecanico',1) RETURNING id",
       [oid(req), nomeSanitizado, emailSanitizado, hash, telefoneSanitizado]
@@ -202,7 +202,7 @@ router.put('/:id', apenasAdmin, validateId, async (req, res) => {
     const telefoneSanitizado = telefone !== undefined
       ? (telefone ? String(telefone).replace(/[^\d\s\-\+\(\)]/g, '').slice(0, 30) || null : null)
       : undefined;
-    const senhaHash = senha ? bcrypt.hashSync(senha, 12) : undefined;
+    const senhaHash = senha ? bcrypt.hashSync(senha, 10) : undefined;
 
     await run(`
       UPDATE usuarios SET

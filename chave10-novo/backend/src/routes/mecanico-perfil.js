@@ -106,7 +106,7 @@ router.patch('/senha', async (req, res) => {
       return res.status(401).json({ error: 'Senha atual incorreta' });
     }
 
-    const hash = bcrypt.hashSync(nova_senha, 12);
+    const hash = bcrypt.hashSync(nova_senha, 10);
     await run('UPDATE usuarios SET senha_hash=$1 WHERE id=$2', [hash, req.user.id]);
     audit(req, ACOES.TROCAR_SENHA, 'usuarios', req.user.id, {});
     res.json({ ok: true });

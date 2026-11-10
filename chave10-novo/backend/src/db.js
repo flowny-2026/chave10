@@ -633,7 +633,7 @@ async function initDB() {
     if (process.env.NODE_ENV === 'production' && !process.env.MASTER_ADMIN_PASSWORD) {
       console.warn('⚠️  AVISO DE SEGURANÇA: MASTER_ADMIN_PASSWORD não definido. Troque a senha após o primeiro login!');
     }
-    const hash = bcrypt.hashSync(defaultPassword, 12);
+    const hash = bcrypt.hashSync(defaultPassword, 10);
     await run(
       "INSERT INTO usuarios (oficina_id, nome, email, senha_hash, perfil) VALUES (NULL, 'Administrador', 'admin@chave10.com', $1, 'master_admin')",
       [hash]
