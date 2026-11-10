@@ -281,7 +281,7 @@ export default function AppOS() {
   const [novoClienteSaving, setNovoClienteSaving] = useState(false);
 
   async function criarClienteInline(e) {
-    e.preventDefault();
+    if (e?.preventDefault) e.preventDefault();
     if (!novoClienteForm.nome.trim()) { showToast('Nome é obrigatório','error'); return; }
     setNovoClienteSaving(true);
     try {
@@ -305,7 +305,7 @@ export default function AppOS() {
   const [novoVeiculoSaving, setNovoVeiculoSaving] = useState(false);
 
   async function criarVeiculoInline(e) {
-    e.preventDefault();
+    if (e?.preventDefault) e.preventDefault();
     if (!novoVeiculoForm.modelo.trim()) { showToast('Modelo é obrigatório','error'); return; }
     setNovoVeiculoSaving(true);
     try {
@@ -965,14 +965,16 @@ export default function AppOS() {
                       </button>
                     </div>
                     {novoClienteOpen ? (
-                      <form onSubmit={criarClienteInline} style={{background:'var(--gray-50)',border:'1px solid var(--brand)',borderRadius:8,padding:'10px 12px',display:'flex',flexDirection:'column',gap:8}}>
-                        <input placeholder="Nome *" value={novoClienteForm.nome} onChange={e=>setNovoClienteForm(f=>({...f,nome:e.target.value}))} autoFocus style={{padding:'7px 10px',fontSize:13}} />
+                      <div style={{background:'var(--gray-50)',border:'1px solid var(--brand)',borderRadius:8,padding:'10px 12px',display:'flex',flexDirection:'column',gap:8}}>
+                        <input placeholder="Nome *" value={novoClienteForm.nome} onChange={e=>setNovoClienteForm(f=>({...f,nome:e.target.value}))} autoFocus style={{padding:'7px 10px',fontSize:13}}
+                          onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();criarClienteInline(e);}}} />
                         <input placeholder="Telefone" value={novoClienteForm.telefone} onChange={e=>setNovoClienteForm(f=>({...f,telefone:e.target.value}))} style={{padding:'7px 10px',fontSize:13}} />
                         <input placeholder="Endereço" value={novoClienteForm.endereco} onChange={e=>setNovoClienteForm(f=>({...f,endereco:e.target.value}))} style={{padding:'7px 10px',fontSize:13}} />
-                        <button type="submit" className="btn btn-primary btn-sm" disabled={novoClienteSaving} style={{alignSelf:'flex-end'}}>
+                        <button type="button" className="btn btn-primary btn-sm" disabled={novoClienteSaving}
+                          onClick={criarClienteInline} style={{alignSelf:'flex-end'}}>
                           {novoClienteSaving ? 'Salvando…' : 'Criar cliente'}
                         </button>
-                      </form>
+                      </div>
                     ) : (
                       <select value={form.cliente_id} onChange={e=>setForm(f=>({...f,cliente_id:e.target.value,veiculo_id:''}))}>
                         <option value="">Selecionar...</option>
@@ -988,7 +990,7 @@ export default function AppOS() {
                       </button>
                     </div>
                     {novoVeiculoOpen ? (
-                      <form onSubmit={criarVeiculoInline} style={{background:'var(--gray-50)',border:'1px solid var(--brand)',borderRadius:8,padding:'10px 12px',display:'flex',flexDirection:'column',gap:8}}>
+                      <div style={{background:'var(--gray-50)',border:'1px solid var(--brand)',borderRadius:8,padding:'10px 12px',display:'flex',flexDirection:'column',gap:8}}>
                         <input placeholder={`${t.modelo} *`} value={novoVeiculoForm.modelo} onChange={e=>setNovoVeiculoForm(f=>({...f,modelo:e.target.value}))} autoFocus style={{padding:'7px 10px',fontSize:13}} />
                         <input placeholder={t.marca} value={novoVeiculoForm.marca} onChange={e=>setNovoVeiculoForm(f=>({...f,marca:e.target.value}))} style={{padding:'7px 10px',fontSize:13}} />
                         <input placeholder={`${t.placa} (opcional)`} value={novoVeiculoForm.placa} onChange={e=>setNovoVeiculoForm(f=>({...f,placa:e.target.value.toUpperCase()}))} style={{padding:'7px 10px',fontSize:13,textTransform:'uppercase'}} />
@@ -996,10 +998,11 @@ export default function AppOS() {
                           <input placeholder={t.ano} value={novoVeiculoForm.ano} onChange={e=>setNovoVeiculoForm(f=>({...f,ano:e.target.value}))} style={{padding:'7px 10px',fontSize:13}} />
                           <input type="number" placeholder={t.kmPlaceholder||`${t.kmAbrev} atual`} value={novoVeiculoForm.km} onChange={e=>setNovoVeiculoForm(f=>({...f,km:e.target.value}))} style={{padding:'7px 10px',fontSize:13}} min="0" />
                         </div>
-                        <button type="submit" className="btn btn-primary btn-sm" disabled={novoVeiculoSaving} style={{alignSelf:'flex-end'}}>
+                        <button type="button" className="btn btn-primary btn-sm" disabled={novoVeiculoSaving}
+                          onClick={criarVeiculoInline} style={{alignSelf:'flex-end'}}>
                           {novoVeiculoSaving ? 'Salvando…' : `Criar ${t.veiculo.toLowerCase()}`}
                         </button>
-                      </form>
+                      </div>
                     ) : (
                       <select value={form.veiculo_id} onChange={e=>setForm(f=>({...f,veiculo_id:e.target.value}))}>
                         <option value="">Selecionar...</option>
