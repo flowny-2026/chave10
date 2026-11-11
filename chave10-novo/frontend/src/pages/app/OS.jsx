@@ -1404,12 +1404,15 @@ export default function AppOS() {
                       </summary>
                       {/* Toggle para ativar/desativar garantia */}
                       <div style={{padding:'8px 14px',borderBottom:'1px solid var(--gray-200)',display:'flex',alignItems:'center',gap:10}}>
-                        <label style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',fontSize:13,color:'var(--gray-700)'}}>
+                        <label
+                          style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',fontSize:13,color:'var(--gray-700)'}}
+                          onClick={e => e.stopPropagation()}
+                        >
                           <input type="checkbox"
                             checked={!!comprovante.os.garantia_ativa}
+                            onClick={e => e.stopPropagation()}
                             onChange={async e => {
                               const ativo = e.target.checked;
-                              // Atualização otimista — reflete imediatamente na UI
                               setComprovante(prev => ({...prev, os: {...prev.os, garantia_ativa: ativo}}));
                               try {
                                 await api.app.os.garantia(comprovante.os.id, {
@@ -1422,7 +1425,6 @@ export default function AppOS() {
                                 setComprovante(d);
                                 showToast(ativo ? 'Garantia ativada nesta OS' : 'Garantia removida');
                               } catch {
-                                // Reverte se falhar
                                 setComprovante(prev => ({...prev, os: {...prev.os, garantia_ativa: !ativo}}));
                                 showToast('Erro ao salvar garantia', 'error');
                               }

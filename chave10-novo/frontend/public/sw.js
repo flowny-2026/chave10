@@ -2,8 +2,8 @@
 // Network-first para HTML/JS/API, cache-first para assets estáticos
 // Background Sync para operações offline
 
-const CACHE_NAME = 'chave10-v62';
-const RUNTIME_CACHE = 'chave10-runtime-v62';
+const CACHE_NAME = 'chave10-v63';
+const RUNTIME_CACHE = 'chave10-runtime-v63';
 const STATIC_ASSETS = [
   '/',
   '/favicon.jpeg',
@@ -100,37 +100,21 @@ self.addEventListener('fetch', (event) => {
 
   // ─── ESTRATÉGIA POR TIPO ───────────────────────
 
-  // 1. APIs: Network-first com fallback silencioso
+  // 1. APIs: Network-first SEM cache de respostas autenticadas
+  // Nunca cacheamos dados de API — cada usuário tem dados diferentes (multi-tenant).
+  // O cache de API causaria vazamento de dados entre contas no mesmo browser.
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
       fetch(request)
-        .then((response) => {
-          // Cacheia apenas respostas bem-sucedidas
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(RUNTIME_CACHE).then((cache) => {
-              cache.put(request, clone);
-            });
-          }
-          return response;
-        })
         .catch(() => {
-          // Tenta buscar do cache
-          return caches.match(request)
-            .then((cached) => {
-              if (cached) {
-                console.log('[SW] API offline - retornando do cache:', url.pathname);
-                return cached;
-              }
-              // Retorna erro 503 se não há cache
-              return new Response(
-                JSON.stringify({ error: 'Sem conexão e sem cache disponível' }),
-                {
-                  status: 503,
-                  headers: { 'Content-Type': 'application/json' },
-                }
-              );
-            });
+          // Sem conexão — retorna erro claro ao invés de dados cacheados de outro usuário
+          return new Response(
+            JSON.stringify({ error: 'Sem conexão com o servidor. Verifique sua internet.' }),
+            {
+              status: 503,
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
         })
     );
     return;
@@ -181,11 +165,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 5. Default: Network-first
+  // 5. Default: Network-first — nunca cacheia requisições autenticadas
   event.respondWith(
     fetch(request)
       .then((response) => {
-        if (response.ok) {
+        // Não cacheia se tiver header de autorização (dados autenticados)
+        if (response.ok && !request.headers.get('Authorization')) {
           const clone = response.clone();
           caches.open(RUNTIME_CACHE).then((cache) => {
             cache.put(request, clone);
