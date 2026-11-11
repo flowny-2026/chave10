@@ -965,14 +965,16 @@ router.post('/estoque', validateEstoque, async (req,res) => {
     const {nome,categoria,tipo,marca,aplicacao,quantidade,estoque_min,preco,custo,margem,data_compra,obs,codigo_barras}=req.body;
     const isFuncionario = req.user?.perfil === 'funcionario';
     if(!nome) return res.status(400).json({error:'Nome obrigatório'});
-    const precoFinal     = isFuncionario ? 0 : (preco||0);
-    const custoFinal     = isFuncionario ? 0 : (custo||0);
-    const margemFinal    = isFuncionario ? 0 : (margem||0);
+    const precoFinal      = isFuncionario ? 0 : (preco||0);
+    const custoFinal      = isFuncionario ? 0 : (custo||0);
+    const margemFinal     = isFuncionario ? 0 : (margem||0);
     const precoVendaFinal = isFuncionario ? 0 : parseFloat((custoFinal * (1 + margemFinal / 100)).toFixed(2));
+    // Espelha preco_venda no campo preco para compatibilidade com OS/Orçamento
+    const precoCompativel = isFuncionario ? 0 : (precoVendaFinal > 0 ? precoVendaFinal : precoFinal);
     const dataCompraFinal = isFuncionario ? null : (data_compra||null);
     const r=await queryOne(
       "INSERT INTO estoque(oficina_id,nome,categoria,tipo,marca,aplicacao,quantidade,estoque_min,preco,custo,margem,preco_venda,data_compra,obs,codigo_barras) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id",
-      [oid(req),nome,categoria||'peca',tipo||null,marca||null,aplicacao||null,quantidade||0,estoque_min||0,precoFinal,custoFinal,margemFinal,precoVendaFinal,dataCompraFinal,obs||null,codigo_barras||null]
+      [oid(req),nome,categoria||'peca',tipo||null,marca||null,aplicacao||null,quantidade||0,estoque_min||0,precoCompativel,custoFinal,margemFinal,precoVendaFinal,dataCompraFinal,obs||null,codigo_barras||null]
     );
     res.status(201).json({id:r.id});
   } catch(err){res.status(500).json({error:'Erro interno'});}
@@ -990,6 +992,10 @@ router.put('/estoque/:id', validateId, checkOwns('estoque'), validateEstoque, as
     const precoVendaFinal = (custoFinal!=null && margemFinal!=null)
       ? parseFloat(((custoFinal||0) * (1 + (margemFinal||0) / 100)).toFixed(2))
       : null;
+    // Espelha preco_venda no campo preco para compatibilidade
+    const precoCompativel = precoVendaFinal != null && precoVendaFinal > 0
+      ? precoVendaFinal
+      : precoFinal;
     const dataCompraFinal = isFuncionario ? null : (data_compra||null);
     const result = await run(
       `UPDATE estoque SET
@@ -1003,7 +1009,7 @@ router.put('/estoque/:id', validateId, checkOwns('estoque'), validateEstoque, as
        WHERE id=$15 AND oficina_id=$16`,
       [nome,categoria||null,tipo||null,marca||null,aplicacao||null,
        quantidade!=null?quantidade:null, estoque_min!=null?estoque_min:null,
-       precoFinal, custoFinal, margemFinal, precoVendaFinal,
+       precoCompativel, custoFinal, margemFinal, precoVendaFinal,
        dataCompraFinal, obs||null, codigo_barras||null,
        req.params.id, oid(req)]
     );

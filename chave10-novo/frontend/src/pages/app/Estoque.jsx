@@ -59,13 +59,16 @@ export default function AppEstoque() {
     e.preventDefault();
     if (!form.nome.trim()) { showToast('Nome é obrigatório','error'); return; }
     try {
+      const custoVal     = parseFloat(form.custo)||0;
+      const margemVal    = parseFloat(form.margem)||0;
+      const precoVendaVal = parseFloat((custoVal * (1 + margemVal / 100)).toFixed(2));
       const payload = {
         ...form,
         quantidade:  parseInt(form.quantidade)||0,
         estoque_min: parseInt(form.estoque_min)||0,
-        preco:       parseFloat(form.preco)||0,
-        custo:       parseFloat(form.custo)||0,
-        margem:      parseFloat(form.margem)||0,
+        custo:       custoVal,
+        margem:      margemVal,
+        preco:       precoVendaVal,   // espelha preco_venda no campo legado
         codigo_barras: form.codigo_barras||null,
       };
       if (editing) await api.app.estoque.update(editing, payload);
@@ -367,7 +370,6 @@ export default function AppEstoque() {
                         style={{background:'var(--gray-50)',cursor:'default',fontWeight:700,color:'var(--success)'}}
                         placeholder="Preencha custo e margem" />
                     </div>
-                    <div className="form-group"><label>Preço unitário (R$) <span style={{fontSize:11,color:'var(--gray-400)',fontWeight:400}}>legado</span></label><input type="number" step="0.01" min="0" value={form.preco} onChange={e=>setForm(f=>({...f,preco:e.target.value}))} placeholder="0,00" /></div>
                   </>}
                   <div className="form-group"><label>Data de compra</label><input type="date" value={form.data_compra} onChange={e=>setForm(f=>({...f,data_compra:e.target.value}))} /></div>
                   <div className="form-group full"><label>Observações</label><textarea value={form.obs} onChange={e=>setForm(f=>({...f,obs:e.target.value}))} placeholder="Anotações adicionais..." /></div>
