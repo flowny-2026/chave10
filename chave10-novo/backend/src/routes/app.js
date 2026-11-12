@@ -22,6 +22,17 @@ router.use(authMiddleware, oficinaSelf);
 // oficina_id vem SEMPRE do JWT — nunca do body/query/params
 const oid = req => req.user.oficina_id;
 
+// ── Numeração unificada OS + Orçamento ───────────────────────
+// Incrementa atomicamente o contador da oficina e retorna o número formatado.
+// Uso: const numero = await proximoNumero(oficina_id);  → '0001', '0042', etc.
+async function proximoNumero(oficina_id) {
+  const r = await queryOne(
+    'UPDATE oficinas SET proximo_numero = proximo_numero + 1 WHERE id=$1 RETURNING proximo_numero',
+    [oficina_id]
+  );
+  return String(r.proximo_numero).padStart(4, '0');
+}
+
 // ── Cache em memória para endpoints pesados ───────────────────
 // TTL de 60s — isolado por oficina_id + chave.
 // Evita queries repetidas ao DB quando múltiplos usuários da mesma
@@ -497,8 +508,7 @@ router.post('/os', validateOS, checkClienteVeiculoOwnership, async (req,res) => 
     // Mecânicos sempre ficam vinculados a si mesmos
     if (isMecanico) mecIdValido = req.user.id;
 
-    const cnt=await queryOne("SELECT COUNT(*) n FROM ordens_servico WHERE oficina_id=$1",[id]);
-    const numero=String(+cnt.n+1).padStart(4,'0');
+    const numero = await proximoNumero(id);
 
     // Calcula comissão se houver mecânico
     let pctSvc=null, pctPec=null, comSvc=null, comPec=null, comTotal=null;
@@ -1144,8 +1154,7 @@ router.post('/orcamentos', validateOrcamento, checkClienteVeiculoOwnership, asyn
     const valorPecas = isFuncionario ? 0 : itens.reduce((s,p) => s + Math.max(0, parseFloat(p.valor_unit)||0) * Math.max(0, parseFloat(p.qtd)||1), 0);
     const pecasTexto = itens.map(p => `${p.qtd||1}x ${String(p.nome).slice(0,100)} (R$ ${parseFloat(p.valor_unit||0).toFixed(2)})`).join('\n');
 
-    const cnt = await queryOne("SELECT COUNT(*) n FROM orcamentos WHERE oficina_id=$1", [oid(req)]);
-    const numero = 'ORC-' + String(+cnt.n + 1).padStart(4, '0');
+    const numero = await proximoNumero(oid(req));
 
     // Valida os_id se informado
     const osIdVal = os_id ? parseInt(os_id) : null;

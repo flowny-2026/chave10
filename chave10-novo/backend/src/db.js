@@ -732,6 +732,20 @@ async function initDB() {
   // 8. OS — flag para evitar baixa dupla de estoque
   await pool.query(`ALTER TABLE ordens_servico ADD COLUMN IF NOT EXISTS estoque_baixado BOOLEAN NOT NULL DEFAULT false;`).catch(() => {});
 
+  // 9. Numeração unificada OS + Orçamento por oficina
+  // proximo_numero é incrementado atomicamente a cada nova OS ou orçamento.
+  // Garante que cada oficina comece em 1 e nunca haja lacunas por race condition.
+  await pool.query(`ALTER TABLE oficinas ADD COLUMN IF NOT EXISTS proximo_numero INTEGER NOT NULL DEFAULT 1;`).catch(() => {});
+  // Inicializa o proximo_numero para oficinas existentes com base no maior número já usado
+  await pool.query(`
+    UPDATE oficinas o SET proximo_numero = GREATEST(
+      1,
+      COALESCE((SELECT MAX(CAST(NULLIF(REGEXP_REPLACE(os.numero,'[^0-9]','','g'),'') AS INTEGER)) FROM ordens_servico os WHERE os.oficina_id=o.id),0),
+      COALESCE((SELECT MAX(CAST(NULLIF(REGEXP_REPLACE(orc.numero,'[^0-9]','','g'),'') AS INTEGER)) FROM orcamentos orc WHERE orc.oficina_id=o.id),0)
+    ) + 1
+    WHERE proximo_numero = 1
+  `).catch(() => {});
+
   console.log('✅ Melhorias 2026 aplicadas ao banco');
 }
 
