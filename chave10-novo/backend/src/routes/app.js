@@ -1051,8 +1051,17 @@ router.get('/despesas', naoFuncionario, async (req,res) => {
 
 router.post('/despesas', naoFuncionario, validateDespesa, async (req,res) => {
   try {
-    const {descricao,categoria,valor,data,vencimento,pago,obs}=req.body;
-    const r=await queryOne("INSERT INTO despesas(oficina_id,descricao,categoria,valor,data,vencimento,pago,obs) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id",[oid(req),descricao,categoria||'Outros',valor,data,vencimento||null,pago?1:0,obs||null]);
+    const {descricao,categoria,valor,data,vencimento,pago,obs,fornecedor_id}=req.body;
+    // Valida fornecedor_id se informado — deve pertencer à mesma oficina
+    let fId = null;
+    if (fornecedor_id) {
+      const fCheck = await queryOne('SELECT id FROM fornecedores WHERE id=$1 AND oficina_id=$2 AND ativo=true',[fornecedor_id,oid(req)]);
+      if (fCheck) fId = fCheck.id;
+    }
+    const r=await queryOne(
+      "INSERT INTO despesas(oficina_id,descricao,categoria,valor,data,vencimento,pago,obs,fornecedor_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id",
+      [oid(req),descricao,categoria||'Outros',valor,data,vencimento||null,pago?1:0,obs||null,fId]
+    );
     res.status(201).json({id:r.id});
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
@@ -1060,8 +1069,29 @@ router.post('/despesas', naoFuncionario, validateDespesa, async (req,res) => {
 // PUT /despesas/:id — checkOwns confirma pertencimento
 router.put('/despesas/:id', naoFuncionario, validateId, checkOwns('despesas'), validateDespesa, async (req,res) => {
   try {
-    const {descricao,categoria,valor,data,vencimento,pago,obs}=req.body;
-    const result = await run("UPDATE despesas SET descricao=COALESCE($1,descricao),categoria=COALESCE($2,categoria),valor=COALESCE($3,valor),data=COALESCE($4,data),vencimento=COALESCE($5,vencimento),pago=COALESCE($6,pago),obs=COALESCE($7,obs) WHERE id=$8 AND oficina_id=$9",[descricao||null,categoria||null,valor||null,data||null,vencimento||null,pago!=null?pago:null,obs||null,req.params.id,oid(req)]);
+    const {descricao,categoria,valor,data,vencimento,pago,obs,fornecedor_id}=req.body;
+    let fId = undefined;
+    if (fornecedor_id !== undefined) {
+      if (fornecedor_id === null || fornecedor_id === '') {
+        fId = null;
+      } else {
+        const fCheck = await queryOne('SELECT id FROM fornecedores WHERE id=$1 AND oficina_id=$2 AND ativo=true',[fornecedor_id,oid(req)]);
+        fId = fCheck ? fCheck.id : null;
+      }
+    }
+    const result = await run(
+      `UPDATE despesas SET
+         descricao=COALESCE($1,descricao), categoria=COALESCE($2,categoria),
+         valor=COALESCE($3,valor), data=COALESCE($4,data),
+         vencimento=COALESCE($5,vencimento), pago=COALESCE($6,pago),
+         obs=COALESCE($7,obs),
+         fornecedor_id=CASE WHEN $8::boolean THEN $9::integer ELSE fornecedor_id END
+       WHERE id=$10 AND oficina_id=$11`,
+      [descricao||null, categoria||null, valor||null, data||null,
+       vencimento||null, pago!=null?pago:null, obs||null,
+       fId !== undefined, fId !== undefined ? fId : null,
+       req.params.id, oid(req)]
+    );
     if(result.rowCount === 0) return res.status(404).json({error:'Despesa não encontrada'});
     res.json({ok:true});
   } catch(err){res.status(500).json({error:'Erro interno'});}
@@ -1299,6 +1329,125 @@ router.patch('/parcelas-receber/:id/recebido', validateId, checkOwns('parcelas_r
     if(result.rowCount === 0) return res.status(404).json({error:'Parcela não encontrada'});
     res.json({ok:true});
   } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// ── GET /financeiro-resumo — KPIs consolidados do módulo financeiro ──────────
+// Retorna todos os dados necessários para a Visão Geral em uma única chamada:
+// receitas, despesas, lucro, comparativos, total a pagar, total a receber, saldo, vencidos
+router.get('/financeiro-resumo', naoFuncionario, async (req,res) => {
+  try {
+    const id = oid(req);
+    const hoje = new Date().toISOString().split('T')[0];
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+
+    // Período do request (default: mês atual)
+    let inicio = req.query.inicio;
+    let fim    = req.query.fim;
+    if (!inicio || !dateRegex.test(inicio)) inicio = hoje.substring(0,7)+'-01';
+    if (!fim    || !dateRegex.test(fim))    fim    = hoje;
+    if (inicio > fim) { const tmp=inicio; inicio=fim; fim=tmp; }
+
+    // Período anterior de mesma duração
+    const dIni = new Date(inicio+'T00:00:00');
+    const dFim = new Date(fim+'T00:00:00');
+    const dur  = Math.round((dFim-dIni)/86400000)+1;
+    const prevFim    = new Date(dIni.getTime()-86400000).toISOString().split('T')[0];
+    const prevInicio = new Date(new Date(prevFim+'T00:00:00').getTime()-(dur-1)*86400000).toISOString().split('T')[0];
+
+    const [
+      recAtual, recPrev,
+      despPagas, despPagasPrev,
+      despTotal, despTotalPrev,
+      despVencidas,
+      totalReceber, totalPagar,
+      parcelasReceber, boletosRec,
+      formasPag,
+    ] = await Promise.all([
+      // Receita = OS finalizadas no período
+      queryOne("SELECT COALESCE(SUM(valor),0) t FROM ordens_servico WHERE oficina_id=$1 AND status='finalizado' AND data>=$2 AND data<=$3",[id,inicio,fim]),
+      queryOne("SELECT COALESCE(SUM(valor),0) t FROM ordens_servico WHERE oficina_id=$1 AND status='finalizado' AND data>=$2 AND data<=$3",[id,prevInicio,prevFim]),
+      // Despesas PAGAS no período
+      queryOne("SELECT COALESCE(SUM(valor),0) t FROM despesas WHERE oficina_id=$1 AND pago=1 AND COALESCE(vencimento,data)>=$2 AND COALESCE(vencimento,data)<=$3",[id,inicio,fim]),
+      queryOne("SELECT COALESCE(SUM(valor),0) t FROM despesas WHERE oficina_id=$1 AND pago=1 AND COALESCE(vencimento,data)>=$2 AND COALESCE(vencimento,data)<=$3",[id,prevInicio,prevFim]),
+      // Despesas TOTAIS (pagas + pendentes) no período
+      queryOne("SELECT COALESCE(SUM(valor),0) t FROM despesas WHERE oficina_id=$1 AND COALESCE(vencimento,data)>=$2 AND COALESCE(vencimento,data)<=$3",[id,inicio,fim]),
+      queryOne("SELECT COALESCE(SUM(valor),0) t FROM despesas WHERE oficina_id=$1 AND COALESCE(vencimento,data)>=$2 AND COALESCE(vencimento,data)<=$3",[id,prevInicio,prevFim]),
+      // Despesas vencidas (pago=0 e vencimento < hoje)
+      queryOne("SELECT COALESCE(SUM(valor),0) t, COUNT(*) n FROM despesas WHERE oficina_id=$1 AND pago=0 AND vencimento IS NOT NULL AND vencimento<$2",[id,hoje]),
+      // Total a receber (parcelas pendentes)
+      queryOne("SELECT COALESCE(SUM(valor),0) t, COUNT(*) n FROM parcelas_receber WHERE oficina_id=$1 AND recebido=0",[id]),
+      // Total a pagar (despesas não pagas)
+      queryOne("SELECT COALESCE(SUM(valor),0) t, COUNT(*) n FROM despesas WHERE oficina_id=$1 AND pago=0",[id]),
+      // Parcelas próximas 90 dias
+      queryOne(`SELECT COALESCE(SUM(valor),0) t FROM parcelas_receber WHERE oficina_id=$1 AND recebido=0 AND data_recebimento<=$2`,[id,new Date(Date.now()+90*86400000).toISOString().split('T')[0]]),
+      // Boletos pendentes
+      queryOne("SELECT COALESCE(SUM(valor_liquido),0) t, COUNT(*) n FROM pagamentos_os WHERE oficina_id=$1 AND boleto_pendente=true",[id]),
+      // Formas de pagamento no período
+      query("SELECT forma, COALESCE(SUM(valor_total),0) total FROM pagamentos_os WHERE oficina_id=$1 AND data_pagamento>=$2 AND data_pagamento<=$3 GROUP BY forma",[id,inicio,fim]),
+    ]);
+
+    const receita      = +recAtual.t;
+    const receitaPrev  = +recPrev.t;
+    const despPagasV   = +despPagas.t;
+    const despPagasPrevV = +despPagasPrev.t;
+    const despTotalV   = +despTotal.t;
+    const lucro        = receita - despPagasV;
+    const lucroPrev    = +recPrev.t - +despPagasPrev.t;
+    const saldo        = receita - despPagasV; // simplificado: receita realizada - despesas pagas
+    const variacao     = (a,p) => p>0 ? Math.round(((a-p)/p)*100) : null;
+    const margem       = receita > 0 ? Math.round((lucro/receita)*100*10)/10 : 0;
+    const margemPrev   = receitaPrev > 0 ? Math.round((lucroPrev/receitaPrev)*100*10)/10 : 0;
+
+    // Série temporal (diária ou mensal)
+    const dFimP = new Date(fim+'T00:00:00');
+    const dIniP = new Date(inicio+'T00:00:00');
+    const durP  = Math.round((dFimP-dIniP)/86400000)+1;
+    let serie = [];
+    if (durP <= 62) {
+      const [fatD, despD] = await Promise.all([
+        query("SELECT data, COALESCE(SUM(valor),0) t FROM ordens_servico WHERE oficina_id=$1 AND status='finalizado' AND data>=$2 AND data<=$3 GROUP BY data",[id,inicio,fim]),
+        query("SELECT COALESCE(vencimento,data) d, COALESCE(SUM(valor),0) t FROM despesas WHERE oficina_id=$1 AND COALESCE(vencimento,data)>=$2 AND COALESCE(vencimento,data)<=$3 GROUP BY COALESCE(vencimento,data)",[id,inicio,fim]),
+      ]);
+      const mF=Object.fromEntries(fatD.map(r=>[r.data,+r.t]));
+      const mD=Object.fromEntries(despD.map(r=>[r.d,+r.t]));
+      for(let i=0;i<durP;i++){
+        const d=new Date(dIniP.getTime()+i*86400000).toISOString().split('T')[0];
+        serie.push({label:d.slice(8,10)+'/'+d.slice(5,7),data:d,receita:mF[d]||0,despesas:mD[d]||0});
+      }
+    } else {
+      const [fatM, despM] = await Promise.all([
+        query("SELECT SUBSTRING(data,1,7) ym, COALESCE(SUM(valor),0) t FROM ordens_servico WHERE oficina_id=$1 AND status='finalizado' AND data>=$2 AND data<=$3 GROUP BY SUBSTRING(data,1,7)",[id,inicio,fim]),
+        query("SELECT SUBSTRING(COALESCE(vencimento,data),1,7) ym, COALESCE(SUM(valor),0) t FROM despesas WHERE oficina_id=$1 AND COALESCE(vencimento,data)>=$2 AND COALESCE(vencimento,data)<=$3 GROUP BY SUBSTRING(COALESCE(vencimento,data),1,7)",[id,inicio,fim]),
+      ]);
+      const mF=Object.fromEntries(fatM.map(r=>[r.ym,+r.t]));
+      const mD=Object.fromEntries(despM.map(r=>[r.ym,+r.t]));
+      const cur=new Date(dIniP.getFullYear(),dIniP.getMonth(),1);
+      const last=new Date(dFimP.getFullYear(),dFimP.getMonth(),1);
+      while(cur<=last){
+        const ym=cur.getFullYear()+'-'+String(cur.getMonth()+1).padStart(2,'0');
+        serie.push({label:ym.slice(5,7)+'/'+ym.slice(2,4),data:ym,receita:mF[ym]||0,despesas:mD[ym]||0});
+        cur.setMonth(cur.getMonth()+1);
+      }
+    }
+
+    res.json({
+      periodo: { inicio, fim, durDias: dur },
+      kpis: {
+        receita:          { valor: receita,       variacao: variacao(receita, receitaPrev) },
+        despesasPagas:    { valor: despPagasV,    variacao: variacao(despPagasV, despPagasPrevV) },
+        despesasTotal:    { valor: despTotalV,    variacao: variacao(despTotalV, +despTotalPrev.t) },
+        lucro:            { valor: lucro,          variacao: variacao(lucro, lucroPrev) },
+        margem:           { valor: margem,         anterior: margemPrev },
+        saldo:            { valor: saldo },
+        totalAReceber:    { valor: +totalReceber.t, quantidade: +totalReceber.n },
+        totalAPagar:      { valor: +totalPagar.t,   quantidade: +totalPagar.n },
+        despesasVencidas: { valor: +despVencidas.t,  quantidade: +despVencidas.n },
+        boletosRec:       { valor: +boletosRec.t,    quantidade: +boletosRec.n },
+      },
+      serie,
+      formasPagamento: formasPag.map(r=>({forma:r.forma, total:+r.total})),
+    });
+  } catch(err){ log.error('app_financeiro_resumo',err); res.status(500).json({error:'Erro interno'}); }
 });
 
 // GET /boletos-pendentes — boletos não recebidos (pagamentos_os com boleto_pendente=true)

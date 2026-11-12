@@ -357,7 +357,7 @@ export default function AppEstoque() {
                   </>}
                   {!isFuncionario && <>
                     <div className="form-group"><label>Custo (R$)</label><input type="number" step="0.01" min="0" value={form.custo} onChange={e=>{const c=e.target.value;const pv=c&&form.margem?parseFloat((parseFloat(c)*(1+(parseFloat(form.margem)||0)/100)).toFixed(2)):'';setForm(f=>({...f,custo:c,preco_venda:pv||f.preco_venda}));}} placeholder="0,00" /></div>
-                    <div className="form-group"><label>Margem de lucro (%)</label><input type="number" step="0.1" min="0" max="10000" value={form.margem} onChange={e=>{const m=e.target.value;const pv=m&&form.custo?parseFloat((parseFloat(form.custo)*(1+(parseFloat(m)||0)/100)).toFixed(2)):'';setForm(f=>({...f,margem:m,preco_venda:pv||f.preco_venda}));}} placeholder="Ex: 30" /></div>
+                    <div className="form-group"><label>Margem de lucro (%)</label><input type="number" step="0.01" min="0" max="10000" value={form.margem} onChange={e=>{const m=e.target.value;const pv=m&&form.custo?parseFloat((parseFloat(form.custo)*(1+(parseFloat(m)||0)/100)).toFixed(2)):'';setForm(f=>({...f,margem:m,preco_venda:pv||f.preco_venda}));}} placeholder="Ex: 30" /></div>
                     <div className="form-group">
                       <label>Preço de venda (R$)
                         <span style={{fontSize:11,color:'var(--gray-400)',fontWeight:400,marginLeft:6}}>calculado automaticamente</span>

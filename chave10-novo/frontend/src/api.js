@@ -197,6 +197,9 @@ export const api = {
       list:    ()                    => get('/app/boletos-pendentes'),
       confirmar: (id, data)          => patch('/app/pagamentos-os/'+id+'/boleto-recebido', data),
     },
+    financeiroResumo: {
+      get: (inicio, fim) => get('/app/financeiro-resumo'+(inicio||fim?'?'+(inicio?'inicio='+inicio:'')+(inicio&&fim?'&':'')+(fim?'fim='+fim:''):'')),
+    },
     fornecedores: {
       list:    ()                    => get('/app/fornecedores'),
       create:  (data)                => post('/app/fornecedores', data),
