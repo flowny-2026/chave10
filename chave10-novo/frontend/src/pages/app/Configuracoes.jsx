@@ -34,6 +34,12 @@ export default function AppConfiguracoes() {
   const [toast, setToast]     = useState({ msg: '', type: '' });
   const { resetOnboarding }   = useOnboarding();
 
+  // Modal de limpar dados
+  const [modalLimpar, setModalLimpar]   = useState(false);
+  const [senhaLimpar, setSenhaLimpar]   = useState('');
+  const [limpandoDados, setLimpandoDados] = useState(false);
+  const [etapaLimpar, setEtapaLimpar]   = useState(1); // 1=aviso, 2=confirma senha
+
   // Trocar senha (movido de "Meu Perfil")
   const [senhaForm, setSenhaForm] = useState({ senha_atual: '', nova_senha: '', confirmar: '' });
   const [mostrarSenhas, setMostrarSenhas] = useState(false);
@@ -62,6 +68,21 @@ export default function AppConfiguracoes() {
   function showToast(msg, type = 'success') {
     setToast({ msg, type });
     setTimeout(() => setToast({ msg: '', type: '' }), 3000);
+  }
+
+  async function executarLimpeza() {
+    if (!senhaLimpar) return;
+    setLimpandoDados(true);
+    try {
+      await api.patch('/app/limpar-dados', { senha_confirmacao: senhaLimpar });
+      setModalLimpar(false);
+      setSenhaLimpar('');
+      showToast('✅ Dados operacionais apagados com sucesso!');
+    } catch (err) {
+      showToast(err?.error || 'Erro ao limpar dados. Verifique sua senha.', 'error');
+    } finally {
+      setLimpandoDados(false);
+    }
   }
 
   // Carrega dados do servidor ao montar
@@ -371,6 +392,103 @@ export default function AppConfiguracoes() {
       </div>
 
       <Toast msg={toast.msg} type={toast.type} />
+
+      {/* ── Zona de perigo ── */}
+      <div className="card" style={{ maxWidth: 720, marginTop: 24, border: '1.5px solid #fecaca' }}>
+        <h3 style={{ fontSize: 18, fontWeight: 700, color: '#dc2626', marginBottom: 8 }}>⚠️ Zona de perigo</h3>
+        <p style={{ fontSize: 14, color: 'var(--gray-600)', marginBottom: 20, lineHeight: 1.6 }}>
+          Apaga todos os dados operacionais da oficina: clientes, veículos, ordens de serviço, orçamentos,
+          despesas, estoque, agenda e lembretes. <strong>Esta ação não pode ser desfeita.</strong><br />
+          O cadastro da oficina, usuários e configurações são preservados.
+        </p>
+        <button
+          className="btn"
+          style={{ background: '#dc2626', color: '#fff', fontWeight: 700 }}
+          onClick={() => { setEtapaLimpar(1); setSenhaLimpar(''); setModalLimpar(true); }}
+        >
+          🗑️ Limpar todos os dados operacionais
+        </button>
+      </div>
+
+      {/* Modal de confirmação — 2 etapas */}
+      {modalLimpar && (
+        <div className="modal-overlay open" style={{ zIndex: 500 }}>
+          <div className="modal" style={{ maxWidth: 460 }}>
+            <div className="modal-header" style={{ borderBottom: '2px solid #fecaca' }}>
+              <h2 style={{ color: '#dc2626' }}>⚠️ Limpar dados operacionais</h2>
+              <button className="modal-close" onClick={() => setModalLimpar(false)}>✕</button>
+            </div>
+            <div className="modal-body">
+
+              {etapaLimpar === 1 && (
+                <>
+                  <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '14px 16px', marginBottom: 20 }}>
+                    <p style={{ fontSize: 14, color: '#7f1d1d', fontWeight: 600, marginBottom: 8 }}>O que será apagado:</p>
+                    <ul style={{ fontSize: 13, color: '#991b1b', lineHeight: 2, paddingLeft: 18 }}>
+                      <li>Todos os clientes e veículos</li>
+                      <li>Todas as ordens de serviço e histórico</li>
+                      <li>Todos os orçamentos</li>
+                      <li>Todas as despesas lançadas</li>
+                      <li>Todo o estoque cadastrado</li>
+                      <li>Agenda e lembretes</li>
+                      <li>Pagamentos e parcelas registradas</li>
+                      <li>Notificações</li>
+                    </ul>
+                  </div>
+                  <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '12px 16px', marginBottom: 20 }}>
+                    <p style={{ fontSize: 13, color: '#166534', fontWeight: 600 }}>✅ O que será preservado:</p>
+                    <p style={{ fontSize: 13, color: '#166534' }}>Cadastro da oficina, usuários, configurações, categorias de despesa e fornecedores.</p>
+                  </div>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: '#dc2626', marginBottom: 20 }}>
+                    Esta ação é irreversível. Tem certeza que deseja continuar?
+                  </p>
+                  <div className="form-actions">
+                    <button className="btn btn-outline" onClick={() => setModalLimpar(false)}>Cancelar</button>
+                    <button
+                      className="btn"
+                      style={{ background: '#dc2626', color: '#fff', fontWeight: 700 }}
+                      onClick={() => setEtapaLimpar(2)}
+                    >
+                      Sim, quero apagar tudo
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {etapaLimpar === 2 && (
+                <>
+                  <p style={{ fontSize: 14, color: 'var(--gray-700)', marginBottom: 16, lineHeight: 1.6 }}>
+                    Para confirmar, digite sua <strong>senha de acesso</strong> ao sistema:
+                  </p>
+                  <div className="form-group" style={{ marginBottom: 20 }}>
+                    <label>Senha *</label>
+                    <input
+                      type="password"
+                      value={senhaLimpar}
+                      onChange={e => setSenhaLimpar(e.target.value)}
+                      placeholder="Digite sua senha"
+                      autoFocus
+                      onKeyDown={e => { if (e.key === 'Enter' && senhaLimpar) executarLimpeza(); }}
+                    />
+                  </div>
+                  <div className="form-actions">
+                    <button className="btn btn-outline" onClick={() => setEtapaLimpar(1)}>← Voltar</button>
+                    <button
+                      className="btn"
+                      style={{ background: '#dc2626', color: '#fff', fontWeight: 700 }}
+                      disabled={!senhaLimpar || limpandoDados}
+                      onClick={executarLimpeza}
+                    >
+                      {limpandoDados ? '⏳ Apagando...' : '🗑️ Confirmar e apagar tudo'}
+                    </button>
+                  </div>
+                </>
+              )}
+
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

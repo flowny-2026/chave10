@@ -1957,6 +1957,66 @@ router.get('/exportar', async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Erro ao exportar dados' }); }
 });
 
+// ── LIMPAR DADOS OPERACIONAIS (preserva cadastro da oficina) ──
+// Apaga todos os dados operacionais (OS, orçamentos, clientes, veículos,
+// despesas, estoque, agenda, lembretes, pagamentos, parcelas, notificações).
+// Preserva: oficina, usuários, configurações, categorias, fornecedores.
+// Requer confirmação por senha do usuário para evitar acionamento acidental.
+router.post('/limpar-dados', naoFuncionario, async (req, res) => {
+  try {
+    const { senha_confirmacao } = req.body;
+    if (!senha_confirmacao || typeof senha_confirmacao !== 'string') {
+      return res.status(400).json({ error: 'Informe sua senha para confirmar a operação' });
+    }
+
+    // Verifica senha do usuário logado
+    const bcrypt = require('bcryptjs');
+    const usuario = await queryOne('SELECT senha_hash FROM usuarios WHERE id=$1', [req.user.id]);
+    if (!usuario) return res.status(404).json({ error: 'Usuário não encontrado' });
+    const senhaOk = await bcrypt.compare(senha_confirmacao, usuario.senha_hash);
+    if (!senhaOk) return res.status(401).json({ error: 'Senha incorreta' });
+
+    const id = oid(req);
+
+    // Apaga na ordem correta respeitando as FKs
+    await run('DELETE FROM notificacoes        WHERE oficina_id=$1', [id]);
+    await run('DELETE FROM audit_logs          WHERE oficina_id=$1', [id]).catch(()=>{});
+    await run('DELETE FROM comissoes           WHERE oficina_id=$1', [id]).catch(()=>{});
+    await run('DELETE FROM parcelas_receber    WHERE oficina_id=$1', [id]);
+    await run('DELETE FROM pagamentos_os       WHERE oficina_id=$1', [id]);
+    await run('DELETE FROM os_fotos            WHERE oficina_id=$1', [id]).catch(()=>{});
+    await run('DELETE FROM orcamento_itens     WHERE oficina_id=$1', [id]).catch(()=>{});
+    await run('DELETE FROM approval_actions    WHERE oficina_id=$1', [id]).catch(()=>{});
+    await run('DELETE FROM approval_links      WHERE oficina_id=$1', [id]).catch(()=>{});
+    await run('DELETE FROM orcamentos          WHERE oficina_id=$1', [id]);
+    await run('DELETE FROM ordens_servico      WHERE oficina_id=$1', [id]);
+    await run('DELETE FROM lembretes           WHERE oficina_id=$1', [id]);
+    await run('DELETE FROM agenda              WHERE oficina_id=$1', [id]);
+    await run('DELETE FROM despesas            WHERE oficina_id=$1', [id]);
+    await run('DELETE FROM estoque             WHERE oficina_id=$1', [id]);
+    await run('DELETE FROM veiculos            WHERE oficina_id=$1', [id]);
+    await run('DELETE FROM clientes            WHERE oficina_id=$1', [id]);
+
+    // Reseta o contador de numeração
+    await run('UPDATE oficinas SET proximo_numero=1 WHERE id=$1', [id]);
+
+    // Invalida cache do dashboard
+    for (const k of _dashCache.keys()) {
+      if (k.startsWith(`dashboard:${id}:`) || k.startsWith(`dashboard-resumo:${id}:`)) {
+        _dashCache.delete(k);
+      }
+    }
+
+    audit(req, 'LIMPAR_DADOS_OPERACIONAIS', 'oficinas', id, { aviso: 'todos os dados operacionais foram apagados' });
+    log.info('dados_operacionais_limpos', { oficina_id: id, usuario_id: req.user.id });
+
+    res.json({ ok: true, mensagem: 'Dados operacionais apagados com sucesso. Configurações e cadastro da oficina foram preservados.' });
+  } catch (err) {
+    log.error('app_limpar_dados', err);
+    res.status(500).json({ error: 'Erro ao limpar dados' });
+  }
+});
+
 // ── CONSULTA DE PLACA POR FOTO (OCR — Simples API) ────────────
 // Proxy seguro: a chave da Simples API fica só no servidor (SIMPLES_API_KEY).
 // Recebe a imagem em base64, envia para o OCR e retorna a placa + dados do
