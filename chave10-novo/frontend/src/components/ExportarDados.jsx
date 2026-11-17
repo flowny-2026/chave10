@@ -35,26 +35,31 @@ export default function ExportarDados() {
       const XLSX = await import('xlsx');
       const wb = XLSX.utils.book_new();
 
-      if (data.dados.clientes.length) {
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.dados.clientes), 'Clientes');
-      }
-      if (data.dados.veiculos.length) {
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.dados.veiculos), 'Veículos');
-      }
-      if (data.dados.ordens_servico.length) {
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.dados.ordens_servico), 'OS');
-      }
-      if (data.dados.orcamentos.length) {
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.dados.orcamentos), 'Orçamentos');
-      }
-      if (data.dados.despesas.length) {
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.dados.despesas), 'Despesas');
-      }
-      if (data.dados.estoque.length) {
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.dados.estoque), 'Estoque');
+      // Sempre cria pelo menos uma aba (workbook vazio causa erro no XLSX.write)
+      const tabelas = [
+        { key: 'clientes',       nome: 'Clientes' },
+        { key: 'veiculos',       nome: 'Veículos' },
+        { key: 'ordens_servico', nome: 'OS' },
+        { key: 'orcamentos',     nome: 'Orçamentos' },
+        { key: 'despesas',       nome: 'Despesas' },
+        { key: 'estoque',        nome: 'Estoque' },
+      ];
+
+      let totalAbas = 0;
+      for (const t of tabelas) {
+        const rows = data.dados[t.key];
+        if (rows && rows.length > 0) {
+          XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), t.nome);
+          totalAbas++;
+        }
       }
 
-      // Usa blob para compatibilidade com mobile (writeFile não funciona em todos os browsers)
+      // Se não há dados, cria aba informativa
+      if (totalAbas === 0) {
+        const ws = XLSX.utils.aoa_to_sheet([['Nenhum dado cadastrado ainda.']]);
+        XLSX.utils.book_append_sheet(wb, ws, 'Info');
+      }
+
       const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
       const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const url = URL.createObjectURL(blob);
@@ -66,9 +71,9 @@ export default function ExportarDados() {
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 1000);
 
-      setResultado({ tipo: 'success', msg: `Planilha exportada com ${data.totais.clientes} clientes, ${data.totais.veiculos} veículos, ${data.totais.ordens_servico} OS, ${data.totais.orcamentos} orçamentos` });
+      setResultado({ tipo: 'success', msg: `Planilha exportada: ${data.totais.clientes} clientes, ${data.totais.veiculos} veículos, ${data.totais.ordens_servico} OS, ${data.totais.orcamentos} orçamentos` });
     } catch (err) {
-      setResultado({ tipo: 'error', msg: err.error || 'Erro ao exportar' });
+      setResultado({ tipo: 'error', msg: err?.error || err?.message || 'Erro ao exportar' });
     } finally {
       setLoading(false);
     }
