@@ -1952,7 +1952,6 @@ router.get('/exportar', async (req, res) => {
     };
 
     res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename=chave10_backup_${new Date().toISOString().split('T')[0]}.json`);
     res.json(exportData);
   } catch (err) { res.status(500).json({ error: 'Erro ao exportar dados' }); }
 });

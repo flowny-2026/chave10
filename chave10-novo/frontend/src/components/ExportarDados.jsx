@@ -36,31 +36,36 @@ export default function ExportarDados() {
       const wb = XLSX.utils.book_new();
 
       if (data.dados.clientes.length) {
-        const ws = XLSX.utils.json_to_sheet(data.dados.clientes);
-        XLSX.utils.book_append_sheet(wb, ws, 'Clientes');
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.dados.clientes), 'Clientes');
       }
       if (data.dados.veiculos.length) {
-        const ws = XLSX.utils.json_to_sheet(data.dados.veiculos);
-        XLSX.utils.book_append_sheet(wb, ws, 'Veículos');
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.dados.veiculos), 'Veículos');
       }
       if (data.dados.ordens_servico.length) {
-        const ws = XLSX.utils.json_to_sheet(data.dados.ordens_servico);
-        XLSX.utils.book_append_sheet(wb, ws, 'OS');
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.dados.ordens_servico), 'OS');
       }
       if (data.dados.orcamentos.length) {
-        const ws = XLSX.utils.json_to_sheet(data.dados.orcamentos);
-        XLSX.utils.book_append_sheet(wb, ws, 'Orçamentos');
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.dados.orcamentos), 'Orçamentos');
       }
       if (data.dados.despesas.length) {
-        const ws = XLSX.utils.json_to_sheet(data.dados.despesas);
-        XLSX.utils.book_append_sheet(wb, ws, 'Despesas');
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.dados.despesas), 'Despesas');
       }
       if (data.dados.estoque.length) {
-        const ws = XLSX.utils.json_to_sheet(data.dados.estoque);
-        XLSX.utils.book_append_sheet(wb, ws, 'Estoque');
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.dados.estoque), 'Estoque');
       }
 
-      XLSX.writeFile(wb, `chave10_dados_${new Date().toISOString().split('T')[0]}.xlsx`);
+      // Usa blob para compatibilidade com mobile (writeFile não funciona em todos os browsers)
+      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `chave10_dados_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+
       setResultado({ tipo: 'success', msg: `Planilha exportada com ${data.totais.clientes} clientes, ${data.totais.veiculos} veículos, ${data.totais.ordens_servico} OS, ${data.totais.orcamentos} orçamentos` });
     } catch (err) {
       setResultado({ tipo: 'error', msg: err.error || 'Erro ao exportar' });

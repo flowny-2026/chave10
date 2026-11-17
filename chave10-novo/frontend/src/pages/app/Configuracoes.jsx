@@ -237,9 +237,9 @@ export default function AppConfiguracoes() {
                           display: 'inline-flex', alignItems: 'center', gap: 6,
                           padding: '8px 14px', borderRadius: 10, cursor: 'pointer',
                           fontSize: 13, fontWeight: 600,
-                          border: ativo ? '2px solid var(--accent)' : '1.5px solid var(--gray-200)',
-                          background: ativo ? 'var(--accent-light)' : '#fff',
-                          color: ativo ? 'var(--accent-dark)' : 'var(--gray-600)',
+                          border: ativo ? '2px solid #F97316' : '1.5px solid #e5e7eb',
+                          background: ativo ? '#fff7ed' : '#fff',
+                          color: ativo ? '#c2410c' : '#4b5563',
                           transition: 'all .15s',
                         }}>
                         {seg.label}
@@ -264,13 +264,13 @@ export default function AppConfiguracoes() {
                         display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3,
                         padding: '10px 16px', borderRadius: 10, cursor: 'pointer',
                         textAlign: 'left', width: '100%', maxWidth: 480,
-                        border: ativo ? '2px solid var(--accent)' : '1.5px solid var(--gray-200)',
-                        background: ativo ? 'var(--accent-light)' : '#fff',
-                        color: ativo ? 'var(--accent-dark)' : 'var(--gray-600)',
+                        border: ativo ? '2px solid #F97316' : '1.5px solid #e5e7eb',
+                        background: ativo ? '#fff7ed' : '#fff',
+                        color: ativo ? '#c2410c' : '#4b5563',
                         transition: 'all .15s',
                       }}>
                       <span style={{ fontSize: 13, fontWeight: 700 }}>{seg.label}</span>
-                      <span style={{ fontSize: 12, color: ativo ? 'var(--accent-dark)' : 'var(--gray-400)', fontWeight: 400 }}>
+                      <span style={{ fontSize: 12, color: ativo ? '#c2410c' : '#9ca3af', fontWeight: 400 }}>
                         Manutenção de máquinas, compressores, geradores e equipamentos. Usa "Equipamento", "Nº de Série" e "Horas de Operação".
                       </span>
                     </button>
