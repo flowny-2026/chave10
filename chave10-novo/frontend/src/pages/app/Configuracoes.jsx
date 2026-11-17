@@ -74,7 +74,7 @@ export default function AppConfiguracoes() {
     if (!senhaLimpar) return;
     setLimpandoDados(true);
     try {
-      await api.patch('/app/limpar-dados', { senha_confirmacao: senhaLimpar });
+      await api.post('/app/limpar-dados', { senha_confirmacao: senhaLimpar });
       setModalLimpar(false);
       setSenhaLimpar('');
       showToast('✅ Dados operacionais apagados com sucesso!');
