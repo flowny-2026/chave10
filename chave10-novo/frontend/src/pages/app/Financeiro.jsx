@@ -166,7 +166,7 @@ export default function AppFinanceiro() {
   }
 
   async function marcarPago(id) {
-    await api.app.despesas.update(id, {pago:1});
+    await api.app.despesas.pagar(id);
     loadDespesas(); loadResumo(); showToast('Marcado como pago!');
   }
   async function removeDespesa(id) {

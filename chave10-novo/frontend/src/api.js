@@ -187,6 +187,7 @@ export const api = {
       list:    (inicio, fim)         => get('/app/despesas' + (inicio||fim ? '?'+(inicio?'inicio='+inicio:'')+(inicio&&fim?'&':'')+(fim?'fim='+fim:'') : '')),
       create:  (data)                => post('/app/despesas', data),
       update:  (id, data)            => put('/app/despesas/'+id, data),
+      pagar:   (id)                  => patch('/app/despesas/'+id+'/pago', {pago:1}),
       remove:  (id)                  => del('/app/despesas/'+id),
     },
     parcelasReceber: {

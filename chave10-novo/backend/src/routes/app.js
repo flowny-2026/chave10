@@ -1107,6 +1107,16 @@ router.put('/despesas/:id', naoFuncionario, validateId, checkOwns('despesas'), v
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
+// PATCH /despesas/:id/pago — marca despesa como paga (sem revalidar todos os campos)
+router.patch('/despesas/:id/pago', naoFuncionario, validateId, checkOwns('despesas'), async (req,res) => {
+  try {
+    const pago = req.body?.pago !== undefined ? (req.body.pago ? 1 : 0) : 1;
+    const result = await run('UPDATE despesas SET pago=$1 WHERE id=$2 AND oficina_id=$3', [pago, req.params.id, oid(req)]);
+    if (result.rowCount === 0) return res.status(404).json({error:'Despesa não encontrada'});
+    res.json({ok:true});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
 // DELETE /despesas/:id — checkOwns confirma pertencimento
 router.delete('/despesas/:id', naoFuncionario, validateId, checkOwns('despesas'), async (req,res) => {
   try {
