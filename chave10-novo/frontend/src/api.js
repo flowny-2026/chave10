@@ -200,6 +200,9 @@ export const api = {
     financeiroResumo: {
       get: (inicio, fim) => get('/app/financeiro-resumo'+(inicio||fim?'?'+(inicio?'inicio='+inicio:'')+(inicio&&fim?'&':'')+(fim?'fim='+fim:''):'')),
     },
+    recebimentos: {
+      get: (inicio, fim) => get('/app/recebimentos'+(inicio||fim?'?'+(inicio?'inicio='+inicio:'')+(inicio&&fim?'&':'')+(fim?'fim='+fim:''):'')),
+    },
     fornecedores: {
       list:    ()                    => get('/app/fornecedores'),
       create:  (data)                => post('/app/fornecedores', data),

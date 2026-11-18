@@ -83,6 +83,9 @@ export default function AppFinanceiro() {
   const [parcelas, setParcelas]           = useState([]);
   const [boletosPendentes, setBoletos]    = useState([]);
   const [pagamentosOS, setPagamentosOS]   = useState([]);
+  const [recebimentos, setRecebimentos]   = useState(null);
+  const [recebimentoCartao, setRecebimentoCartao] = useState('proximo_dia');
+  const [diaDetalhe, setDiaDetalhe]       = useState(null); // data selecionada no grid 7 dias
   const [loading, setLoading]             = useState(false);
   const [toast, setToast]                 = useState({msg:'',type:''});
 
@@ -136,12 +139,18 @@ export default function AppFinanceiro() {
   useEffect(() => {
     api.app.categoriasDespesas?.list().then(d=>setCatsDin(d||[])).catch(()=>{});
     api.app.fornecedores?.list().then(d=>setFornecedores(d||[])).catch(()=>{});
+    api.app.config?.get().then(cfg=>{ if(cfg?.recebimento_cartao) setRecebimentoCartao(cfg.recebimento_cartao); }).catch(()=>{});
     loadParcelas(); loadBoletos(); loadPagamentos();
   }, []);
 
+  const loadRecebimentos = useCallback(async () => {
+    try { const r = await api.app.recebimentos.get(periodo.ini, periodo.fim); setRecebimentos(r); }
+    catch { setRecebimentos(null); }
+  }, [periodo.ini, periodo.fim]);
+
   useEffect(() => {
     setLoading(true);
-    Promise.all([loadResumo(), loadDespesas()]).finally(() => setLoading(false));
+    Promise.all([loadResumo(), loadDespesas(), loadRecebimentos()]).finally(() => setLoading(false));
   }, [periodo.ini, periodo.fim]);
 
   // ── Ações de despesa ──────────────────────────────────────
@@ -166,7 +175,7 @@ export default function AppFinanceiro() {
     loadDespesas(); loadResumo(); showToast('Despesa excluída');
   }
   async function marcarRecebido(id) {
-    try { await api.app.parcelasReceber.marcarRecebido(id); loadParcelas(); loadResumo(); showToast('Parcela marcada como recebida!'); }
+    try { await api.app.parcelasReceber.marcarRecebido(id); loadParcelas(); loadResumo(); loadRecebimentos(); showToast('Parcela marcada como recebida!'); }
     catch { showToast('Erro','error'); }
   }
 
@@ -425,92 +434,302 @@ export default function AppFinanceiro() {
       ═══════════════════════════════════════════════════════ */}
       {abaAtiva === 'contas-receber' && (() => {
         const hojeStr = hoje;
-        const pendentes = parcelas.filter(p=>!p.recebido).sort((a,b)=>a.data_recebimento.localeCompare(b.data_recebimento));
-        const parcelasHoje      = pendentes.filter(p=>p.data_recebimento===hojeStr);
-        const parcelasAtrasadas = pendentes.filter(p=>p.data_recebimento<hojeStr);
-        const parcelasProximas  = pendentes.filter(p=>p.data_recebimento>hojeStr);
-        const boletosVencidos   = boletosPendentes.filter(b=>b.boleto_vencimento && b.boleto_vencimento<hojeStr);
+        const hojeDate = new Date();
 
-        const totalParcelas = pendentes.reduce((s,p)=>s+parseFloat(p.valor||0),0);
-        const totalBoletos  = boletosPendentes.reduce((s,b)=>s+parseFloat(b.valor_liquido||b.valor_total||0),0);
+        // ── Decide o que é "a receber futuro" baseado na config ──
+        // mesmo_dia / proximo_dia → cartão já recebido, só boleto fica a receber
+        // agenda_parcelas → parcelas de cartão aparecem como recebimentos futuros
+        const usaAgendaParcelas = recebimentoCartao === 'agenda_parcelas';
 
-        // Resumo próximos 3 meses
-        const hoje_ = new Date();
-        const resumoMeses = Array.from({length:3},(_,i)=>{
-          const d   = new Date(hoje_.getFullYear(), hoje_.getMonth()+i, 1);
-          const ym  = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
-          const tP  = parcelas.filter(p=>!p.recebido&&(p.data_recebimento||'').startsWith(ym)).reduce((s,p)=>s+parseFloat(p.valor||0),0);
-          const tB  = boletosPendentes.filter(b=>(b.boleto_vencimento||'').startsWith(ym)).reduce((s,b)=>s+parseFloat(b.valor_liquido||b.valor_total||0),0);
-          return { label: i===0?'Este mês':i===1?'Próximo mês':d.toLocaleDateString('pt-BR',{month:'long'}), total:tP+tB, ym };
+        // Boletos pendentes sempre são "a receber"
+        const boletosVencidos = boletosPendentes.filter(b => b.boleto_vencimento && b.boleto_vencimento < hojeStr);
+        const totalBoletos    = boletosPendentes.reduce((s,b) => s + parseFloat(b.valor_liquido||b.valor_total||0), 0);
+
+        // Parcelas de cartão — só conta se agenda_parcelas
+        const parcelasPendentes = usaAgendaParcelas
+          ? parcelas.filter(p => !p.recebido)
+          : [];
+        const parcelasAtrasadas = parcelasPendentes.filter(p => p.data_recebimento < hojeStr);
+        const totalParcelas     = parcelasPendentes.reduce((s,p) => s + parseFloat(p.valor||0), 0);
+
+        // Total recebido no período (do endpoint /recebimentos)
+        const totalRecebido = recebimentos?.totalRecebido || 0;
+
+        // Total a receber = boletos + parcelas (se agenda)
+        const totalAReceber = totalBoletos + totalParcelas;
+
+        // Em atraso = boletos vencidos + parcelas atrasadas
+        const totalAtraso = boletosVencidos.reduce((s,b) => s + parseFloat(b.valor_liquido||b.valor_total||0), 0)
+          + parcelasAtrasadas.reduce((s,p) => s + parseFloat(p.valor||0), 0);
+
+        // ── Faturamento 3 meses fechados ──
+        const fatMeses = recebimentos?.faturamentoMeses || Array.from({length:3},(_,i)=>{
+          const d = new Date(hojeDate.getFullYear(), hojeDate.getMonth()+i, 1);
+          return { ym: d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'), total:0, quantidade:0, ini:'', fim:'' };
         });
+        const nomeMes = (ym) => {
+          const [y,m] = ym.split('-');
+          return new Date(+y, +m-1, 1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+        };
+
+        // ── Previsão próximos 7 dias (apenas boletos) ──
+        const dias7 = Array.from({length:7},(_,i)=>{
+          const d = new Date(hojeDate.getTime() + i*86400000);
+          return d.toISOString().split('T')[0];
+        });
+        const previsao7 = dias7.map(dia => {
+          const bolsDia = boletosPendentes.filter(b => b.boleto_vencimento === dia);
+          const total   = bolsDia.reduce((s,b) => s + parseFloat(b.valor_liquido||b.valor_total||0), 0);
+          return { dia, total, itens: bolsDia };
+        });
+
+        // Itens do dia selecionado para o modal de detalhe
+        const itensDia = diaDetalhe ? (previsao7.find(d=>d.dia===diaDetalhe)?.itens || []) : [];
 
         return (
           <div>
-            {/* KPIs */}
+            {/* ── 4 KPIs principais ── */}
             <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:12,marginBottom:20}}>
-              <KPIFin title="Total a receber" value={fmt.currency(totalParcelas+totalBoletos)} color="var(--brand)" icon="📥" />
-              <KPIFin title="Parcelas cartão" value={fmt.currency(totalParcelas)} sub={`${pendentes.length} parcela(s)`} color="var(--success)" icon="💳" />
-              <KPIFin title="Boletos pendentes" value={fmt.currency(totalBoletos)} sub={`${boletosPendentes.length} boleto(s)`} color="var(--warning,#f59e0b)" icon="📄" />
-              <KPIFin title="Em atraso" value={fmt.currency(parcelasAtrasadas.reduce((s,p)=>s+parseFloat(p.valor||0),0))} sub={`${parcelasAtrasadas.length} parcela(s)`} color="var(--danger)" icon="⚠️" />
+              <KPIFin title="Total recebido" value={fmt.currency(totalRecebido)}
+                sub="no período selecionado" color="var(--success)" icon="✅" />
+              <KPIFin title="Total a receber" value={fmt.currency(totalAReceber)}
+                sub={`${boletosPendentes.length} boleto(s)${usaAgendaParcelas&&parcelasPendentes.length?` + ${parcelasPendentes.length} parcela(s)`:''}`}
+                color="var(--brand)" icon="📥" />
+              <KPIFin title="Boletos pendentes" value={fmt.currency(totalBoletos)}
+                sub={`${boletosPendentes.length} boleto(s) em aberto`}
+                color="#f59e0b" icon="📄" />
+              <KPIFin title="Em atraso" value={fmt.currency(totalAtraso)}
+                sub={`${boletosVencidos.length+parcelasAtrasadas.length} vencido(s)`}
+                color={totalAtraso>0?'var(--danger)':'var(--success)'} icon="⚠️" />
             </div>
 
-            {/* Resumo 3 meses */}
-            <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10,marginBottom:20}}>
-              {resumoMeses.map((m,i)=>(
-                <div key={m.ym} style={{background:i===0?'var(--brand-light,#fff7ed)':'var(--gray-50)',border:`1px solid ${i===0?'var(--brand,#F97316)':'var(--gray-200)'}`,borderRadius:'var(--r-sm,6px)',padding:'12px 14px',textAlign:'center'}}>
-                  <div style={{fontSize:11,fontWeight:600,color:'var(--gray-500)',marginBottom:4}}>{m.label}</div>
-                  <div style={{fontSize:16,fontWeight:800,color:i===0?'var(--brand,#F97316)':'var(--gray-700)'}}>{fmt.currency(m.total)}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* Alertas */}
-            {(parcelasHoje.length>0||parcelasAtrasadas.length>0||boletosVencidos.length>0) && (
-              <div className="fin-alerta" style={{borderRadius:'var(--r-sm)',padding:'12px 16px',marginBottom:16}}>
-                {parcelasHoje.length>0&&<div style={{fontSize:13,fontWeight:600}} className="fin-alerta-hoje">Hoje: receber <strong>{fmt.currency(parcelasHoje.reduce((s,p)=>s+parseFloat(p.valor||0),0))}</strong> ({parcelasHoje.length} parcela{parcelasHoje.length>1?'s':''})</div>}
-                {parcelasAtrasadas.length>0&&<div style={{fontSize:13,fontWeight:600,marginTop:4}} className="fin-alerta-atraso">{parcelasAtrasadas.length} parcela{parcelasAtrasadas.length>1?'s':''} atrasada{parcelasAtrasadas.length>1?'s':''} — {fmt.currency(parcelasAtrasadas.reduce((s,p)=>s+parseFloat(p.valor||0),0))}</div>}
-                {boletosVencidos.length>0&&<div style={{fontSize:13,fontWeight:600,marginTop:4}} className="fin-alerta-atraso">{boletosVencidos.length} boleto{boletosVencidos.length>1?'s':''} vencido{boletosVencidos.length>1?'s':''}</div>}
+            {/* ── Faturamento por mês (3 meses fechados) ── */}
+            <div className="card" style={{marginBottom:20}}>
+              <div className="card-header">
+                <div className="card-title">Faturamento por mês</div>
+                <span style={{fontSize:12,color:'var(--gray-400)'}}>OS finalizadas — independente de recebimento</span>
               </div>
-            )}
+              <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12,padding:'4px 0'}}>
+                {fatMeses.map((m,i) => (
+                  <div key={m.ym} style={{
+                    background: i===0?'#fff7ed':'#f9fafb',
+                    border:`1px solid ${i===0?'#F97316':'#e5e7eb'}`,
+                    borderRadius:8, padding:'14px 16px', textAlign:'center',
+                  }}>
+                    <div style={{fontSize:11,fontWeight:600,color:'#6b7280',marginBottom:4,textTransform:'capitalize'}}>
+                      {nomeMes(m.ym)}
+                    </div>
+                    <div style={{fontSize:18,fontWeight:800,color:i===0?'#F97316':'#1f2937'}}>
+                      {fmt.currency(m.total)}
+                    </div>
+                    <div style={{fontSize:11,color:'#9ca3af',marginTop:4}}>
+                      {m.quantidade} OS finalizada{m.quantidade!==1?'s':''}
+                    </div>
+                    {i===0 && <div style={{fontSize:10,color:'#9ca3af',marginTop:4}}>
+                      {m.ini&&m.fim?`${fmt.date(m.ini)} a ${fmt.date(m.fim)}`:''}
+                    </div>}
+                  </div>
+                ))}
+              </div>
+              <div style={{fontSize:12,color:'#9ca3af',marginTop:12,padding:'8px 4px',borderTop:'1px solid #f3f4f6'}}>
+                💡 Faturamento = serviços concluídos no período. Pode diferir do valor efetivamente recebido.
+              </div>
+            </div>
 
-            {/* Tabela unificada */}
-            <div className="card">
-              <div className="card-header"><div className="card-title">Valores a receber</div><span style={{fontSize:12,color:'var(--gray-400)'}}>{pendentes.length+boletosPendentes.length} pendente(s)</span></div>
+            {/* ── Previsão próximos 7 dias ── */}
+            <div className="card" style={{marginBottom:20}}>
+              <div className="card-header">
+                <div className="card-title">Previsão — próximos 7 dias</div>
+                <span style={{fontSize:12,color:'var(--gray-400)'}}>Apenas boletos pendentes</span>
+              </div>
               <div className="table-wrapper">
                 <table>
-                  <thead><tr><th>Tipo</th><th>Vencimento</th><th>Cliente</th><th>OS</th><th>Detalhe</th><th>Valor</th><th>Status</th><th></th></tr></thead>
+                  <thead>
+                    <tr>
+                      <th>Vencimento</th>
+                      <th>Tipo</th>
+                      <th>Valor previsto</th>
+                      <th>Status</th>
+                      <th></th>
+                    </tr>
+                  </thead>
                   <tbody>
-                    {[...parcelasAtrasadas,...parcelasHoje,...parcelasProximas].map(p=>{
-                      const isH=p.data_recebimento===hojeStr; const isA=p.data_recebimento<hojeStr;
-                      return <tr key={`p-${p.id}`} className={isH?'fin-row-hoje':isA?'fin-row-atrasado':''}>
-                        <td><span className="badge badge-gray">💳 Cartão</span></td>
-                        <td style={{whiteSpace:'nowrap',fontWeight:isH||isA?700:400}}>{fmt.date(p.data_recebimento)}</td>
-                        <td style={{maxWidth:110,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.cliente_nome||'—'}</td>
-                        <td><strong style={{color:'var(--brand)'}}>#{String(p.os_id).padStart(4,'0')}</strong></td>
-                        <td style={{fontSize:12,color:'var(--gray-500)'}}>{p.numero_parcela}ª parcela</td>
-                        <td><strong style={{color:'var(--success)',whiteSpace:'nowrap'}}>{fmt.currency(p.valor)}</strong></td>
-                        <td>{isA?<span className="badge badge-red">Atrasado</span>:isH?<span className="badge badge-green">Hoje</span>:<span className="badge badge-gray">Agendado</span>}</td>
-                        <td><button className="btn btn-success btn-sm" onClick={()=>marcarRecebido(p.id)} title="Marcar recebido">✓</button></td>
-                      </tr>;
+                    {previsao7.map(({dia, total, itens}) => {
+                      const isHoje  = dia === hojeStr;
+                      const isAtras = dia < hojeStr;
+                      return (
+                        <tr key={dia} style={{background: isHoje?'#fff7ed':isAtras?'#fef2f2':''}}>
+                          <td style={{fontWeight: isHoje||isAtras?700:400, whiteSpace:'nowrap'}}>
+                            {fmt.date(dia)}
+                            {isHoje && <span style={{marginLeft:6,fontSize:11,background:'#F97316',color:'#fff',borderRadius:4,padding:'1px 6px'}}>Hoje</span>}
+                          </td>
+                          <td><span className="badge badge-gray">📄 Boleto</span></td>
+                          <td>
+                            {total > 0
+                              ? <strong style={{color: isAtras?'var(--danger)':'var(--success)'}}>{fmt.currency(total)}</strong>
+                              : <span style={{color:'var(--gray-300)',fontSize:12}}>—</span>
+                            }
+                          </td>
+                          <td>
+                            {total === 0
+                              ? <span style={{fontSize:12,color:'var(--gray-300)'}}>Sem previsão</span>
+                              : isAtras ? <span className="badge badge-red">Vencido</span>
+                              : isHoje  ? <span className="badge badge-green">Hoje</span>
+                              : <span className="badge badge-gray">Pendente</span>
+                            }
+                          </td>
+                          <td>
+                            {itens.length > 0 && (
+                              <button className="btn btn-ghost btn-sm"
+                                onClick={() => setDiaDetalhe(diaDetalhe===dia ? null : dia)}
+                                title={`${itens.length} boleto(s) neste dia`}>
+                                {itens.length} boleto{itens.length>1?'s':''} {diaDetalhe===dia?'▲':'▼'}
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
                     })}
-                    {boletosPendentes.map(b=>{
-                      const venc=b.boleto_vencimento; const isV=venc&&venc<hojeStr; const isH=venc===hojeStr;
-                      return <tr key={`b-${b.id}`} className={isV?'fin-row-atrasado':isH?'fin-row-hoje':''}>
-                        <td><span className="badge badge-gray">📄 Boleto</span></td>
-                        <td style={{whiteSpace:'nowrap',fontWeight:isV||isH?700:400}}>{venc?fmt.date(venc):'—'}</td>
-                        <td style={{maxWidth:110,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{b.cliente_nome||'—'}</td>
-                        <td><strong style={{color:'var(--brand)'}}>#{b.os_numero||String(b.os_id).padStart(4,'0')}</strong></td>
-                        <td style={{fontSize:12,color:'var(--gray-500)'}}>Boleto pendente</td>
-                        <td><strong style={{color:'var(--success)',whiteSpace:'nowrap'}}>{fmt.currency(b.valor_liquido||b.valor_total)}</strong></td>
-                        <td>{isV?<span className="badge badge-red">Vencido</span>:isH?<span className="badge badge-green">Hoje</span>:venc?<span className="badge badge-gray">Aguardando</span>:<span className="badge badge-yellow">Sem venc.</span>}</td>
-                        <td><button className="btn btn-success btn-sm" title="Confirmar" onClick={async()=>{try{await api.app.boletosPendentes.confirmar(b.id,{recebido_em:hojeStr});loadBoletos();loadResumo();showToast('Boleto confirmado!');}catch(err){showToast(err?.error||'Erro','error');}}}>✓</button></td>
-                      </tr>;
-                    })}
-                    {pendentes.length===0&&boletosPendentes.length===0&&<tr><td colSpan={8} style={{textAlign:'center',padding:24,color:'var(--gray-400)'}}>Nenhum valor a receber</td></tr>}
                   </tbody>
                 </table>
               </div>
+
+              {/* Detalhe do dia selecionado */}
+              {diaDetalhe && itensDia.length > 0 && (
+                <div style={{marginTop:12,border:'1px solid #e5e7eb',borderRadius:8,overflow:'hidden'}}>
+                  <div style={{background:'#f9fafb',padding:'8px 14px',fontSize:12,fontWeight:700,color:'#374151',borderBottom:'1px solid #e5e7eb'}}>
+                    Boletos em {fmt.date(diaDetalhe)}
+                  </div>
+                  <table style={{width:'100%',borderCollapse:'collapse'}}>
+                    <thead>
+                      <tr style={{background:'#f9fafb'}}>
+                        <th style={{padding:'8px 12px',fontSize:12,textAlign:'left',fontWeight:600,color:'#6b7280'}}>Cliente</th>
+                        <th style={{padding:'8px 12px',fontSize:12,textAlign:'left',fontWeight:600,color:'#6b7280'}}>OS</th>
+                        <th style={{padding:'8px 12px',fontSize:12,textAlign:'right',fontWeight:600,color:'#6b7280'}}>Valor</th>
+                        <th style={{padding:'8px 12px',fontSize:12,textAlign:'center',fontWeight:600,color:'#6b7280'}}>Ação</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {itensDia.map(b => (
+                        <tr key={b.id} style={{borderTop:'1px solid #f3f4f6'}}>
+                          <td style={{padding:'8px 12px',fontSize:13}}>{b.cliente_nome||'—'}</td>
+                          <td style={{padding:'8px 12px',fontSize:13,color:'var(--brand)',fontWeight:600}}>
+                            #{b.os_numero||String(b.os_id).padStart(4,'0')}
+                          </td>
+                          <td style={{padding:'8px 12px',fontSize:13,textAlign:'right',fontWeight:700,color:'var(--success)'}}>
+                            {fmt.currency(b.valor_liquido||b.valor_total)}
+                          </td>
+                          <td style={{padding:'8px 12px',textAlign:'center'}}>
+                            <button className="btn btn-success btn-sm" title="Confirmar recebimento"
+                              onClick={async()=>{
+                                try {
+                                  await api.app.boletosPendentes.confirmar(b.id,{recebido_em:hojeStr});
+                                  loadBoletos(); loadResumo(); loadRecebimentos();
+                                  if(itensDia.length<=1) setDiaDetalhe(null);
+                                  showToast('Boleto confirmado!');
+                                } catch(err){ showToast(err?.error||'Erro','error'); }
+                              }}>✓ Recebido</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
+
+            {/* ── Tabela completa de boletos pendentes ── */}
+            {boletosPendentes.length > 0 && (
+              <div className="card" style={{marginBottom:20}}>
+                <div className="card-header">
+                  <div className="card-title">Todos os boletos pendentes</div>
+                  <span style={{fontSize:12,color:'var(--gray-400)'}}>{boletosPendentes.length} boleto(s)</span>
+                </div>
+                <div className="table-wrapper">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Vencimento</th>
+                        <th>Cliente</th>
+                        <th>OS</th>
+                        <th>Valor</th>
+                        <th>Data recebimento</th>
+                        <th>Status</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...boletosPendentes].sort((a,b)=>(a.boleto_vencimento||'').localeCompare(b.boleto_vencimento||'')).map(b => {
+                        const venc  = b.boleto_vencimento;
+                        const isV   = venc && venc < hojeStr;
+                        const isH   = venc === hojeStr;
+                        return (
+                          <tr key={b.id} className={isV?'fin-row-atrasado':isH?'fin-row-hoje':''}>
+                            <td style={{whiteSpace:'nowrap',fontWeight:isV||isH?700:400}}>{venc?fmt.date(venc):'—'}</td>
+                            <td style={{maxWidth:130,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{b.cliente_nome||'—'}</td>
+                            <td><strong style={{color:'var(--brand)'}}>#{b.os_numero||String(b.os_id).padStart(4,'0')}</strong></td>
+                            <td><strong style={{color:'var(--success)',whiteSpace:'nowrap'}}>{fmt.currency(b.valor_liquido||b.valor_total)}</strong></td>
+                            <td style={{fontSize:12,color:'var(--gray-500)'}}>{venc?fmt.date(venc)+' (prev.)':'—'}</td>
+                            <td>{isV?<span className="badge badge-red">Vencido</span>:isH?<span className="badge badge-green">Hoje</span>:<span className="badge badge-gray">Aguardando</span>}</td>
+                            <td>
+                              <button className="btn btn-success btn-sm" title="Confirmar recebimento"
+                                onClick={async()=>{
+                                  try {
+                                    await api.app.boletosPendentes.confirmar(b.id,{recebido_em:hojeStr});
+                                    loadBoletos(); loadResumo(); loadRecebimentos();
+                                    showToast('Boleto confirmado!');
+                                  } catch(err){ showToast(err?.error||'Erro','error'); }
+                                }}>✓</button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* ── Parcelas de cartão (só se agenda_parcelas) ── */}
+            {usaAgendaParcelas && parcelasPendentes.length > 0 && (
+              <div className="card">
+                <div className="card-header">
+                  <div className="card-title">Parcelas de cartão pendentes</div>
+                  <span style={{fontSize:12,color:'var(--gray-400)'}}>{parcelasPendentes.length} parcela(s)</span>
+                </div>
+                <div className="table-wrapper">
+                  <table>
+                    <thead>
+                      <tr><th>Data prevista</th><th>Cliente</th><th>OS</th><th>Parcela</th><th>Valor</th><th>Data recebimento</th><th>Status</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                      {parcelasPendentes.sort((a,b)=>a.data_recebimento.localeCompare(b.data_recebimento)).map(p => {
+                        const isH=p.data_recebimento===hojeStr; const isA=p.data_recebimento<hojeStr;
+                        return (
+                          <tr key={p.id} className={isH?'fin-row-hoje':isA?'fin-row-atrasado':''}>
+                            <td style={{whiteSpace:'nowrap',fontWeight:isH||isA?700:400}}>{fmt.date(p.data_recebimento)}</td>
+                            <td style={{maxWidth:110,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.cliente_nome||'—'}</td>
+                            <td><strong style={{color:'var(--brand)'}}>#{p.os_numero||String(p.os_id).padStart(4,'0')}</strong></td>
+                            <td style={{fontSize:12,color:'var(--gray-500)'}}>{p.numero_parcela}ª parcela</td>
+                            <td><strong style={{color:'var(--success)',whiteSpace:'nowrap'}}>{fmt.currency(p.valor)}</strong></td>
+                            <td style={{fontSize:12,color:'var(--gray-500)'}}>{fmt.date(p.data_recebimento)+' (prev.)'}</td>
+                            <td>{isA?<span className="badge badge-red">Atrasado</span>:isH?<span className="badge badge-green">Hoje</span>:<span className="badge badge-gray">Agendado</span>}</td>
+                            <td><button className="btn btn-success btn-sm" onClick={()=>marcarRecebido(p.id)}>✓</button></td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {boletosPendentes.length===0 && (!usaAgendaParcelas||parcelasPendentes.length===0) && (
+              <div className="empty-state" style={{padding:40}}>
+                <div className="empty-icon">🎉</div>
+                <p>Nenhum valor a receber pendente</p>
+              </div>
+            )}
           </div>
         );
       })()}

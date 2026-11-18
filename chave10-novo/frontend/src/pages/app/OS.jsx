@@ -47,7 +47,7 @@ function gerarHTMLOS(os, clientes, veiculos, oficina, t) {
   const total = totalMO + totalPecas;
 
   return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/>
-  <title>OS #${String(os.id).padStart(4,'0')}</title>
+  <title>OS #${os.numero || String(os.id).padStart(4,'0')}</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:Arial,sans-serif;font-size:13px;color:#1a1a1a;padding:32px}
@@ -84,7 +84,7 @@ function gerarHTMLOS(os, clientes, veiculos, oficina, t) {
       ${(oficina?.documento || oficina?.cnpj_cpf) ? `<div class="oficina-detalhe">CNPJ/CPF: ${oficina.documento || oficina.cnpj_cpf}</div>` : ''}
     </div>
     <div style="text-align:right">
-      <div class="os-num">OS #${String(os.id).padStart(4,'0')}</div>
+      <div class="os-num">OS #${os.numero || String(os.id).padStart(4,'0')}</div>
       <div style="font-size:12px;color:#6B7280;margin-top:2px">Data: ${fmt.date(os.data)}</div>
       <div style="margin-top:4px"><span class="status">${STATUS_LABEL[os.status]||os.status}</span></div>
     </div>
@@ -713,7 +713,7 @@ export default function AppOS() {
     const total = (parseFloat(os.valor_mo)||0)+totalPecas;
     const v = veiculos.find(x=>x.id===os.veiculo_id);
     const oficina = (() => { try { return JSON.parse(localStorage.getItem('c10_oficina'))||{}; } catch { return {}; } })();
-    let msg = `*OS #${String(os.id).padStart(4,'0')} — ${oficina.nome||'Chave 10'}*\n`;
+    let msg = `*OS #${os.numero || String(os.id).padStart(4,'0')} — ${oficina.nome||'Chave 10'}*\n`;
     msg += `Data: ${fmt.date(os.data)}\n`;
     msg += `${tw.veiculo}: ${v?`${v.marca} ${v.modelo} — ${v.placa}`:'—'}\n\n`;
     msg += `*Problema:* ${os.descricao}\n`;
@@ -793,7 +793,7 @@ export default function AppOS() {
                     const total = parseFloat(os.valor_mo||0)+parseFloat(os.valor_pecas||0)||parseFloat(os.valor||0);
                     return (
                       <tr key={os.id}>
-                        <td><strong style={{color:'var(--brand)'}}>#{String(os.id).padStart(4,'0')}</strong></td>
+                        <td><strong style={{color:'var(--brand)'}}>#{os.numero || String(os.id).padStart(4,'0')}</strong></td>
                         <td style={{color:'var(--gray-500)',fontSize:12}}>{fmt.date(os.data)}</td>
                         <td>{os.cliente_nome||'—'}</td>
                         <td><div>{os.veiculo_modelo||'—'}</div>{os.placa&&<small style={{color:'var(--gray-400)'}}>{os.placa}</small>}</td>
@@ -834,7 +834,7 @@ export default function AppOS() {
               return (
                 <div key={os.id} className="os-card-mobile" onClick={()=>openView(os)}>
                   <div className="os-card-top">
-                    <div className="os-card-num">#{String(os.id).padStart(4,'0')}</div>
+                    <div className="os-card-num">#{os.numero || String(os.id).padStart(4,'0')}</div>
                     <span className={`badge ${STATUS_CLASS[os.status]||'badge-gray'}`}>{STATUS_LABEL[os.status]||os.status}</span>
                   </div>
                   <div className="os-card-cliente">{os.cliente_nome||'Sem cliente'}</div>
@@ -871,7 +871,7 @@ export default function AppOS() {
         <div className="modal-overlay open">
           <div className="modal" style={{maxWidth:680}}>
             <div className="modal-header">
-              <h2>{editing?`Editar OS #${String(editing).padStart(4,'0')}`:'Nova Ordem de Serviço'}</h2>
+              <h2>{editing ? `Editar OS #${osList.find(o=>o.id===editing)?.numero || String(editing).padStart(4,'0')}` : 'Nova Ordem de Serviço'}</h2>
               <button className="modal-close" onClick={()=>setModal(null)}>✕</button>
             </div>
             
@@ -1184,7 +1184,7 @@ export default function AppOS() {
           <div className="modal-overlay open">
             <div className="modal" style={{maxWidth:620}}>
               <div className="modal-header">
-                <h2>OS #{String(viewing.id).padStart(4,'0')}</h2>
+                <h2>OS #{viewing.numero || String(viewing.id).padStart(4,'0')}</h2>
                 <button className="modal-close" onClick={()=>setModal(null)}>✕</button>
               </div>
               <div className="modal-body">

@@ -746,6 +746,23 @@ async function initDB() {
     WHERE proximo_numero = 1
   `).catch(() => {});
 
+  // 10. Configuração de recebimento de cartão por oficina
+  // 'mesmo_dia'       → cartão é recebido na data do pagamento (D+0)
+  // 'proximo_dia'     → cartão cai em D+1 (padrão da maioria das maquininhas)
+  // 'agenda_parcelas' → cada parcela entra no mês seguinte (crédito parcelado)
+  await pool.query(`
+    DO $$
+    BEGIN
+      BEGIN
+        ALTER TABLE oficinas ADD COLUMN recebimento_cartao TEXT NOT NULL DEFAULT 'proximo_dia';
+      EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN
+        ALTER TABLE oficinas ADD CONSTRAINT oficinas_recebimento_cartao_check
+          CHECK(recebimento_cartao IN ('mesmo_dia','proximo_dia','agenda_parcelas'));
+      EXCEPTION WHEN duplicate_object THEN NULL; END;
+    END $$;
+  `).catch(() => {});
+
   console.log('✅ Melhorias 2026 aplicadas ao banco');
 }
 

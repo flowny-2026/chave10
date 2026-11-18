@@ -1324,7 +1324,11 @@ router.get('/parcelas-receber', validatePagination, async (req,res) => {
   try {
     const { limit, offset } = req.pagination;
     const rows = await query(
-      "SELECT pr.*, c.nome as cliente_nome FROM parcelas_receber pr LEFT JOIN clientes c ON c.id=pr.cliente_id WHERE pr.oficina_id=$1 ORDER BY pr.data_recebimento LIMIT $2 OFFSET $3",
+      `SELECT pr.*, c.nome as cliente_nome, os.numero as os_numero
+       FROM parcelas_receber pr
+       LEFT JOIN clientes c ON c.id=pr.cliente_id
+       LEFT JOIN ordens_servico os ON os.id=pr.os_id
+       WHERE pr.oficina_id=$1 ORDER BY pr.data_recebimento LIMIT $2 OFFSET $3`,
       [oid(req), limit, offset]
     );
     res.json(rows);
@@ -1338,6 +1342,57 @@ router.patch('/parcelas-receber/:id/recebido', validateId, checkOwns('parcelas_r
     if(result.rowCount === 0) return res.status(404).json({error:'Parcela não encontrada'});
     res.json({ok:true});
   } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// ── GET /recebimentos — pagamentos efetivamente recebidos no período ──────────
+// Retorna pagamentos_os com data_pagamento no período + faturamento OS por mês (3 meses)
+router.get('/recebimentos', naoFuncionario, async (req,res) => {
+  try {
+    const id = oid(req);
+    const hoje = new Date().toISOString().split('T')[0];
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    let inicio = req.query.inicio;
+    let fim    = req.query.fim;
+    if (!inicio || !dateRegex.test(inicio)) inicio = hoje.substring(0,7)+'-01';
+    if (!fim    || !dateRegex.test(fim))    fim    = hoje;
+    if (inicio > fim) { const tmp=inicio; inicio=fim; fim=tmp; }
+
+    // Pagamentos recebidos no período (exceto boletos pendentes)
+    const recebidos = await query(
+      `SELECT p.id, p.os_id, p.forma, p.valor_total, p.valor_liquido, p.taxa_maquininha,
+              p.data_pagamento, p.boleto_recebido_em, p.boleto_pendente,
+              os.numero as os_numero, c.nome as cliente_nome
+       FROM pagamentos_os p
+       LEFT JOIN ordens_servico os ON os.id = p.os_id
+       LEFT JOIN clientes c ON c.id = p.cliente_id
+       WHERE p.oficina_id=$1
+         AND p.data_pagamento>=$2 AND p.data_pagamento<=$3
+         AND (p.boleto_pendente IS NULL OR p.boleto_pendente=false)
+       ORDER BY p.data_pagamento DESC`,
+      [id, inicio, fim]
+    );
+
+    // Total recebido no período
+    const totalRecebido = recebidos.reduce((s,p)=>s+parseFloat(p.valor_liquido||p.valor_total||0),0);
+
+    // Faturamento de OS por mês (3 meses fechados: atual, próximo, seguinte)
+    const dHoje = new Date();
+    const faturamentoMeses = await Promise.all(
+      Array.from({length:3},(_,i)=>{
+        const d   = new Date(dHoje.getFullYear(), dHoje.getMonth()+i, 1);
+        const ult = new Date(dHoje.getFullYear(), dHoje.getMonth()+i+1, 0);
+        const ini = d.toISOString().split('T')[0];
+        const fim2 = ult.toISOString().split('T')[0];
+        const ym  = ini.substring(0,7);
+        return queryOne(
+          "SELECT COALESCE(SUM(valor),0) t, COUNT(*) n FROM ordens_servico WHERE oficina_id=$1 AND status='finalizado' AND data>=$2 AND data<=$3",
+          [id, ini, fim2]
+        ).then(r=>({ ym, ini, fim: fim2, total: +r.t, quantidade: +r.n }));
+      })
+    );
+
+    res.json({ recebidos, totalRecebido, faturamentoMeses });
+  } catch(err){ log.error('app_recebimentos',err); res.status(500).json({error:'Erro interno'}); }
 });
 
 // ── GET /financeiro-resumo — KPIs consolidados do módulo financeiro ──────────
@@ -1678,7 +1733,7 @@ router.delete('/agenda/:id', validateId, checkOwns('agenda'), async (req,res) =>
 router.get('/config', naoFuncionario, async (req,res) => {
   try {
     const of = await queryOne(
-      "SELECT nome, responsavel, telefone, email, endereco, logo, observacoes, whatsapp, segmento, meta_mensal, repassar_taxa_cliente FROM oficinas WHERE id=$1",
+      "SELECT nome, responsavel, telefone, email, endereco, logo, observacoes, whatsapp, segmento, meta_mensal, repassar_taxa_cliente, recebimento_cartao FROM oficinas WHERE id=$1",
       [oid(req)]
     );
     if (!of) return res.status(404).json({ error: 'Oficina não encontrada' });
@@ -1694,6 +1749,7 @@ router.get('/config', naoFuncionario, async (req,res) => {
       segmento:    of.segmento    || 'oficina_mecanica',
       meta_mensal: parseFloat(of.meta_mensal) || 0,
       repassar_taxa_cliente: of.repassar_taxa_cliente || false,
+      recebimento_cartao: of.recebimento_cartao || 'proximo_dia',
     });
   } catch(err){ log.error('app_get_config', err); res.status(500).json({ error: 'Erro interno' }); }
 });
@@ -1740,6 +1796,9 @@ router.put('/config', naoFuncionario, validateLogoUpload, async (req,res) => {
       }
     }
 
+    const recebimentoCartao = ['mesmo_dia','proximo_dia','agenda_parcelas'].includes(req.body?.recebimento_cartao)
+      ? req.body.recebimento_cartao : null;
+
     await run(
       `UPDATE oficinas SET
         nome        = $1,
@@ -1751,7 +1810,8 @@ router.put('/config', naoFuncionario, validateLogoUpload, async (req,res) => {
         logo        = COALESCE($7, logo),
         observacoes = $8,
         segmento    = COALESCE($9, segmento),
-        repassar_taxa_cliente = COALESCE($11, repassar_taxa_cliente)
+        repassar_taxa_cliente = COALESCE($11, repassar_taxa_cliente),
+        recebimento_cartao    = COALESCE($12, recebimento_cartao)
        WHERE id = $10`,
       [
         nome,
@@ -1765,6 +1825,7 @@ router.put('/config', naoFuncionario, validateLogoUpload, async (req,res) => {
         segmento    || null,
         oid(req),
         req.body?.repassar_taxa_cliente !== undefined ? !!req.body.repassar_taxa_cliente : null,
+        recebimentoCartao,
       ]
     );
 

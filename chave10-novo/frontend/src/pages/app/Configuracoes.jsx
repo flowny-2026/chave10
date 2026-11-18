@@ -7,7 +7,7 @@ import { useOnboarding } from '../../hooks/useOnboarding';
 import { api } from '../../api';
 import { SEGMENTOS } from '../../config/segmentos';
 
-const EMPTY = { nome: '', responsavel: '', documento: '', email: '', endereco: '', telefone: '', whatsapp: '', logo: null, segmento: 'carro', repassar_taxa_cliente: false };
+const EMPTY = { nome: '', responsavel: '', documento: '', email: '', endereco: '', telefone: '', whatsapp: '', logo: null, segmento: 'carro', repassar_taxa_cliente: false, recebimento_cartao: 'proximo_dia' };
 
 function F({ label, type = 'text', placeholder, value, onChange, half }) {
   return (
@@ -280,7 +280,6 @@ export default function AppConfiguracoes() {
             </div>
           </div>
 
-          {/* ── Configurações financeiras ── */}
           <div className="form-group full" style={{ borderTop: '1px solid var(--gray-100)', paddingTop: 20, marginTop: 8 }}>
             <label style={{ fontSize: 14, fontWeight: 700, color: 'var(--gray-800)', marginBottom: 12, display: 'block' }}>
               Configurações de pagamento
@@ -289,12 +288,11 @@ export default function AppConfiguracoes() {
             {/* Toggle: repassar taxa da maquininha */}
             <label style={{ display: 'flex', alignItems: 'flex-start', gap: 14, cursor: 'pointer',
               background: 'var(--gray-50)', border: '1px solid var(--gray-200)',
-              borderRadius: 'var(--r-sm)', padding: '14px 16px' }}>
-              {/* Toggle visual */}
+              borderRadius: 'var(--r-sm)', padding: '14px 16px', marginBottom: 12 }}>
               <div onClick={() => setOf(o => ({ ...o, repassar_taxa_cliente: !o.repassar_taxa_cliente }))}
                 style={{
                   flexShrink: 0, width: 44, height: 24, borderRadius: 12, marginTop: 2,
-                  background: of.repassar_taxa_cliente ? 'var(--accent, #F97316)' : 'var(--gray-300)',
+                  background: of.repassar_taxa_cliente ? '#F97316' : '#d1d5db',
                   position: 'relative', transition: 'background .2s', cursor: 'pointer',
                 }}>
                 <div style={{
@@ -304,16 +302,46 @@ export default function AppConfiguracoes() {
                 }} />
               </div>
               <div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--gray-800)', marginBottom: 4 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: '#1f2937', marginBottom: 4 }}>
                   Repassar taxa da maquininha ao cliente
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--gray-500)', lineHeight: 1.55 }}>
+                <div style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.55 }}>
                   {of.repassar_taxa_cliente
-                    ? 'Ativado — o valor cobrado do cliente incluirá a taxa. Exemplo: serviço R$ 500 + taxa 5% = R$ 525 para o cliente. Sua receita: R$ 500.'
-                    : 'Desativado — o cliente paga o valor do serviço. A taxa é absorvida pela oficina. Exemplo: serviço R$ 500, você recebe R$ 475.'}
+                    ? 'Ativado — o valor cobrado do cliente incluirá a taxa.'
+                    : 'Desativado — a taxa é absorvida pela oficina.'}
                 </div>
               </div>
             </label>
+
+            {/* Recebimento de cartão */}
+            <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 'var(--r-sm)', padding: '14px 16px' }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#1f2937', marginBottom: 8 }}>
+                Recebimento de cartão
+              </div>
+              <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 12, lineHeight: 1.5 }}>
+                Define como os pagamentos por cartão aparecem na aba <strong>A Receber</strong> do Financeiro.
+              </div>
+              {[
+                { value: 'mesmo_dia',       label: 'Mesmo dia (D+0)',       desc: 'Cartão é considerado recebido na data do pagamento.' },
+                { value: 'proximo_dia',     label: 'Próximo dia útil (D+1)', desc: 'Cartão cai no dia seguinte. Padrão da maioria das maquininhas.' },
+                { value: 'agenda_parcelas', label: 'Agenda de parcelas',    desc: 'Cada parcela do crédito entra no mês correspondente.' },
+              ].map(opt => (
+                <label key={opt.value} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10, cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="recebimento_cartao"
+                    value={opt.value}
+                    checked={(of.recebimento_cartao || 'proximo_dia') === opt.value}
+                    onChange={() => setOf(o => ({ ...o, recebimento_cartao: opt.value }))}
+                    style={{ marginTop: 3, accentColor: '#F97316', flexShrink: 0 }}
+                  />
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>{opt.label}</div>
+                    <div style={{ fontSize: 12, color: '#9ca3af' }}>{opt.desc}</div>
+                  </div>
+                </label>
+              ))}
+            </div>
           </div>
 
           <div className="form-actions" style={{ marginTop: 8 }}>
