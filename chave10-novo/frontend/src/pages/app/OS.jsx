@@ -1,0 +1,1854 @@
+﻿import { useEffect, useState, useCallback, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { api } from '../../api';
+import { offlineManager, OPERATION_TYPES, useOfflineManager } from '../../utils/offlineManager';
+import FotoUploader from '../../components/FotoUploader';
+import { useSegmento, getTermosSegmento } from '../../hooks/useSegmento';
+import { IcoView, IcoEdit, IcoTrash, IcoPrint, IcoWhatsApp } from '../../components/ActionIcons';
+import { printHTML } from '../../utils/printHTML';
+import { gerarComprovanteHTML, montarMsgWhatsApp, downloadComprovanteOSPDF } from '../../utils/comprovanteOS';
+
+const fmt = {
+  currency: v => 'R$ ' + parseFloat(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.'),
+  date: iso => { if(!iso) return '-'; const [y,m,d]=iso.split('-'); return `${d}/${m}/${y}`; },
+};
+const STATUS_CLASS = { em_andamento:'badge-orange', finalizado:'badge-green' };
+const STATUS_LABEL = { em_andamento:'Em andamento', finalizado:'Finalizado' };
+const PECA_EMPTY = { nome:'', qtd:'1', valor_unit:'', cliente_fornece: false };
+const MO_EMPTY   = { descricao:'', valor:'' };
+
+function novaPeca() { return { ...PECA_EMPTY, id: Date.now() }; }
+function novaMO()   { return { ...MO_EMPTY,   id: Date.now() + Math.random() }; }
+
+function calcTotal(pecas, mo_itens) {
+  const totalPecas = pecas.reduce((s,p)=>s+(parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1),0);
+  const totalMO    = Array.isArray(mo_itens)
+    ? mo_itens.reduce((s,m)=>s+(parseFloat(m.valor)||0),0)
+    : 0;
+  return totalMO + totalPecas;
+}
+
+function Toast({ msg, type }) {
+  if (!msg) return null;
+  return <div className={`toast show ${type}`} style={{position:'fixed',bottom:24,right:24,zIndex:300}}>{msg}</div>;
+}
+
+// Gera HTML para impressão/PDF — recebe `t` para termos do segmento
+function gerarHTMLOS(os, clientes, veiculos, oficina, t) {
+  const c = clientes.find(x=>x.id===os.cliente_id);
+  const v = veiculos.find(x=>x.id===os.veiculo_id);
+  const pecas = os.pecas_itens || [];
+  const totalPecas = pecas.reduce((s,p)=>s+(parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1),0);
+
+  const moItens = os.mo_itens || [];
+  const totalMO = moItens.length > 0
+    ? moItens.reduce((s,m)=>s+(parseFloat(m.valor)||0),0)
+    : (parseFloat(os.valor_mo)||0);
+  const total = totalMO + totalPecas;
+
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/>
+  <title>OS #${os.numero || String(os.id).padStart(4,'0')}</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:Arial,sans-serif;font-size:13px;color:#1a1a1a;padding:32px}
+    .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #1E3A5F}
+    .oficina-nome{font-size:20px;font-weight:800;color:#1E3A5F}
+    .oficina-detalhe{font-size:11px;color:#6B7280;margin-top:2px}
+    .os-num{font-size:20px;font-weight:700;color:#1E3A5F}
+    .section{margin-bottom:20px}
+    .section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#6B7280;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #E5E7EB}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:8px 24px}
+    .field label{font-size:11px;color:#9CA3AF;display:block;margin-bottom:2px}
+    .field span{font-size:13px;color:#1a1a1a}
+    table{width:100%;border-collapse:collapse;margin-top:4px}
+    th{background:#F3F4F6;padding:8px 10px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#6B7280}
+    td{padding:8px 10px;border-bottom:1px solid #F3F4F6;font-size:13px}
+    .total-row{display:flex;justify-content:space-between;padding:8px 10px;font-weight:700}
+    .total-final{background:#1E3A5F;color:#fff;border-radius:6px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+    .total-final .val{font-size:20px;font-weight:800;color:#F97316}
+    .status{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;background:${os.status==='finalizado'?'#f0fdf4':'#fff7ed'};color:${os.status==='finalizado'?'#16a34a':'#d97706'}}
+    .footer{margin-top:32px;padding-top:16px;border-top:1px solid #E5E7EB;text-align:center;font-size:11px;color:#9CA3AF}
+    @media print{body{padding:16px}}
+  </style></head><body>
+  <div class="header">
+    <div>
+      ${oficina?.logo
+        ? `<img src="${oficina.logo}" style="max-height:70px;max-width:200px;object-fit:contain;margin-bottom:6px" alt="${oficina.nome||''}" />`
+        : `<div class="oficina-nome">${oficina?.nome || 'Minha Oficina'}</div>`
+      }
+      ${oficina?.logo && oficina?.nome ? `<div class="oficina-nome" style="font-size:15px">${oficina.nome}</div>` : ''}
+      ${oficina?.endereco   ? `<div class="oficina-detalhe">📍 ${oficina.endereco}</div>` : ''}
+      ${oficina?.telefone   ? `<div class="oficina-detalhe">📞 ${oficina.telefone}</div>` : ''}
+      ${oficina?.whatsapp   ? `<div class="oficina-detalhe">💬 WhatsApp: ${oficina.whatsapp}</div>` : ''}
+      ${oficina?.email      ? `<div class="oficina-detalhe">✉ ${oficina.email}</div>` : ''}
+      ${(oficina?.documento || oficina?.cnpj_cpf) ? `<div class="oficina-detalhe">CNPJ/CPF: ${oficina.documento || oficina.cnpj_cpf}</div>` : ''}
+    </div>
+    <div style="text-align:right">
+      <div class="os-num">OS #${os.numero || String(os.id).padStart(4,'0')}</div>
+      <div style="font-size:12px;color:#6B7280;margin-top:2px">Data: ${fmt.date(os.data)}</div>
+      <div style="margin-top:4px"><span class="status">${STATUS_LABEL[os.status]||os.status}</span></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Cliente</div>
+    <div class="grid-2">
+      <div class="field"><label>Nome</label><span>${c?.nome||'—'}</span></div>
+      <div class="field"><label>Telefone</label><span>${c?.telefone||'—'}</span></div>
+      <div class="field"><label>Email</label><span>${c?.email||'—'}</span></div>
+      <div class="field"><label>Endereço</label><span>${c?.endereco||'—'}</span></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">${t.veiculo}</div>
+    <div class="grid-2">
+      <div class="field"><label>${t.veiculo}</label><span>${v?`${v.marca} ${v.modelo}`:'—'}</span></div>
+      <div class="field"><label>${t.placa}</label><span>${v?.placa||'—'}</span></div>
+      <div class="field"><label>${t.ano}</label><span>${v?.ano||'—'}</span></div>
+      <div class="field"><label>${t.kmAbrev}</label><span>${v?.km?parseInt(v.km).toLocaleString('pt-BR')+` ${t.kmUnit}`:'—'}</span></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Problema relatado</div>
+    <p style="background:#F9FAFB;padding:10px 12px;border-radius:6px">${os.descricao||'—'}</p>
+  </div>
+
+  ${os.servicos?`<div class="section"><div class="section-title">Serviços realizados</div><p style="background:#F9FAFB;padding:10px 12px;border-radius:6px">${os.servicos}</p></div>`:''}
+
+  <div class="section">
+    <div class="section-title">${t.pecas} utilizadas</div>
+    ${pecas.length ? `
+    <table>
+      <thead><tr><th>Descrição</th><th style="text-align:center">Qtd</th><th style="text-align:right">Valor unit.</th><th style="text-align:right">Subtotal</th></tr></thead>
+      <tbody>
+        ${pecas.map(p=>`<tr><td>${p.nome||'—'}</td><td style="text-align:center">${p.qtd||1}</td><td style="text-align:right">${fmt.currency(p.valor_unit)}</td><td style="text-align:right">${fmt.currency((parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1))}</td></tr>`).join('')}
+      </tbody>
+    </table>` : `<p style="color:#9CA3AF;font-size:12px">Nenhuma ${t.peca.toLowerCase()} registrada</p>`}
+  </div>
+
+  <div class="section">
+    <div class="section-title">Valores</div>
+    ${moItens.length > 0 ? `
+    <table style="margin-bottom:8px">
+      <thead><tr><th>Serviço / Mão de obra</th><th style="text-align:right">Valor</th></tr></thead>
+      <tbody>
+        ${moItens.map(m=>`<tr><td>${m.descricao||'—'}</td><td style="text-align:right">${fmt.currency(m.valor)}</td></tr>`).join('')}
+      </tbody>
+    </table>
+    <div class="total-row"><span>Total mão de obra</span><span>${fmt.currency(totalMO)}</span></div>
+    ` : `<div class="total-row"><span>Mão de obra</span><span>${fmt.currency(os.valor_mo)}</span></div>`}
+    <div class="total-row"><span>Total ${t.pecas.toLowerCase()}</span><span>${fmt.currency(totalPecas)}</span></div>
+    <div class="total-final"><span style="font-size:15px;font-weight:700">TOTAL</span><span class="val">${fmt.currency(total)}</span></div>
+  </div>
+
+  ${os.observacao?`<div class="section"><div class="section-title">Observações</div><p style="background:#F9FAFB;padding:10px 12px;border-radius:6px">${os.observacao}</p></div>`:''}
+
+  <div class="footer">
+    ${oficina?.nome||''}${oficina?.telefone?' · '+oficina.telefone:''}${oficina?.email?' · '+oficina.email:''}<br/>
+    Documento gerado em ${new Date().toLocaleDateString('pt-BR')}
+  </div>
+  </body></html>`;
+}
+
+/** Formulário inline para configurar garantia de uma OS específica */
+function GarantiaForm({ osId, os, oficina, onSave }) {
+  const [prazo, setPrazo] = useState(String(os.garantia_prazo_dias ?? oficina.garantia_padrao_dias ?? 90));
+  const [cond, setCond]   = useState(os.garantia_condicoes ?? oficina.garantia_padrao_condicoes ?? '');
+  const [loading, setLoading] = useState(false);
+
+  async function salvar(e) {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await api.app.os.garantia(osId, {
+        garantia_prazo_dias: parseInt(prazo) || 0,
+        garantia_condicoes:  cond || null,
+      });
+      if (onSave) await onSave();
+    } catch {
+      // falha silenciosa — o toast é disparado pelo pai
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <form onSubmit={salvar} style={{padding:'12px 14px 14px'}}>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 2fr',gap:10,marginBottom:10}}>
+        <div className="form-group">
+          <label style={{fontSize:12}}>Prazo (dias)</label>
+          <input type="number" min="0" max="3650" value={prazo} onChange={e=>setPrazo(e.target.value)} style={{height:36}} />
+        </div>
+        <div className="form-group" style={{display:'flex',alignItems:'flex-end',gap:6}}>
+          <div style={{flex:1}}>
+            <label style={{fontSize:12}}>Condições (opcional)</label>
+            <input type="text" placeholder="Ex: peças e mão de obra" value={cond} onChange={e=>setCond(e.target.value)} maxLength={200} style={{height:36}} />
+          </div>
+          <button className="btn btn-primary" type="submit" disabled={loading} style={{height:36,padding:'0 14px',flexShrink:0}}>
+            {loading ? '…' : 'Salvar'}
+          </button>
+        </div>
+      </div>
+    </form>
+  );
+}
+
+export default function AppOS() {
+  const t = useSegmento();
+  // Funcionário e mecânico não veem valores financeiros
+  const isFuncionario = (() => { try { const p = JSON.parse(localStorage.getItem('c10_user'))?.perfil; return p === 'funcionario' || p === 'mecanico'; } catch { return false; } })();
+  const isMecanico    = (() => { try { return JSON.parse(localStorage.getItem('c10_user'))?.perfil === 'mecanico'; } catch { return false; } })();
+  // Configuração da oficina: repassar taxa da maquininha ao cliente
+  const [repassarTaxaCliente, setRepassarTaxaCliente] = useState(
+    () => { try { return JSON.parse(localStorage.getItem('c10_oficina'))?.repassar_taxa_cliente === true; } catch { return false; } }
+  );
+  const [searchParams] = useSearchParams();
+  const [osList, setOsList]     = useState([]);
+  const [clientes, setClientes] = useState([]);
+  const [veiculos, setVeiculos] = useState([]);
+  const [mecanicos, setMecanicos] = useState([]);
+  const [estoquePecas, setEstoquePecas] = useState([]); // peças do estoque p/ autocompletar
+  const [search, setSearch]     = useState(() => searchParams.get('q') || '');
+  const [statusFiltro, setStatusFiltro] = useState('');
+  const [modal, setModal]       = useState(null);
+  const [form, setForm]         = useState({ cliente_id:'', veiculo_id:'', mecanico_id:null, descricao:'', servicos:'', pecas_itens:[novaPeca()], mo_itens:[novaMO()], valor_mo:'', data:new Date().toISOString().split('T')[0], status:'em_andamento', observacao:'' });
+  const [editing, setEditing]   = useState(null);
+
+  // ── OS Rápida ─────────────────────────────────────────────────────
+  const RAPIDA_EMPTY = { nome_cliente:'', telefone_cliente:'', endereco_cliente:'', marca_veiculo:'', modelo_veiculo:'', placa_veiculo:'', ano_veiculo:'', km_veiculo:'', descricao:'', servicos:'', mecanico_id:'', valor_mo:'' };
+  const [rapida, setRapida]         = useState(RAPIDA_EMPTY);
+  const [rapidaSaving, setRapidaSaving] = useState(false);
+
+  async function saveRapida(e) {
+    e.preventDefault();
+    if (!rapida.nome_cliente.trim())   { showToast('Nome do cliente é obrigatório','error'); return; }
+    if (!rapida.descricao.trim() && !rapida.servicos.trim()) { showToast('Preencha ao menos o problema relatado ou os serviços realizados','error'); return; }
+    setRapidaSaving(true);
+    try {
+      // 1. Cria cliente
+      const novoCliente = await api.app.clientes.create({
+        nome:     rapida.nome_cliente.trim(),
+        telefone: rapida.telefone_cliente.trim() || null,
+        endereco: rapida.endereco_cliente.trim() || null,
+      });
+      let veiculo_id = null;
+      // 2. Cria veículo (se preencheu pelo menos modelo)
+      if (rapida.modelo_veiculo.trim()) {
+        const novoVeiculo = await api.app.veiculos.create({
+          cliente_id: novoCliente.id,
+          marca:  rapida.marca_veiculo.trim() || 'Outro',
+          modelo: rapida.modelo_veiculo.trim(),
+          placa:  rapida.placa_veiculo.trim().toUpperCase() || null,
+          ano:    rapida.ano_veiculo.trim() || null,
+          km:     rapida.km_veiculo ? parseInt(rapida.km_veiculo) || null : null,
+        });
+        veiculo_id = novoVeiculo.id;
+      }
+      // 3. Cria OS
+      await api.app.os.create({
+        cliente_id:  novoCliente.id,
+        veiculo_id,
+        mecanico_id: rapida.mecanico_id || null,
+        descricao:   rapida.descricao.trim(),
+        servicos:    rapida.servicos.trim() || null,
+        valor_mo:    parseFloat(rapida.valor_mo) || 0,
+        valor_pecas: 0,
+        valor:       parseFloat(rapida.valor_mo) || 0,
+        pecas_itens: [],
+        pecas:       '',
+        data:        new Date().toISOString().split('T')[0],
+        status:      'em_andamento',
+      });
+      // 4. Recarrega listas
+      const [c, v] = await Promise.all([api.app.clientes.list(), api.app.veiculos.list()]);
+      setClientes(c); setVeiculos(v);
+      load(statusFiltro);
+      setRapida(RAPIDA_EMPTY);
+      setModal(null);
+      showToast('OS criada com sucesso!');
+    } catch (err) {
+      showToast(err?.error || 'Erro ao criar OS rápida','error');
+    } finally {
+      setRapidaSaving(false);
+    }
+  }
+
+  // ── Novo cliente inline (dentro do modal de OS completa) ──────────
+  const [novoClienteOpen, setNovoClienteOpen]   = useState(false);
+  const [novoClienteForm, setNovoClienteForm]   = useState({ nome:'', telefone:'', endereco:'' });
+  const [novoClienteSaving, setNovoClienteSaving] = useState(false);
+
+  async function criarClienteInline(e) {
+    if (e?.preventDefault) e.preventDefault();
+    if (!novoClienteForm.nome.trim()) { showToast('Nome é obrigatório','error'); return; }
+    setNovoClienteSaving(true);
+    try {
+      const novo = await api.app.clientes.create({ nome: novoClienteForm.nome.trim(), telefone: novoClienteForm.telefone.trim() || null, endereco: novoClienteForm.endereco.trim() || null });
+      const lista = await api.app.clientes.list();
+      setClientes(lista);
+      setForm(f => ({ ...f, cliente_id: String(novo.id), veiculo_id: '' }));
+      setNovoClienteForm({ nome:'', telefone:'', endereco:'' });
+      setNovoClienteOpen(false);
+      showToast('Cliente criado!');
+    } catch (err) {
+      showToast(err?.error || 'Erro ao criar cliente','error');
+    } finally {
+      setNovoClienteSaving(false);
+    }
+  }
+
+  // ── Novo veículo inline (dentro do modal de OS completa) ──────────
+  const [novoVeiculoOpen, setNovoVeiculoOpen]   = useState(false);
+  const [novoVeiculoForm, setNovoVeiculoForm]   = useState({ marca:'', modelo:'', placa:'', ano:'', km:'' });
+  const [novoVeiculoSaving, setNovoVeiculoSaving] = useState(false);
+
+  async function criarVeiculoInline(e) {
+    if (e?.preventDefault) e.preventDefault();
+    if (!novoVeiculoForm.modelo.trim()) { showToast('Modelo é obrigatório','error'); return; }
+    setNovoVeiculoSaving(true);
+    try {
+      const clienteId = form.cliente_id || null;
+      const novo = await api.app.veiculos.create({
+        cliente_id: clienteId ? +clienteId : null,
+        marca:  novoVeiculoForm.marca.trim() || 'Outro',
+        modelo: novoVeiculoForm.modelo.trim(),
+        placa:  novoVeiculoForm.placa.trim().toUpperCase() || null,
+        ano:    novoVeiculoForm.ano.trim() || null,
+        km:     novoVeiculoForm.km ? parseInt(novoVeiculoForm.km) || null : null,
+      });
+      const lista = await api.app.veiculos.list();
+      setVeiculos(lista);
+      setForm(f => ({ ...f, veiculo_id: String(novo.id) }));
+      setNovoVeiculoForm({ marca:'', modelo:'', placa:'', ano:'', km:'' });
+      setNovoVeiculoOpen(false);
+      showToast('Veículo criado!');
+    } catch (err) {
+      showToast(err?.error || 'Erro ao criar veículo','error');
+    } finally {
+      setNovoVeiculoSaving(false);
+    }
+  }
+  const [viewing, setViewing]   = useState(null);
+  const [toast, setToast]       = useState({ msg:'', type:'' });
+  const [pagForm, setPagForm]   = useState({ os_id:null, forma:'', valor_total:0, parcelas:1, bandeira:'', taxa_maquininha:'', observacao:'', boleto_vencimento:'', boleto_recebido_em:'' });
+  const [pagSaving, setPagSaving] = useState(false);
+  const [pendingPhotos, setPendingPhotos] = useState([]); // fotos selecionadas antes de salvar
+
+  // Handler para selecionar fotos no formulário (antes de salvar)
+  function handlePendingPhotos(e) {
+    const files = e.target.files;
+    if (!files?.length) return;
+    const remaining = 15 - pendingPhotos.length;
+    const batch = Array.from(files).slice(0, Math.min(5, remaining));
+    const newPhotos = batch.map(file => ({
+      file,
+      preview: URL.createObjectURL(file),
+    }));
+    setPendingPhotos(prev => [...prev, ...newPhotos].slice(0, 15));
+    e.target.value = '';
+  }
+  
+  // Offline mode
+  const { isOnline, pendingCount } = useOfflineManager();
+  const [autoSaveStatus, setAutoSaveStatus] = useState(''); // '', 'saving', 'saved'
+  const autoSaveTimerRef = useRef(null);
+  const DRAFT_ID = 'current_os';
+
+  // Sincroniza search com query param quando a URL muda (ex: busca da topbar)
+  useEffect(() => {
+    const q = searchParams.get('q') || '';
+    setSearch(q);
+  }, [searchParams]);
+
+  function showToast(msg, type='success') { setToast({msg,type}); setTimeout(()=>setToast({msg:'',type:''}),3000); }
+
+  // Auto-save rascunho a cada 30 segundos
+  const saveFormDraft = useCallback(() => {
+    if (modal !== 'form') return;
+    const hasContent = form.descricao || form.servicos || form.cliente_id || form.veiculo_id;
+    if (!hasContent) return;
+    
+    setAutoSaveStatus('saving');
+    offlineManager.saveDraft('os', { ...form, draftId: DRAFT_ID });
+    
+    setTimeout(() => {
+      setAutoSaveStatus('saved');
+      setTimeout(() => setAutoSaveStatus(''), 2000);
+    }, 500);
+  }, [form, modal]);
+
+  // Auto-save quando form muda (debounced)
+  useEffect(() => {
+    if (modal !== 'form') return;
+    
+    // Limpa timer anterior
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+    
+    // Agenda novo save
+    autoSaveTimerRef.current = setTimeout(() => {
+      saveFormDraft();
+    }, 30000); // 30 segundos
+    
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, [form, modal, saveFormDraft]);
+
+  // Recupera rascunho ao abrir modal
+  useEffect(() => {
+    if (modal === 'form' && !editing) {
+      const draft = offlineManager.getDraft('os', DRAFT_ID);
+      if (draft && (draft.descricao || draft.servicos)) {
+        const shouldRecover = window.confirm('Você tem um rascunho salvo. Deseja recuperá-lo?');
+        if (shouldRecover) {
+          setForm(draft);
+          showToast('Rascunho recuperado!', 'success');
+        } else {
+          // Remove rascunho se usuário não quiser
+          offlineManager.removeDraft('os', DRAFT_ID);
+        }
+      }
+    }
+  }, [modal, editing]);
+
+  async function load(status) {
+    try { const data = await api.app.os.list(status||undefined); setOsList(data); return data; }
+    catch { setOsList([]); return []; }
+  }
+
+  useEffect(() => {
+    Promise.all([
+      api.app.clientes.list(),
+      api.app.veiculos.list(),
+      api.app.mecanicos.ativos().catch(() => []),
+      api.app.estoque.list('peca').catch(() => []),
+    ]).then(([c,v,m,e])=>{ setClientes(c); setVeiculos(v); setMecanicos(m||[]); setEstoquePecas(Array.isArray(e)?e:[]); }).catch(()=>{});
+    // Carrega config da oficina para saber se repassar taxa ao cliente
+    api.app.config.get().then(cfg => {
+      if (cfg) {
+        localStorage.setItem('c10_oficina', JSON.stringify(cfg));
+        setRepassarTaxaCliente(cfg.repassar_taxa_cliente === true);
+      }
+    }).catch(() => {});
+    load();
+  }, []);
+
+  function openCreate() {
+    setForm({ cliente_id:'', veiculo_id:'', mecanico_id:null, descricao:'', servicos:'', pecas_itens:[novaPeca()], mo_itens:[novaMO()], valor_mo:'', data:new Date().toISOString().split('T')[0], status:'em_andamento', observacao:'' });
+    setEditing(null); setPendingPhotos([]);
+    setNovoClienteOpen(false); setNovoVeiculoOpen(false);
+    setNovoClienteForm({ nome:'', telefone:'', endereco:'' }); setNovoVeiculoForm({ marca:'', modelo:'', placa:'', ano:'', km:'' });
+    setModal('form');
+  }
+
+  function openEdit(os) {
+    const pecas = os.pecas_itens && os.pecas_itens.length ? os.pecas_itens : [novaPeca()];
+    const moIt  = os.mo_itens   && os.mo_itens.length   ? os.mo_itens.map(m=>({...m,id:m.id||Date.now()+Math.random()})) : (os.valor_mo ? [{ ...novaMO(), descricao:'Mão de obra', valor: String(os.valor_mo) }] : [novaMO()]);
+    setForm({ cliente_id:os.cliente_id||'', veiculo_id:os.veiculo_id||'', mecanico_id:os.mecanico_id||null, descricao:os.descricao||'', servicos:os.servicos||'', pecas_itens:pecas.map(p=>({...p,id:p.id||Date.now()})), mo_itens:moIt, valor_mo:os.valor_mo||'', data:os.data||new Date().toISOString().split('T')[0], status:os.status||'em_andamento', observacao:os.observacao||'' });
+    setEditing(os.id); setModal('form');
+  }
+
+  function setPeca(id, field, val) { setForm(f=>({...f, pecas_itens: f.pecas_itens.map(p=>p.id===id?{...p,[field]:val}:p)})); }
+  // Ao digitar/selecionar o nome da peça, se casar com um item do estoque,
+  // preenche automaticamente o valor unitário (só se ainda estiver vazio/zero).
+  function setPecaNome(id, nome) {
+    setForm(f=>({
+      ...f,
+      pecas_itens: f.pecas_itens.map(p=>{
+        if (p.id !== id) return p;
+        const match = estoquePecas.find(e => (e.nome||'').toLowerCase() === (nome||'').toLowerCase());
+        const semValor = !p.valor_unit || parseFloat(p.valor_unit) === 0;
+        return {
+          ...p,
+          nome,
+          valor_unit: (match && semValor && !p.cliente_fornece) ? String(match.preco_venda || match.preco || '') : p.valor_unit,
+        };
+      }),
+    }));
+  }
+  function addPeca() { setForm(f=>({...f, pecas_itens:[...f.pecas_itens, novaPeca()]})); }
+  function removePeca(id) { setForm(f=>({...f, pecas_itens: f.pecas_itens.filter(p=>p.id!==id)})); }
+
+  // ── Mão de obra detalhada ─────────────────────────────────────────
+  function setMO(id, field, val) { setForm(f=>({...f, mo_itens: f.mo_itens.map(m=>m.id===id?{...m,[field]:val}:m)})); }
+  function addMO()    { setForm(f=>({...f, mo_itens:[...f.mo_itens, novaMO()]})); }
+  function removeMO(id) { setForm(f=>({...f, mo_itens: f.mo_itens.filter(m=>m.id!==id)})); }
+  const totalMOForm = (form.mo_itens||[]).reduce((s,m)=>s+(parseFloat(m.valor)||0),0);
+
+  async function save(e) {
+    e.preventDefault();
+    if (!form.descricao.trim() && !form.servicos.trim()) { showToast('Preencha ao menos o problema relatado ou os serviços realizados','error'); return; }
+    
+    try {
+      const pecasValidas = form.pecas_itens.filter(p=>p.nome.trim());
+      const totalPecas = pecasValidas.reduce((s,p)=>s+(parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1),0);
+      const moValidas  = (form.mo_itens||[]).filter(m=>m.descricao.trim()||parseFloat(m.valor)>0);
+      const totalMO    = moValidas.reduce((s,m)=>s+(parseFloat(m.valor)||0),0);
+      const payload = { 
+        ...form, 
+        cliente_id:form.cliente_id||null, 
+        veiculo_id:form.veiculo_id||null, 
+        valor_mo:totalMO,
+        mo_itens:moValidas,
+        valor_pecas:totalPecas, 
+        valor:totalMO+totalPecas, 
+        pecas_itens:pecasValidas, 
+        pecas: pecasValidas.map(p=>`${p.qtd}x ${p.nome} (${fmt.currency(p.valor_unit)})`).join('\n') 
+      };
+      
+      if (isOnline) {
+        // Online: envia normalmente
+        let osId = editing;
+        if (editing) {
+          await api.app.os.update(editing, payload);
+        } else {
+          const res = await api.app.os.create(payload);
+          osId = res.id;
+        }
+        
+        // Upload de fotos pendentes (se houver)
+        if (pendingPhotos.length > 0 && osId) {
+          try {
+            const { compressImages } = await import('../../utils/imageCompressor');
+            // pendingPhotos já tem .file (File) — precisa comprimir antes
+            const filesToCompress = pendingPhotos.map(p => p.file).filter(Boolean);
+            if (filesToCompress.length > 0) {
+              const compressed = await compressImages(filesToCompress);
+              const validas = compressed.filter(c => !c.error);
+              if (validas.length > 0) {
+                const fotosPayload = validas.map(c => ({
+                  imagem: c.dataUrl,
+                  titulo: '',
+                  descricao: '',
+                  categoria: 'problema',
+                }));
+                await api.app.os.fotos.upload(osId, fotosPayload);
+              }
+            }
+          } catch (fotoErr) {
+            console.warn('Fotos não enviadas:', fotoErr);
+            // Não falha a OS por causa das fotos
+          }
+        }
+        
+        // Remove rascunho após sucesso
+        offlineManager.removeDraft('os', DRAFT_ID);
+        setPendingPhotos([]);
+
+        const listaAtualizada = await load(statusFiltro);
+        const osSalva = listaAtualizada.find(o => o.id === osId);
+        if (osSalva) {
+          openView(osSalva);
+        } else {
+          setModal(null);
+        }
+        showToast(editing ? 'OS atualizada!' : 'Ordem de serviço salva!');
+      } else {
+        // Offline: adiciona à fila
+        const operationType = editing ? OPERATION_TYPES.UPDATE_OS : OPERATION_TYPES.CREATE_OS;
+        const operationData = editing ? { id: editing, ...payload } : payload;
+        
+        offlineManager.addToQueue({
+          type: operationType,
+          data: operationData,
+        });
+        
+        // Remove rascunho
+        offlineManager.removeDraft('os', DRAFT_ID);
+        
+        setModal(null);
+        showToast('Você está offline! OS salva e será enviada automaticamente quando voltar online.', 'info');
+      }
+    } catch (err) {
+      // Se falhar mesmo online, adiciona à fila
+      const pecasValidas = form.pecas_itens.filter(p=>p.nome.trim());
+      const totalPecas = pecasValidas.reduce((s,p)=>s+(parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1),0);
+      const moValidas  = (form.mo_itens||[]).filter(m=>m.descricao.trim()||parseFloat(m.valor)>0);
+      const totalMO    = moValidas.reduce((s,m)=>s+(parseFloat(m.valor)||0),0);
+      const payload = { 
+        ...form, 
+        cliente_id:form.cliente_id||null, 
+        veiculo_id:form.veiculo_id||null, 
+        valor_mo:totalMO,
+        mo_itens:moValidas,
+        valor_pecas:totalPecas, 
+        valor:totalMO+totalPecas, 
+        pecas_itens:pecasValidas, 
+        pecas: pecasValidas.map(p=>`${p.qtd}x ${p.nome} (${fmt.currency(p.valor_unit)})`).join('\n') 
+      };
+      
+      const operationType = editing ? OPERATION_TYPES.UPDATE_OS : OPERATION_TYPES.CREATE_OS;
+      const operationData = editing ? { id: editing, ...payload } : payload;
+      
+      offlineManager.addToQueue({
+        type: operationType,
+        data: operationData,
+      });
+      
+      setModal(null);
+      showToast('Erro de conexão. OS salva localmente e será sincronizada automaticamente.', 'warning');
+    }
+  }
+
+  async function finalizar(id) {
+    // Abre modal de pagamento em vez de finalizar direto
+    const os = osList.find(o => o.id === id);
+    if (!os) return;
+    const total = (parseFloat(os.valor_mo)||0) + (parseFloat(os.valor_pecas)||0) || parseFloat(os.valor||0);
+    setPagForm({ os_id: id, forma: '', valor_total: total, parcelas: 1, bandeira: '', taxa_maquininha: '', observacao: '', boleto_vencimento: '', boleto_recebido_em: '' });
+    setModal('pagamento');
+  }
+
+  async function confirmarPagamento(e) {
+    e.preventDefault();
+    if (!pagForm.forma) { showToast('Selecione a forma de pagamento','error'); return; }
+    if (pagSaving) return;
+    setPagSaving(true);
+    try {
+      const taxaPct = parseFloat(pagForm.taxa_maquininha) || 0;
+      const payload = (repassarTaxaOs && taxaPct > 0 && (pagForm.forma === 'credito' || pagForm.forma === 'debito'))
+        ? { ...pagForm, valor_total: pagForm.valor_total + (pagForm.valor_total * taxaPct / 100) }
+        : pagForm;
+      await api.app.os.pagamento(pagForm.os_id, payload);
+      await load(statusFiltro);
+      setViewing(v => v ? { ...v, status: 'finalizado' } : v);
+      setModal('comprovante');
+      abrirComprovante(pagForm.os_id);
+    } catch (err) { showToast(err.error||'Erro ao registrar pagamento','error'); }
+    finally { setPagSaving(false); }
+  }
+
+  /**
+   * Carrega dados completos da OS do endpoint /comprovante
+   * e exibe o modal de comprovante.
+   */
+  async function abrirComprovante(osId) {
+    setComprovanteLoading(true);
+    try {
+      const dados = await api.app.os.comprovante(osId);
+      setComprovante(dados);
+    } catch (err) {
+      showToast('Não foi possível carregar o comprovante', 'error');
+      setModal(viewing ? 'view' : null);
+    } finally {
+      setComprovanteLoading(false);
+    }
+  }
+
+  function imprimirComprovante() {
+    if (!comprovante) return;
+    const { os, oficina, pagamentos: pags } = comprovante;
+    const html = gerarComprovanteHTML(os, oficina, pags);
+    printHTML(html);
+  }
+
+  async function baixarComprovanteOSPDF() {
+    if (!comprovante) return;
+    const { os, oficina, pagamentos: pags } = comprovante;
+    showToast('⏳ Gerando PDF…');
+    const result = await downloadComprovanteOSPDF(os, oficina, pags);
+    if (result.success) {
+      showToast(`✅ PDF salvo: ${result.filename}`);
+    } else {
+      // Fallback: usa impressão via browser se jsPDF falhar
+      imprimirComprovante();
+      showToast('PDF gerado via impressão do navegador');
+    }
+  }
+
+  function enviarComprovanteWhatsApp() {
+    if (!comprovante) return;
+    const { os, oficina, pagamentos: pags } = comprovante;
+    const { tel, msg } = montarMsgWhatsApp(os, oficina, pags);
+    if (!tel) { showToast('Cliente sem telefone cadastrado', 'error'); return; }
+    window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`, '_blank');
+  }
+
+  const taxaCalculada = pagForm.taxa_maquininha && pagForm.valor_total
+    ? pagForm.valor_total - (pagForm.valor_total * parseFloat(pagForm.taxa_maquininha) / 100)
+    : pagForm.valor_total;
+
+  // Quando repassar taxa ao cliente: total cobrado = valor_os + taxa
+  // Quando não repassar: total cobrado = valor_os (taxa sai da oficina)
+  // repassarTaxaOs: valor por OS — começa com a config global da oficina
+  const repassarTaxaOs = pagForm.repassar_taxa_os !== undefined ? pagForm.repassar_taxa_os : repassarTaxaCliente;
+  const taxaValor = pagForm.taxa_maquininha && parseFloat(pagForm.taxa_maquininha) > 0
+    ? pagForm.valor_total * parseFloat(pagForm.taxa_maquininha) / 100
+    : 0;
+  const totalComTaxa   = pagForm.valor_total + taxaValor;
+  const liquidoOficina = pagForm.valor_total - taxaValor;
+  async function reabrir(id) {
+    await api.app.os.setStatus(id, 'em_andamento');
+    await load(statusFiltro);
+    // Atualiza viewing para refletir o novo status imediatamente no modal
+    setViewing(v => v && v.id === id ? { ...v, status: 'em_andamento' } : v);
+    showToast('OS reaberta');
+  }
+  async function remove(id) {
+    if (!window.confirm('Deseja excluir esta ordem de serviço?')) return;
+    await api.app.os.remove(id); load(statusFiltro); showToast('OS excluída');
+  }
+
+  async function imprimir(os) {
+    // Busca dados atualizados da oficina da API
+    let oficina = (() => { try { return JSON.parse(localStorage.getItem('c10_oficina'))||{}; } catch { return {}; } })();
+    try {
+      const config = await api.app.config.get();
+      if (config) {
+        oficina = { ...config, cnpj_cpf: config.documento || oficina.cnpj_cpf };
+        localStorage.setItem('c10_oficina', JSON.stringify(oficina));
+      }
+    } catch { /* usa o cache local */ }
+    const html = gerarHTMLOS(os, clientes, veiculos, oficina, t);
+    printHTML(html);
+  }
+
+  function enviarWhatsApp(os) {
+    const tw = getTermosSegmento();
+    const c = clientes.find(x=>x.id===os.cliente_id);
+    if (!c?.telefone) { showToast('Cliente sem telefone','error'); return; }
+    const pecas = os.pecas_itens || [];
+    const totalPecas = pecas.reduce((s,p)=>s+(parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1),0);
+    const total = (parseFloat(os.valor_mo)||0)+totalPecas;
+    const v = veiculos.find(x=>x.id===os.veiculo_id);
+    const oficina = (() => { try { return JSON.parse(localStorage.getItem('c10_oficina'))||{}; } catch { return {}; } })();
+    let msg = `*OS #${os.numero || String(os.id).padStart(4,'0')} — ${oficina.nome||'Chave 10'}*\n`;
+    msg += `Data: ${fmt.date(os.data)}\n`;
+    msg += `${tw.veiculo}: ${v?`${v.marca} ${v.modelo} — ${v.placa}`:'—'}\n\n`;
+    if (os.servicos) msg += `*Serviços:* ${os.servicos}\n`;
+    if (os.descricao && !os.servicos) msg += `*Problema:* ${os.descricao}\n`;
+    if (pecas.length) {
+      msg += `\n*${tw.pecas} utilizadas:*\n`;
+      pecas.filter(p=>p.nome).forEach(p=>{ msg += `• ${p.qtd}x ${p.nome} — ${fmt.currency((parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1))}\n`; });
+    }
+    msg += `\n*Mão de obra:* ${fmt.currency(os.valor_mo)}`;
+    msg += `\n*Total ${tw.pecas.toLowerCase()}:* ${fmt.currency(totalPecas)}`;
+    msg += `\n*TOTAL: ${fmt.currency(total)}*`;
+    const tel = c.telefone.replace(/\D/g,'');
+    window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`, '_blank');
+  }
+
+  function openView(os) {
+    setViewing(os);
+    setModal('ver');
+    // Carrega pagamentos e fotos da OS
+    api.app.os.pagamentos(os.id).then(data => setViewPagamentos(data||[])).catch(()=>setViewPagamentos([]));
+    api.app.os.fotos.list(os.id).then(data => setViewFotos(data||[])).catch(()=>setViewFotos([]));
+  }
+  const [viewPagamentos, setViewPagamentos] = useState([]);
+  const [viewFotos, setViewFotos] = useState([]);
+  // Estado do modal de comprovante (pós-finalização ou visualização avulsa)
+  const [comprovante, setComprovante] = useState(null); // { os, oficina, pagamentos } | null
+  const [comprovanteLoading, setComprovanteLoading] = useState(false);
+
+  const veiculosFiltrados = form.cliente_id ? veiculos.filter(v=>String(v.cliente_id)===String(form.cliente_id)) : veiculos;
+  const listaFiltrada = search
+    ? osList.filter(o => {
+        const q = search.toLowerCase().replace(/[-\s]/g, '');
+        const placa = (o.placa || '').toLowerCase().replace(/[-\s]/g, '');
+        return (
+          (o.cliente_nome  || '').toLowerCase().includes(search.toLowerCase()) ||
+          (o.veiculo_modelo|| '').toLowerCase().includes(search.toLowerCase()) ||
+          (o.veiculo_marca || '').toLowerCase().includes(search.toLowerCase()) ||
+          placa.includes(q) ||
+          String(o.id).includes(search) ||
+          (o.descricao     || '').toLowerCase().includes(search.toLowerCase())
+        );
+      })
+    : osList;
+
+  const totalForm = calcTotal(form.pecas_itens, form.mo_itens);
+
+  return (
+    <div>
+      <div className="page-header">
+        <div><div className="page-title">{t.oss}</div><div className="page-subtitle">{listaFiltrada.length} ordem(ns)</div></div>
+        <div style={{display:'flex',gap:8}}>
+          <button className="btn btn-outline" onClick={()=>{setRapida(RAPIDA_EMPTY);setModal('rapida');}}>⚡ OS Rápida</button>
+          <button className="btn btn-primary" onClick={openCreate}>+ {t.novaOs}</button>
+        </div>
+      </div>
+      <div className="search-bar">
+        <div className="search-input-wrap">
+          <svg className="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" placeholder={`Buscar por cliente, ${t.veiculo.toLowerCase()} ou nº OS...`} value={search} onChange={e=>setSearch(e.target.value)} />
+        </div>
+        <select className="dash-select" value={statusFiltro} onChange={e=>{setStatusFiltro(e.target.value);load(e.target.value);}}>
+          <option value="">Todos</option>
+          <option value="em_andamento">Em andamento</option>
+          <option value="finalizado">Finalizados</option>
+        </select>
+      </div>
+      <div className="card">
+        {listaFiltrada.length ? (
+          <>
+          {/* Tabela desktop */}
+          <div className="os-table-desktop">
+            <div className="table-wrapper">
+              <table>
+                <thead><tr><th>OS</th><th>Data</th><th>Cliente</th><th>{t.veiculo}</th><th>Problema</th><th>{t.mecanico}</th>{!isFuncionario&&<th>Total</th>}<th>Pagamento</th><th>Status</th><th>Ações</th></tr></thead>
+                <tbody>
+                  {listaFiltrada.map(os => {
+                    const total = parseFloat(os.valor_mo||0)+parseFloat(os.valor_pecas||0)||parseFloat(os.valor||0);
+                    const hojeStr = new Date().toISOString().split('T')[0];
+                    // Célula de pagamento
+                    let pagCell;
+                    if (os.pagamento_forma && os.boleto_pendente) {
+                      // Boleto ainda não recebido
+                      const venc = os.boleto_vencimento;
+                      const vencido = venc && venc < hojeStr;
+                      pagCell = (
+                        <td style={{whiteSpace:'nowrap',fontSize:12}}>
+                          <span style={{color: vencido ? 'var(--danger)' : '#92400e', fontWeight:600}}>
+                            📄 {venc ? fmt.date(venc) : '—'}
+                          </span>
+                          {vencido && <div style={{fontSize:10,color:'var(--danger)'}}>Vencido</div>}
+                          {!vencido && venc && <div style={{fontSize:10,color:'#92400e'}}>Vence</div>}
+                        </td>
+                      );
+                    } else if (os.data_pagamento) {
+                      // Pago — mostra data e forma
+                      const formaLabel = {pix:'PIX',dinheiro:'Dinheiro',debito:'Débito',credito:'Crédito',boleto:'Boleto'}[os.pagamento_forma] || os.pagamento_forma || '';
+                      pagCell = (
+                        <td style={{whiteSpace:'nowrap',fontSize:12}}>
+                          <span style={{color:'var(--success)',fontWeight:600}}>✅ {fmt.date(os.data_pagamento)}</span>
+                          <div style={{fontSize:10,color:'var(--gray-400)'}}>{formaLabel}</div>
+                        </td>
+                      );
+                    } else {
+                      pagCell = <td style={{fontSize:12,color:'var(--gray-300)'}}>—</td>;
+                    }
+                    return (
+                      <tr key={os.id}>
+                        <td><strong style={{color:'var(--brand)'}}>#{os.numero || String(os.id).padStart(4,'0')}</strong></td>
+                        <td style={{color:'var(--gray-500)',fontSize:12}}>{fmt.date(os.data)}</td>
+                        <td>{os.cliente_nome||'—'}</td>
+                        <td><div>{os.veiculo_modelo||'—'}</div>{os.placa&&<small style={{color:'var(--gray-400)'}}>{os.placa}</small>}</td>
+                        <td style={{maxWidth:180,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{os.descricao}</td>
+                        <td style={{fontSize:12,color:'var(--gray-500)'}}>{os.mecanico_nome||<span style={{color:'var(--gray-300)'}}>—</span>}</td>
+                        {!isFuncionario&&<td><strong>{fmt.currency(total)}</strong></td>}
+                        {pagCell}
+                        <td><span className={`badge ${STATUS_CLASS[os.status]||'badge-gray'}`}>{STATUS_LABEL[os.status]||os.status}</span></td>
+                        <td>
+                          <div style={{display:'flex',gap:4}}>
+                            <button className="btn btn-outline btn-sm" onClick={()=>openView(os)} title="Ver"><IcoView /></button>
+                            <button className="btn btn-outline btn-sm" onClick={()=>imprimir(os)} title="Imprimir"><IcoPrint /></button>
+                            <button className="btn btn-outline btn-sm" onClick={()=>enviarWhatsApp(os)} title="WhatsApp"><IcoWhatsApp /></button>
+                            {os.token_publico && (
+                              <button className="btn btn-outline btn-sm" title="Compartilhar link com cliente"
+                                onClick={()=>{const url=`${window.location.origin}/acompanhar/${os.token_publico}`;navigator.clipboard?.writeText(url).then(()=>showToast('Link copiado!')).catch(()=>showToast(url));}}>
+                                🔗
+                              </button>
+                            )}
+                            {os.status==='finalizado'&&!isFuncionario&&(
+                              <button className="btn btn-outline btn-sm" onClick={()=>{setModal('comprovante');abrirComprovante(os.id);}} title="Comprovante">📄</button>
+                            )}
+                            <button className="btn btn-outline btn-sm" onClick={()=>openEdit(os)} title="Editar"><IcoEdit /></button>
+                            <button className="btn btn-outline btn-sm" onClick={()=>remove(os.id)} title="Excluir"><IcoTrash /></button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Cards mobile */}
+          <div className="os-cards-mobile">
+            {listaFiltrada.map(os => {
+              const total = parseFloat(os.valor_mo||0)+parseFloat(os.valor_pecas||0)||parseFloat(os.valor||0);
+              const hojeStr = new Date().toISOString().split('T')[0];
+              // Info de pagamento para o card mobile
+              let pagInfo = null;
+              if (os.boleto_pendente) {
+                const venc = os.boleto_vencimento;
+                const vencido = venc && venc < hojeStr;
+                pagInfo = <span style={{fontSize:11,color: vencido ? 'var(--danger)' : '#92400e', fontWeight:600}}>📄 Boleto {venc ? fmt.date(venc) : ''}{vencido ? ' · Vencido' : ' · Pendente'}</span>;
+              } else if (os.data_pagamento) {
+                const formaLabel = {pix:'PIX',dinheiro:'Dinheiro',debito:'Débito',credito:'Crédito',boleto:'Boleto'}[os.pagamento_forma] || '';
+                pagInfo = <span style={{fontSize:11,color:'var(--success)',fontWeight:600}}>✅ {fmt.date(os.data_pagamento)}{formaLabel ? ` · ${formaLabel}` : ''}</span>;
+              }
+              return (
+                <div key={os.id} className="os-card-mobile" onClick={()=>openView(os)}>
+                  <div className="os-card-top">
+                    <div className="os-card-num">#{os.numero || String(os.id).padStart(4,'0')}</div>
+                    <span className={`badge ${STATUS_CLASS[os.status]||'badge-gray'}`}>{STATUS_LABEL[os.status]||os.status}</span>
+                  </div>
+                  <div className="os-card-cliente">{os.cliente_nome||'Sem cliente'}</div>
+                  <div className="os-card-info">
+                    <span>{os.veiculo_modelo||'—'}{os.placa?` · ${os.placa}`:''}</span>
+                    <span>{fmt.date(os.data)}</span>
+                  </div>
+                  {pagInfo && <div style={{marginTop:4}}>{pagInfo}</div>}
+                  <div className="os-card-desc">{os.descricao}</div>
+                  <div className="os-card-bottom">
+                    {!isFuncionario&&<span className="os-card-valor">{fmt.currency(total)}</span>}
+                    <div className="os-card-actions">
+                      <button className="btn btn-outline btn-sm" onClick={e=>{e.stopPropagation();imprimir(os);}} title="Imprimir"><IcoPrint /></button>
+                      <button className="btn btn-outline btn-sm" onClick={e=>{e.stopPropagation();openEdit(os);}} title="Editar"><IcoEdit /></button>
+                      <button className="btn btn-outline btn-sm" onClick={e=>{e.stopPropagation();enviarWhatsApp(os);}} title="WhatsApp"><IcoWhatsApp /></button>
+                      <button className="btn btn-outline btn-sm" onClick={e=>{e.stopPropagation();remove(os.id);}} title="Excluir"><IcoTrash /></button>
+                    </div>
+                  </div>
+                  <div className="os-card-tap-hint">
+                    <span>Toque para ver detalhes</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          </>
+        ) : (
+          <div className="empty-state"><div className="empty-icon">📋</div><p>Nenhuma ordem encontrada</p><button className="btn btn-primary" onClick={openCreate}>Criar primeira OS</button></div>
+        )}
+      </div>
+
+      {/* Modal Form */}
+      {modal==='form' && (
+        <div className="modal-overlay open">
+          <div className="modal" style={{maxWidth:680}}>
+            <div className="modal-header">
+              <h2>{editing ? `Editar OS #${osList.find(o=>o.id===editing)?.numero || String(editing).padStart(4,'0')}` : 'Nova Ordem de Serviço'}</h2>
+              <button className="modal-close" onClick={()=>setModal(null)}>✕</button>
+            </div>
+            
+            {/* Alertas de status */}
+            {!isOnline && (
+              <div style={{
+                background: 'linear-gradient(135deg, #fbbf24, #f59e0b)',
+                padding: '12px 20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                borderBottom: '1px solid rgba(0,0,0,.1)',
+              }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                  <line x1="12" y1="9" x2="12" y2="13"/>
+                  <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>
+                    Você está offline
+                  </div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,.8)' }}>
+                    A OS será salva localmente e sincronizada quando a conexão voltar
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {pendingCount > 0 && isOnline && (
+              <div style={{
+                background: 'linear-gradient(135deg, #60a5fa, #3b82f6)',
+                padding: '12px 20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                borderBottom: '1px solid rgba(0,0,0,.1)',
+              }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" style={{animation: 'spin 1s linear infinite'}}>
+                  <polyline points="23 4 23 10 17 10"/>
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                </svg>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>
+                    Sincronizando operações pendentes...
+                  </div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,.8)' }}>
+                    {pendingCount} operação{pendingCount > 1 ? 'ões' : ''} sendo processada{pendingCount > 1 ? 's' : ''}
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Auto-save indicator */}
+            {autoSaveStatus && (
+              <div style={{
+                background: autoSaveStatus === 'saved' ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #60a5fa, #3b82f6)',
+                padding: '10px 20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                borderBottom: '1px solid rgba(0,0,0,.1)',
+              }}>
+                {autoSaveStatus === 'saving' ? (
+                  <>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" style={{animation: 'spin 1s linear infinite'}}>
+                      <polyline points="23 4 23 10 17 10"/>
+                      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                    </svg>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: '#fff' }}>Salvando rascunho...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: '#fff' }}>Rascunho salvo</span>
+                  </>
+                )}
+              </div>
+            )}
+            
+            <div className="modal-body">
+              <form onSubmit={save}>
+                <div className="form-grid">
+                  <div className="form-group">
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
+                      <label style={{marginBottom:0}}>Cliente</label>
+                      <button type="button" onClick={()=>{setNovoClienteOpen(o=>!o);setNovoVeiculoOpen(false);}} className="btn btn-primary btn-sm" style={{fontSize:12,fontWeight:700,padding:'4px 10px',lineHeight:1.4}}>
+                        {novoClienteOpen ? '✕ Cancelar' : '+ Novo'}
+                      </button>
+                    </div>
+                    {novoClienteOpen ? (
+                      <div style={{background:'var(--gray-50)',border:'1px solid var(--brand)',borderRadius:8,padding:'10px 12px',display:'flex',flexDirection:'column',gap:8}}>
+                        <input placeholder="Nome *" value={novoClienteForm.nome} onChange={e=>setNovoClienteForm(f=>({...f,nome:e.target.value}))} autoFocus style={{padding:'7px 10px',fontSize:13}}
+                          onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();criarClienteInline(e);}}} />
+                        <input placeholder="Telefone" value={novoClienteForm.telefone} onChange={e=>setNovoClienteForm(f=>({...f,telefone:e.target.value}))} style={{padding:'7px 10px',fontSize:13}} />
+                        <input placeholder="Endereço" value={novoClienteForm.endereco} onChange={e=>setNovoClienteForm(f=>({...f,endereco:e.target.value}))} style={{padding:'7px 10px',fontSize:13}} />
+                        <button type="button" className="btn btn-primary btn-sm" disabled={novoClienteSaving}
+                          onClick={criarClienteInline} style={{alignSelf:'flex-end'}}>
+                          {novoClienteSaving ? 'Salvando…' : 'Criar cliente'}
+                        </button>
+                      </div>
+                    ) : (
+                      <select value={form.cliente_id} onChange={e=>setForm(f=>({...f,cliente_id:e.target.value,veiculo_id:''}))}>
+                        <option value="">Selecionar...</option>
+                        {clientes.map(c=><option key={c.id} value={c.id}>{c.nome}</option>)}
+                      </select>
+                    )}
+                  </div>
+                  <div className="form-group">
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
+                      <label style={{marginBottom:0}}>{t.veiculo}</label>
+                      <button type="button" onClick={()=>{setNovoVeiculoOpen(o=>!o);setNovoClienteOpen(false);}} className="btn btn-primary btn-sm" style={{fontSize:12,fontWeight:700,padding:'4px 10px',lineHeight:1.4}}>
+                        {novoVeiculoOpen ? '✕ Cancelar' : '+ Novo'}
+                      </button>
+                    </div>
+                    {novoVeiculoOpen ? (
+                      <div style={{background:'var(--gray-50)',border:'1px solid var(--brand)',borderRadius:8,padding:'10px 12px',display:'flex',flexDirection:'column',gap:8}}>
+                        <input placeholder={`${t.modelo} *`} value={novoVeiculoForm.modelo} onChange={e=>setNovoVeiculoForm(f=>({...f,modelo:e.target.value}))} autoFocus style={{padding:'7px 10px',fontSize:13}} />
+                        <input placeholder={t.marca} value={novoVeiculoForm.marca} onChange={e=>setNovoVeiculoForm(f=>({...f,marca:e.target.value}))} style={{padding:'7px 10px',fontSize:13}} />
+                        <input placeholder={`${t.placa} (opcional)`} value={novoVeiculoForm.placa} onChange={e=>setNovoVeiculoForm(f=>({...f,placa:e.target.value.toUpperCase()}))} style={{padding:'7px 10px',fontSize:13,textTransform:'uppercase'}} />
+                        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+                          <input placeholder={t.ano} value={novoVeiculoForm.ano} onChange={e=>setNovoVeiculoForm(f=>({...f,ano:e.target.value}))} style={{padding:'7px 10px',fontSize:13}} />
+                          <input type="number" placeholder={t.kmPlaceholder||`${t.kmAbrev} atual`} value={novoVeiculoForm.km} onChange={e=>setNovoVeiculoForm(f=>({...f,km:e.target.value}))} style={{padding:'7px 10px',fontSize:13}} min="0" />
+                        </div>
+                        <button type="button" className="btn btn-primary btn-sm" disabled={novoVeiculoSaving}
+                          onClick={criarVeiculoInline} style={{alignSelf:'flex-end'}}>
+                          {novoVeiculoSaving ? 'Salvando…' : `Criar ${t.veiculo.toLowerCase()}`}
+                        </button>
+                      </div>
+                    ) : (
+                      <select value={form.veiculo_id} onChange={e=>setForm(f=>({...f,veiculo_id:e.target.value}))}>
+                        <option value="">Selecionar...</option>
+                        {veiculosFiltrados.map(v=><option key={v.id} value={v.id}>{v.marca} {v.modelo} — {v.placa}</option>)}
+                      </select>
+                    )}
+                  </div>
+                  {!isFuncionario && !isMecanico && (
+                  <div className="form-group">
+                    <label>{t.mecanico} responsável</label>
+                    <select value={form.mecanico_id||''} onChange={e=>setForm(f=>({...f,mecanico_id:e.target.value||null}))}>
+                      <option value="">Sem {t.mecanico.toLowerCase()}</option>
+                      {mecanicos.map(m=><option key={m.id} value={m.id}>{m.nome}</option>)}
+                    </select>
+                  </div>
+                  )}
+                  <div className="form-group full"><label>Problema relatado</label><textarea value={form.descricao} onChange={e=>setForm(f=>({...f,descricao:e.target.value}))} placeholder="Descreva o problema..." /></div>
+                  <div className="form-group full"><label>Serviços realizados</label><textarea value={form.servicos} onChange={e=>setForm(f=>({...f,servicos:e.target.value}))} placeholder="Liste os serviços feitos..." /></div>
+                </div>
+
+                {/* Peças detalhadas */}
+                {!isFuncionario && (
+                <div style={{marginTop:16,marginBottom:16}}>
+                  {/* Sugestões do estoque para autocompletar o nome da peça */}
+                  <datalist id="estoque-pecas-os">
+                    {estoquePecas.map(e => <option key={e.id} value={e.nome} />)}
+                  </datalist>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+                    <label style={{fontWeight:700,fontSize:13,color:'var(--gray-700)'}}>{t.pecaLabel}</label>
+                    <button type="button" className="btn btn-outline btn-sm" onClick={addPeca}>+ Adicionar {t.peca.toLowerCase()}</button>
+                  </div>
+                  <div style={{background:'var(--gray-50)',borderRadius:'var(--r-sm)',overflow:'hidden',border:'1px solid var(--gray-200)'}}>
+                    {form.pecas_itens.map((p,i)=>(
+                      <div key={p.id} style={{padding:'10px',borderBottom:'1px solid var(--gray-200)'}}>
+                        {/* Linha 1: Descrição (autocompletar do estoque) */}
+                        <input list="estoque-pecas-os" value={p.nome} onChange={e=>setPecaNome(p.id,e.target.value)} placeholder="Ex: Filtro de óleo Bosch" style={{padding:'7px 10px',fontSize:13,width:'100%',marginBottom:8}} />
+                        {/* Linha 2: Qtd + Valor + checkbox + remover */}
+                        <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+                          <div style={{display:'flex',alignItems:'center',gap:4}}>
+                            <label style={{fontSize:11,fontWeight:600,color:'var(--gray-500)',whiteSpace:'nowrap'}}>Qtd</label>
+                            <input type="number" min="1" value={p.qtd} onChange={e=>setPeca(p.id,'qtd',e.target.value)} placeholder="1" style={{padding:'6px 8px',fontSize:12,textAlign:'center',width:60}} />
+                          </div>
+                          <div style={{display:'flex',alignItems:'center',gap:4,flex:1}}>
+                            <label style={{fontSize:11,fontWeight:600,color:'var(--gray-500)',whiteSpace:'nowrap'}}>Valor un. R$</label>
+                            <input type="number" step="0.01" min="0" value={p.cliente_fornece ? '' : (p.valor_unit === '0' || p.valor_unit === 0 ? '' : p.valor_unit)} onChange={e=>setPeca(p.id,'valor_unit',e.target.value)} placeholder="0,00" style={{padding:'6px 8px',fontSize:12,textAlign:'right',flex:1,opacity:p.cliente_fornece?0.4:1}} disabled={p.cliente_fornece} />
+                          </div>
+                          <label style={{display:'flex',alignItems:'center',gap:3,fontSize:11,color:'var(--gray-500)',cursor:'pointer',whiteSpace:'nowrap'}}>
+                            <input type="checkbox" checked={!!p.cliente_fornece} onChange={e=>setPeca(p.id,'cliente_fornece',e.target.checked)} style={{width:14,height:14}} />
+                            {t.peca} do cliente
+                          </label>
+                          <button type="button" onClick={()=>removePeca(p.id)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--danger)',fontSize:18}} disabled={form.pecas_itens.length===1}>×</button>
+                        </div>
+                        {/* Subtotal da linha */}
+                        {!p.cliente_fornece && parseFloat(p.valor_unit) > 0 && (
+                          <div style={{fontSize:11,color:'var(--gray-500)',textAlign:'right',marginTop:4}}>
+                            Subtotal: <strong>{fmt.currency((parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1))}</strong>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    <div style={{display:'flex',justifyContent:'flex-end',padding:'8px 10px',fontSize:12,fontWeight:600,color:'var(--gray-600)'}}>
+                      Total {t.pecas.toLowerCase()}: <strong style={{marginLeft:8,color:'var(--gray-900)'}}>{fmt.currency(form.pecas_itens.reduce((s,p)=>s+(parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1),0))}</strong>
+                    </div>
+                  </div>
+                </div>
+                )}
+
+                <div className="form-grid">
+                  {!isFuncionario && (
+                  <div className="form-group full">
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+                      <label style={{marginBottom:0,fontWeight:700}}>Mão de obra</label>
+                      <button type="button" className="btn btn-outline btn-sm" onClick={addMO}>+ Adicionar serviço</button>
+                    </div>
+                    <div style={{background:'var(--gray-50)',borderRadius:'var(--r-sm)',overflow:'hidden',border:'1px solid var(--gray-200)'}}>
+                      {(form.mo_itens||[]).map((m)=>(
+                        <div key={m.id} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 10px',borderBottom:'1px solid var(--gray-200)'}}>
+                          <input
+                            placeholder="Descrição do serviço (ex: Troca de óleo)"
+                            value={m.descricao}
+                            onChange={e=>setMO(m.id,'descricao',e.target.value)}
+                            style={{flex:1,padding:'7px 10px',fontSize:13}}
+                          />
+                          <input
+                            type="number" step="0.01" min="0"
+                            placeholder="R$ 0,00"
+                            value={m.valor}
+                            onChange={e=>setMO(m.id,'valor',e.target.value)}
+                            style={{width:110,padding:'7px 10px',fontSize:13,textAlign:'right'}}
+                          />
+                          <button type="button" onClick={()=>removeMO(m.id)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--danger)',fontSize:18,flexShrink:0}} disabled={(form.mo_itens||[]).length===1}>×</button>
+                        </div>
+                      ))}
+                      <div style={{display:'flex',justifyContent:'flex-end',padding:'8px 10px',fontSize:12,fontWeight:600,color:'var(--gray-600)'}}>
+                        Total mão de obra: <strong style={{marginLeft:8,color:'var(--gray-900)'}}>{fmt.currency(totalMOForm)}</strong>
+                      </div>
+                    </div>
+                  </div>
+                  )}
+                  {!isFuncionario && (
+                  <div className="form-group">
+                    <label>Total geral</label>
+                    <div style={{padding:'10px 13px',background:'var(--brand-light)',borderRadius:'var(--r-sm)',fontFamily:'Poppins,sans-serif',fontSize:16,fontWeight:800,color:'var(--brand)'}}>{fmt.currency(totalForm)}</div>
+                  </div>
+                  )}
+                  <div className="form-group"><label>Data</label><input type="date" value={form.data} onChange={e=>setForm(f=>({...f,data:e.target.value}))} /></div>
+                  <div className="form-group">
+                    <label>Status</label>
+                    <select value={form.status} onChange={e=>setForm(f=>({...f,status:e.target.value}))}>
+                      <option value="em_andamento">Em andamento</option>
+                      <option value="finalizado">Finalizado</option>
+                    </select>
+                  </div>
+                  <div className="form-group full"><label>Observações</label><input value={form.observacao} onChange={e=>setForm(f=>({...f,observacao:e.target.value}))} placeholder="Observações adicionais..." /></div>
+                </div>
+
+                {/* Upload de fotos — disponível na criação e edição */}
+                <div style={{ marginTop: 16, marginBottom: 16, padding: '14px 16px', background: 'var(--gray-50)', borderRadius: 10, border: '1px solid var(--gray-200)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gray-700)' }}>
+                      Fotos {pendingPhotos.length > 0 && <span style={{ fontWeight: 400, color: 'var(--gray-400)' }}>({pendingPhotos.length} selecionada{pendingPhotos.length > 1 ? 's' : ''})</span>}
+                    </div>
+                    <label style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 5,
+                      padding: '5px 12px', borderRadius: 7, cursor: 'pointer',
+                      background: 'var(--accent)', color: '#fff', fontSize: 12, fontWeight: 600,
+                    }}>
+                      + Adicionar
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        multiple
+                        style={{ display: 'none' }}
+                        onChange={handlePendingPhotos}
+                      />
+                    </label>
+                  </div>
+                  {pendingPhotos.length === 0 ? (
+                    <div style={{ fontSize: 12, color: 'var(--gray-400)', textAlign: 'center', padding: '8px 0' }}>
+                      Tire fotos dos problemas encontrados para enviar ao cliente
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {pendingPhotos.map((p, i) => (
+                        <div key={i} style={{ position: 'relative', width: 64, height: 64, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--gray-200)' }}>
+                          <img src={p.preview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <button type="button" onClick={() => setPendingPhotos(f => f.filter((_, j) => j !== i))} style={{
+                            position: 'absolute', top: 2, right: 2, width: 18, height: 18, borderRadius: '50%',
+                            background: 'rgba(220,38,38,.85)', color: '#fff', border: 'none', fontSize: 10, cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}>✕</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {pendingPhotos.length >= 15 && (
+                    <div style={{ fontSize: 11, color: 'var(--danger)', marginTop: 6 }}>Limite de 15 fotos atingido</div>
+                  )}
+                </div>
+
+                <div className="form-actions">
+                  <button type="button" className="btn btn-outline" onClick={()=>setModal(null)}>Cancelar</button>
+                  <button type="submit" className="btn btn-primary">Salvar OS</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Ver */}
+      {modal==='ver' && viewing && (()=>{
+        const pecas = viewing.pecas_itens || [];
+        const totalPecas = pecas.reduce((s,p)=>s+(parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1),0);
+        const moItensView = viewing.mo_itens || [];
+        const totalMOView = moItensView.length > 0 ? moItensView.reduce((s,m)=>s+(parseFloat(m.valor)||0),0) : (parseFloat(viewing.valor_mo)||0);
+        const total = totalMOView + totalPecas || parseFloat(viewing.valor||0);
+        return (
+          <div className="modal-overlay open">
+            <div className="modal" style={{maxWidth:620}}>
+              <div className="modal-header">
+                <h2>OS #{viewing.numero || String(viewing.id).padStart(4,'0')}</h2>
+                <button className="modal-close" onClick={()=>setModal(null)}>✕</button>
+              </div>
+              <div className="modal-body">
+                <div className="os-view-fields">
+                  {[
+                    {l:'Cliente',v:viewing.cliente_nome||'—'},
+                    {l:t.veiculo,v:(viewing.veiculo_marca?viewing.veiculo_marca+' ':'')+( viewing.veiculo_modelo||'—')},
+                    {l:t.placa,v:viewing.placa||'—'},
+                    {l:'Data',v:fmt.date(viewing.data)},
+                    ...(viewing.mecanico_nome ? [{l:'Mecânico',v:viewing.mecanico_nome}] : []),
+                    {l:'Status',v:<span className={`badge ${STATUS_CLASS[viewing.status]||'badge-gray'}`}>{STATUS_LABEL[viewing.status]||viewing.status}</span>}
+                  ].map(item=>(
+                    <div key={item.l} className="os-view-field">
+                      <div className="os-view-label">{item.l}</div>
+                      <div className="os-view-value">{item.v}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {[{t:'Serviços realizados',v:viewing.servicos},{t:'Problema relatado',v:viewing.descricao},{t:'Observação',v:viewing.observacao}].filter(s=>s.v).map(s=>(
+                  <div key={s.t} style={{marginBottom:12}}>
+                    <div className="os-view-label">{s.t}</div>
+                    <div className="os-view-text-block">{s.v}</div>
+                  </div>
+                ))}
+
+                {/* Peças — cards no mobile em vez de tabela */}
+                <div style={{marginBottom:12}}>
+                  <div className="os-view-label">{t.pecas} utilizadas</div>
+                  {pecas.filter(p=>p.nome).length ? (
+                    <div className="os-view-pecas">
+                      {pecas.filter(p=>p.nome).map((p,i)=>(
+                        <div key={i} className="os-view-peca-item">
+                          <div style={{flex:1,minWidth:0}}>
+                            <div className="os-view-peca-nome">{p.nome}</div>
+                            <div className="os-view-peca-qtd">Qtd: {p.qtd||1}</div>
+                          </div>
+                          {!isFuncionario&&(
+                            <div style={{textAlign:'right',flexShrink:0}}>
+                              <div className="os-view-peca-qtd">{fmt.currency(p.valor_unit)} un.</div>
+                              <div className="os-view-peca-total">{fmt.currency((parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1))}</div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : <p style={{fontSize:13,color:'var(--gray-400)'}}>Nenhuma peça registrada</p>}
+                </div>
+
+                {!isFuncionario && (
+                <>
+                <div className="os-view-totais">
+                  {moItensView.length > 0 ? (
+                    moItensView.map((m,i)=>(
+                      <div key={i} className="os-view-total-item">
+                        <span>{m.descricao||'Mão de obra'}</span>
+                        <span>{fmt.currency(m.valor)}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="os-view-total-item">
+                      <span>Mão de obra</span>
+                      <span>{fmt.currency(viewing.valor_mo)}</span>
+                    </div>
+                  )}
+                  {moItensView.length > 1 && (
+                    <div className="os-view-total-item" style={{fontWeight:700}}>
+                      <span>Total mão de obra</span>
+                      <span>{fmt.currency(totalMOView)}</span>
+                    </div>
+                  )}
+                  <div className="os-view-total-item">
+                    <span>Total {t.pecas.toLowerCase()}</span>
+                    <span>{fmt.currency(totalPecas)}</span>
+                  </div>
+                  <div className="os-view-total-final">
+                    <span>Total</span>
+                    <span>{fmt.currency(total)}</span>
+                  </div>
+                </div>
+                </>
+                )}
+
+                {/* Histórico de pagamento */}
+                {viewPagamentos.length > 0 && (
+                  <div style={{marginBottom:16}}>
+                    <div style={{fontSize:11,fontWeight:700,color:'var(--gray-400)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:8}}>💳 Pagamento registrado</div>
+                    {viewPagamentos.map(pag => {
+                      const formaLabel = {pix:'PIX',dinheiro:'Dinheiro',debito:'Débito',credito:'Crédito',boleto:'Boleto'}[pag.forma]||pag.forma;
+                      return (
+                        <div key={pag.id} style={{background:'var(--gray-50)',borderRadius:'var(--r-sm)',padding:'12px 14px',border:'1px solid var(--gray-200)',marginBottom:8}}>
+                          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+                            <span style={{fontSize:13,fontWeight:700,color:'var(--gray-800)'}}>
+                              {pag.forma==='pix'?'📱':pag.forma==='dinheiro'?'💵':'💳'} {formaLabel}
+                              {pag.forma==='credito'&&pag.parcelas>1?` ${pag.parcelas}x`:''}
+                              {pag.bandeira?` · ${pag.bandeira.charAt(0).toUpperCase()+pag.bandeira.slice(1)}`:''}
+                            </span>
+                            <span style={{fontSize:13,fontWeight:700,color:'var(--success)'}}>{fmt.currency(pag.valor_total)}</span>
+                          </div>
+                          {pag.taxa_maquininha > 0 && (
+                            <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--gray-500)'}}>
+                              <span>Taxa {pag.taxa_maquininha}% → Líquido:</span>
+                              <span style={{fontWeight:600,color:'var(--gray-700)'}}>{fmt.currency(pag.valor_liquido)}</span>
+                            </div>
+                          )}
+                          {pag.forma==='credito'&&pag.parcelas>1&&(
+                            <div style={{fontSize:12,color:'var(--gray-500)',marginTop:4}}>
+                              {pag.parcelas}x de {fmt.currency(pag.valor_parcela)} (recebimento a cada 30 dias)
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <FotoUploader
+                  osId={viewing.id}
+                  fotos={viewFotos}
+                  onUpdate={() => api.app.os.fotos.list(viewing.id).then(data => setViewFotos(data||[])).catch(()=>{})}
+                  disabled={viewing.status === 'finalizado'}
+                />
+
+                <div className="os-view-actions">
+                  <button className="btn btn-outline" onClick={()=>setModal(null)}>Fechar</button>
+                  <button className="btn btn-outline" onClick={()=>imprimir(viewing)}><IcoPrint /> Imprimir</button>
+                  <button className="btn btn-outline" onClick={()=>enviarWhatsApp(viewing)}><IcoWhatsApp /> WhatsApp</button>
+                  <button className="btn btn-outline" title="Copiar link de acompanhamento para o cliente"
+                    onClick={async()=>{
+                      try {
+                        let token = viewing.token_publico;
+                        if (!token) {
+                          const r = await api.app.os.link(viewing.id);
+                          token = r.token;
+                          setViewing(v => v ? {...v, token_publico: token} : v);
+                          setOsList(l => l.map(o => o.id===viewing.id ? {...o, token_publico:token} : o));
+                        }
+                        const url = `${window.location.origin}/acompanhar/${token}`;
+                        await navigator.clipboard?.writeText(url);
+                        showToast('🔗 Link copiado! Envie ao cliente.');
+                      } catch { showToast('Erro ao gerar link','error'); }
+                    }}>
+                    🔗 Link cliente
+                  </button>
+                  {viewing.status==='finalizado'&&!isFuncionario&&(
+                    <button className="btn btn-outline" onClick={()=>{setModal('comprovante');abrirComprovante(viewing.id);}}>📄 Comprovante</button>
+                  )}
+                  <button className="btn btn-primary" onClick={()=>openEdit(viewing)}><IcoEdit /> Editar</button>
+                  {viewing.status==='em_andamento'&&<button className="btn btn-success" onClick={()=>finalizar(viewing.id)}>Finalizar</button>}
+                  {viewing.status==='finalizado'&&<button className="btn btn-outline" onClick={()=>reabrir(viewing.id)}>↩ Reabrir</button>}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      <Toast msg={toast.msg} type={toast.type} />
+
+      {/* ══ Modal Comprovante de Serviço ══════════════════════════ */}
+      {modal==='comprovante' && (
+        <div className="modal-overlay open" style={{zIndex:400}}>
+          <div className="modal" style={{maxWidth:560}}>
+            <div className="modal-header">
+              <h2>📄 Comprovante de Serviço</h2>
+              <button className="modal-close" onClick={()=>{setModal(null);setComprovante(null);}}>✕</button>
+            </div>
+            <div className="modal-body">
+              {comprovanteLoading ? (
+                <div style={{textAlign:'center',padding:'40px 0',color:'var(--gray-400)'}}>
+                  <div style={{fontSize:32,marginBottom:12}}>⏳</div>
+                  <div style={{fontSize:14}}>Carregando comprovante…</div>
+                </div>
+              ) : comprovante ? (
+                <>
+                  {/* Resumo da OS */}
+                  <div style={{background:'var(--brand-light,#f0f6ff)',border:'1px solid var(--brand-200,#c7d9f0)',borderRadius:'var(--r-md,8px)',padding:'16px 18px',marginBottom:20}}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+                      <span style={{fontSize:12,fontWeight:700,color:'var(--brand)',textTransform:'uppercase',letterSpacing:'.5px'}}>
+                        OS Nº {comprovante.os.numero || String(comprovante.os.id).padStart(4,'0')}
+                      </span>
+                      <span style={{display:'inline-block',padding:'2px 10px',borderRadius:20,fontSize:11,fontWeight:700,background:'#f0fdf4',color:'#16a34a',border:'1px solid #bbf7d0'}}>✓ Finalizado</span>
+                    </div>
+                    <div style={{fontSize:14,fontWeight:600,color:'var(--gray-800)',marginBottom:4}}>
+                      {comprovante.os.cliente_nome || '—'}
+                    </div>
+                    <div style={{fontSize:12,color:'var(--gray-500)'}}>
+                      {[comprovante.os.veiculo_marca, comprovante.os.veiculo_modelo].filter(Boolean).join(' ')}
+                      {(comprovante.os.veiculo_placa||comprovante.os.placa) ? ` · ${comprovante.os.veiculo_placa||comprovante.os.placa}` : ''}
+                    </div>
+                    {(() => {
+                      const totalMO    = parseFloat(comprovante.os.valor_mo)    || 0;
+                      const totalPecas = parseFloat(comprovante.os.valor_pecas) || 0;
+                      const total      = totalMO + totalPecas;
+                      // Só mostra garantia se foi explicitamente ativada nesta OS
+                      const garantiaDias = comprovante.os.garantia_ativa
+                        ? (comprovante.os.garantia_prazo_dias || comprovante.oficina.garantia_padrao_dias || 0)
+                        : 0;
+                      return (
+                        <div style={{marginTop:10,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                          <span style={{fontSize:12,color:'var(--gray-500)'}}>
+                            {garantiaDias > 0 ? `🛡️ Garantia: ${garantiaDias} dias` : ''}
+                          </span>
+                          <span style={{fontFamily:'Poppins,sans-serif',fontSize:20,fontWeight:800,color:'var(--accent,#F97316)'}}>
+                            {(() => { const v = total; return 'R$\u00a0' + v.toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.'); })()}
+                          </span>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Configuração de garantia — opt-in por OS */}
+                  {!isFuncionario && !isMecanico && (
+                    <details style={{marginBottom:16,background:'var(--gray-50)',borderRadius:'var(--r-sm,6px)',border:'1px solid var(--gray-200)'}}>
+                      <summary style={{padding:'10px 14px',cursor:'pointer',fontSize:12,fontWeight:600,color:'var(--gray-700)',userSelect:'none'}}>
+                        🛡️ {comprovante.os.garantia_ativa ? 'Garantia configurada' : 'Informar garantia (opcional)'}
+                      </summary>
+                      {/* Toggle para ativar/desativar garantia */}
+                      <div style={{padding:'8px 14px',borderBottom:'1px solid var(--gray-200)',display:'flex',alignItems:'center',gap:10}}>
+                        <label
+                          style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',fontSize:13,color:'var(--gray-700)'}}
+                          onClick={e => e.stopPropagation()}
+                        >
+                          <input type="checkbox"
+                            checked={!!comprovante.os.garantia_ativa}
+                            onClick={e => e.stopPropagation()}
+                            onChange={async e => {
+                              const ativo = e.target.checked;
+                              setComprovante(prev => ({...prev, os: {...prev.os, garantia_ativa: ativo}}));
+                              try {
+                                await api.app.os.garantia(comprovante.os.id, {
+                                  garantia_ativa: ativo,
+                                  garantia_prazo_dias: ativo
+                                    ? (comprovante.os.garantia_prazo_dias || comprovante.oficina.garantia_padrao_dias || 90)
+                                    : 0,
+                                });
+                                const d = await api.app.os.comprovante(comprovante.os.id);
+                                setComprovante(d);
+                                showToast(ativo ? 'Garantia ativada nesta OS' : 'Garantia removida');
+                              } catch {
+                                setComprovante(prev => ({...prev, os: {...prev.os, garantia_ativa: !ativo}}));
+                                showToast('Erro ao salvar garantia', 'error');
+                              }
+                            }}
+                          />
+                          Informar garantia nesta OS
+                        </label>
+                      </div>
+                      {comprovante.os.garantia_ativa && (
+                        <GarantiaForm osId={comprovante.os.id} os={comprovante.os} oficina={comprovante.oficina} onSave={async()=>{
+                          const d = await api.app.os.comprovante(comprovante.os.id);
+                          setComprovante(d);
+                          showToast('Garantia salva');
+                        }} />
+                      )}
+                    </details>
+                  )}
+
+                  {/* Botões de ação */}
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}}>
+                    <button className="btn btn-outline" style={{display:'flex',alignItems:'center',justifyContent:'center',gap:6}} onClick={imprimirComprovante}>
+                      <IcoPrint /> Visualizar / Imprimir
+                    </button>
+                    <button className="btn btn-outline" style={{display:'flex',alignItems:'center',justifyContent:'center',gap:6}} onClick={baixarComprovanteOSPDF}>
+                      📥 Baixar PDF
+                    </button>
+                    <button className="btn btn-success" style={{display:'flex',alignItems:'center',justifyContent:'center',gap:6}} onClick={enviarComprovanteWhatsApp}
+                      disabled={!comprovante.os.cliente_telefone}
+                      title={!comprovante.os.cliente_telefone ? 'Cliente sem telefone cadastrado' : undefined}>
+                      <IcoWhatsApp /> Enviar pelo WhatsApp
+                    </button>
+                    <button className="btn btn-primary" onClick={()=>{setModal(null);setComprovante(null);}}>
+                      ✓ Voltar para OS
+                    </button>
+                  </div>
+                  {!comprovante.os.cliente_telefone && (
+                    <p style={{fontSize:11,color:'var(--gray-400)',textAlign:'center',marginTop:4}}>
+                      ⚠️ WhatsApp indisponível — cliente sem telefone cadastrado
+                    </p>
+                  )}
+                  <p style={{fontSize:11,color:'var(--gray-400)',textAlign:'center',marginTop:8,fontStyle:'italic'}}>
+                    Para enviar pelo WhatsApp, baixe o PDF primeiro e depois anexe na conversa que será aberta.
+                  </p>
+                </>
+              ) : (
+                <div style={{textAlign:'center',padding:'40px 0',color:'var(--gray-400)'}}>
+                  <div style={{fontSize:32,marginBottom:12}}>⚠️</div>
+                  <div style={{fontSize:14}}>Não foi possível carregar o comprovante.</div>
+                  <button className="btn btn-outline" style={{marginTop:12}} onClick={()=>{setModal(null);setComprovante(null);}}>Fechar</button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Pagamento */}
+      {modal==='pagamento' && (
+        <div className="modal-overlay open">
+          <div className="modal" style={{maxWidth:520}}>
+            <div className="modal-header">
+              <h2>Dar baixa — Forma de pagamento</h2>
+              <button className="modal-close" onClick={()=>setModal(null)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={confirmarPagamento}>
+                {/* Valor total */}
+                <div style={{background:'var(--brand-light)',borderRadius:'var(--r-sm)',padding:'14px 16px',marginBottom:20,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                  <span style={{fontSize:13,fontWeight:600,color:'var(--brand)'}}>Valor da OS</span>
+                  <span style={{fontFamily:'Poppins,sans-serif',fontSize:22,fontWeight:800,color:'var(--brand)'}}>{fmt.currency(pagForm.valor_total)}</span>
+                </div>
+                {repassarTaxaOs && (pagForm.forma==='credito'||pagForm.forma==='debito') && taxaValor > 0 && (
+                  <div style={{background:'#fff7ed',border:'1px solid rgba(249,115,22,.3)',borderRadius:'var(--r-sm)',padding:'10px 14px',marginBottom:16,fontSize:12,color:'#c05c0a',fontWeight:600}}>
+                    ⚡ Taxa repassada ao cliente — o total cobrado será {fmt.currency(totalComTaxa)}
+                  </div>
+                )}
+
+                {/* Formas de pagamento */}
+                <div style={{marginBottom:16}}>
+                  <label style={{fontSize:12,fontWeight:700,color:'var(--gray-600)',marginBottom:8,display:'block'}}>Forma de pagamento *</label>
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(130px, 1fr))',gap:8}}>
+                    {[
+                      {v:'pix',label:'PIX'},
+                      {v:'dinheiro',label:'Dinheiro'},
+                      {v:'debito',label:'Débito'},
+                      {v:'credito',label:'Crédito'},
+                      {v:'boleto',label:'Boleto'},
+                    ].map(f=>(
+                      <button key={f.v} type="button"
+                        className={`pay-method-btn${pagForm.forma===f.v?' pay-method-btn--active':''}`}
+                        onClick={()=>setPagForm(p=>({...p,forma:f.v,parcelas:1,bandeira:'',taxa_maquininha:''}))}>
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Opções de crédito */}
+                {pagForm.forma==='credito' && (
+                  <div style={{background:'var(--gray-50)',borderRadius:'var(--r-sm)',padding:16,marginBottom:16,border:'1px solid var(--gray-200)'}}>
+                    <div className="form-grid" style={{gap:12}}>
+                      <div className="form-group">
+                        <label>Parcelas</label>
+                        <select value={pagForm.parcelas} onChange={e=>setPagForm(p=>({...p,parcelas:parseInt(e.target.value)}))}>
+                          {[1,2,3,4,5,6,7,8,9,10].map(n=>(
+                            <option key={n} value={n}>{n}x de {fmt.currency((repassarTaxaCliente ? totalComTaxa : pagForm.valor_total)/n)}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>Bandeira</label>
+                        <select value={pagForm.bandeira} onChange={e=>setPagForm(p=>({...p,bandeira:e.target.value}))}>
+                          <option value="">Selecionar...</option>
+                          <option value="visa">Visa</option>
+                          <option value="mastercard">Mastercard</option>
+                          <option value="elo">Elo</option>
+                          <option value="amex">American Express</option>
+                          <option value="hipercard">Hipercard</option>
+                          <option value="outra">Outra</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>Taxa da maquininha (%)</label>
+                        <input type="number" step="0.01" min="0" max="99" placeholder="Ex: 3.5" value={pagForm.taxa_maquininha} onChange={e=>setPagForm(p=>({...p,taxa_maquininha:e.target.value}))} />
+                      </div>
+                    </div>
+                    {/* Checkbox: repassar taxa ao cliente — por OS */}
+                    <label style={{display:'flex',alignItems:'center',gap:10,cursor:'pointer',marginBottom:8,
+                        padding:'10px 12px',background:'var(--gray-50)',borderRadius:'var(--r-sm)',
+                        border:`1px solid ${repassarTaxaOs?'var(--accent)':'var(--gray-200)'}`,transition:'border-color .15s'}}>
+                        <input type="checkbox" checked={!!repassarTaxaOs}
+                          onChange={e=>setPagForm(p=>({...p,repassar_taxa_os:e.target.checked}))}
+                          style={{accentColor:'var(--accent)',width:16,height:16,cursor:'pointer',flexShrink:0}} />
+                        <span style={{fontSize:13,fontWeight:600,color:repassarTaxaOs?'var(--accent)':'var(--gray-700)'}}>
+                          Repassar taxa ao cliente
+                        </span>
+                        <span style={{fontSize:12,color:'var(--gray-500)',marginLeft:'auto'}}>
+                          {repassarTaxaOs && taxaValor > 0 ? `+${fmt.currency(taxaValor)}` : 'taxa por conta da oficina'}
+                        </span>
+                      </label>
+                    {taxaValor > 0 && (
+                      <div style={{marginTop:12,padding:'12px 14px',background:'#fff',borderRadius:'var(--r-sm)',border:`1px solid ${repassarTaxaCliente ? 'var(--accent)' : 'var(--gray-200)'}`}}>
+                        <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--gray-500)',marginBottom:6}}>
+                          <span>Serviço</span>
+                          <span>{fmt.currency(pagForm.valor_total)}</span>
+                        </div>
+                        <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:repassarTaxaCliente?'var(--accent)':'var(--danger)',marginBottom:6}}>
+                          <span>Taxa maquininha ({pagForm.taxa_maquininha}%)</span>
+                          <span style={{fontWeight:700}}>{repassarTaxaCliente ? '+ ' : '- '}{fmt.currency(taxaValor)}</span>
+                        </div>
+                        <div style={{display:'flex',justifyContent:'space-between',fontSize:14,fontWeight:800,borderTop:'1px solid var(--gray-200)',paddingTop:6}}>
+                          {repassarTaxaOs ? (
+                            <>
+                              <span style={{color:'var(--accent)'}}>Total cobrado do cliente</span>
+                              <span style={{color:'var(--accent)'}}>{fmt.currency(totalComTaxa)}</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>Você recebe</span>
+                              <span style={{color:'var(--success)'}}>{fmt.currency(liquidoOficina)}</span>
+                            </>
+                          )}
+                        </div>
+                        {repassarTaxaOs && (
+                          <div style={{fontSize:11,color:'var(--gray-400)',marginTop:4}}>
+                            Receita da oficina: {fmt.currency(pagForm.valor_total)}
+                          </div>
+                        )}
+                        {pagForm.parcelas > 1 && (
+                          <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--gray-500)',marginTop:4}}>
+                            <span>{pagForm.parcelas}x de</span>
+                            <span style={{fontWeight:600}}>{fmt.currency((repassarTaxaOs ? totalComTaxa : liquidoOficina) / pagForm.parcelas)}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Opções de débito */}
+                {pagForm.forma==='debito' && (
+                  <div style={{background:'var(--gray-50)',borderRadius:'var(--r-sm)',padding:16,marginBottom:16,border:'1px solid var(--gray-200)'}}>
+                    <div className="form-grid" style={{gap:12}}>
+                      <div className="form-group">
+                        <label>Bandeira</label>
+                        <select value={pagForm.bandeira} onChange={e=>setPagForm(p=>({...p,bandeira:e.target.value}))}>
+                          <option value="">Selecionar...</option>
+                          <option value="visa">Visa</option>
+                          <option value="mastercard">Mastercard</option>
+                          <option value="elo">Elo</option>
+                          <option value="outra">Outra</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>Taxa da maquininha (%)</label>
+                        <input type="number" step="0.01" min="0" max="99" placeholder="Ex: 1.5" value={pagForm.taxa_maquininha} onChange={e=>setPagForm(p=>({...p,taxa_maquininha:e.target.value}))} />
+                      </div>
+                    </div>
+                    {/* Checkbox: repassar taxa ao cliente — por OS */}
+                    {/* Checkbox: repassar taxa ao cliente — por OS */}
+                    <label style={{display:'flex',alignItems:'center',gap:10,cursor:'pointer',marginBottom:8,
+                        padding:'10px 12px',background:'var(--gray-50)',borderRadius:'var(--r-sm)',
+                        border:`1px solid ${repassarTaxaOs?'var(--accent)':'var(--gray-200)'}`,transition:'border-color .15s'}}>
+                        <input type="checkbox" checked={!!repassarTaxaOs}
+                          onChange={e=>setPagForm(p=>({...p,repassar_taxa_os:e.target.checked}))}
+                          style={{accentColor:'var(--accent)',width:16,height:16,cursor:'pointer',flexShrink:0}} />
+                        <span style={{fontSize:13,fontWeight:600,color:repassarTaxaOs?'var(--accent)':'var(--gray-700)'}}>
+                          Repassar taxa ao cliente
+                        </span>
+                        <span style={{fontSize:12,color:'var(--gray-500)',marginLeft:'auto'}}>
+                          {repassarTaxaOs && taxaValor > 0 ? `+${fmt.currency(taxaValor)}` : 'taxa por conta da oficina'}
+                        </span>
+                      </label>
+                    {taxaValor > 0 && (
+                      <div style={{marginTop:12,padding:'12px 14px',background:'#fff',borderRadius:'var(--r-sm)',border:`1px solid ${repassarTaxaOs ? 'var(--accent)' : 'var(--gray-200)'}`}}>
+                        <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--gray-500)',marginBottom:6}}>
+                          <span>Serviço</span><span>{fmt.currency(pagForm.valor_total)}</span>
+                        </div>
+                        <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:repassarTaxaOs?'var(--accent)':'var(--danger)',marginBottom:6}}>
+                          <span>Taxa ({pagForm.taxa_maquininha}%)</span>
+                          <span style={{fontWeight:700}}>{repassarTaxaOs ? '+ ' : '- '}{fmt.currency(taxaValor)}</span>
+                        </div>
+                        <div style={{display:'flex',justifyContent:'space-between',fontSize:14,fontWeight:800,borderTop:'1px solid var(--gray-200)',paddingTop:6}}>
+                          {repassarTaxaOs ? (
+                            <><span style={{color:'var(--accent)'}}>Total cobrado do cliente</span><span style={{color:'var(--accent)'}}>{fmt.currency(totalComTaxa)}</span></>
+                          ) : (
+                            <><span>Você recebe</span><span style={{color:'var(--success)'}}>{fmt.currency(liquidoOficina)}</span></>
+                          )}
+                        </div>
+                        {repassarTaxaOs && <div style={{fontSize:11,color:'var(--gray-400)',marginTop:4}}>Receita da oficina: {fmt.currency(pagForm.valor_total)}</div>}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {/* Opções de boleto */}
+                {pagForm.forma==='boleto' && (
+                  <div style={{background:'var(--gray-50)',borderRadius:'var(--r-sm)',padding:16,marginBottom:16,border:'1px solid var(--gray-200)'}}>
+                    <div className="form-grid" style={{gap:12}}>
+                      <div className="form-group">
+                        <label>Vencimento do boleto</label>
+                        <input type="date" value={pagForm.boleto_vencimento||''} onChange={e=>setPagForm(p=>({...p,boleto_vencimento:e.target.value}))} />
+                      </div>
+                      <div className="form-group">
+                        <label>Data de recebimento <span style={{fontSize:11,color:'var(--gray-400)'}}>(preencha se já recebeu)</span></label>
+                        <input type="date" value={pagForm.boleto_recebido_em||''} onChange={e=>setPagForm(p=>({...p,boleto_recebido_em:e.target.value}))} />
+                      </div>
+                    </div>
+                    <div style={{fontSize:12,color:'var(--gray-500)',marginTop:8}}>
+                      {pagForm.boleto_recebido_em
+                        ? '✓ Boleto será registrado como recebido.'
+                        : '⏳ Boleto ficará pendente até a confirmação do recebimento.'}
+                    </div>
+                  </div>
+                )}
+
+                {/* Observação */}
+                <div className="form-group" style={{marginBottom:20}}>
+                  <label>Observação (opcional)</label>
+                  <input value={pagForm.observacao} onChange={e=>setPagForm(p=>({...p,observacao:e.target.value}))} placeholder="Ex: Cliente pagou com 2 cartões..." />
+                </div>
+
+                <div className="form-actions">
+                  <button type="button" className="btn btn-outline" onClick={()=>setModal(null)}>Cancelar</button>
+                  <button type="submit" className="btn btn-primary" disabled={!pagForm.forma || pagSaving}>
+                    {pagSaving ? 'Registrando…' : 'Confirmar pagamento e finalizar'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══ Modal OS Rápida ══════════════════════════════════════════ */}
+      {modal === 'rapida' && (
+        <div className="modal-overlay open">
+          <div className="modal" style={{maxWidth: 520}}>
+            <div className="modal-header">
+              <div>
+                <h2>⚡ OS Rápida</h2>
+                <div style={{fontSize:12,color:'var(--gray-400)',marginTop:2}}>Preencha e crie cliente, {t.veiculo.toLowerCase()} e OS de uma vez</div>
+              </div>
+              <button className="modal-close" onClick={()=>setModal(null)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={saveRapida}>
+
+                {/* ── Cliente ────────────────────────────────────── */}
+                <div style={{marginBottom:14,padding:'12px 14px',background:'var(--gray-50)',borderRadius:10,border:'1px solid var(--gray-200)'}}>
+                  <div style={{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px',color:'var(--gray-400)',marginBottom:10}}>Cliente</div>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}}>
+                    <div className="form-group" style={{marginBottom:0}}>
+                      <label>Nome *</label>
+                      <input autoFocus placeholder="Nome completo" value={rapida.nome_cliente} onChange={e=>setRapida(r=>({...r,nome_cliente:e.target.value}))} />
+                    </div>
+                    <div className="form-group" style={{marginBottom:0}}>
+                      <label>Telefone</label>
+                      <input placeholder="(00) 00000-0000" value={rapida.telefone_cliente} onChange={e=>setRapida(r=>({...r,telefone_cliente:e.target.value}))} />
+                    </div>
+                  </div>
+                  <div className="form-group" style={{marginBottom:0}}>
+                    <label>Endereço</label>
+                    <input placeholder="Rua, número, bairro..." value={rapida.endereco_cliente} onChange={e=>setRapida(r=>({...r,endereco_cliente:e.target.value}))} />
+                  </div>
+                </div>
+
+                {/* ── Veículo ────────────────────────────────────── */}
+                <div style={{marginBottom:14,padding:'12px 14px',background:'var(--gray-50)',borderRadius:10,border:'1px solid var(--gray-200)'}}>
+                  <div style={{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px',color:'var(--gray-400)',marginBottom:10}}>
+                    {t.veiculo} <span style={{fontWeight:400,color:'var(--gray-300)'}}>(opcional)</span>
+                  </div>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}}>
+                    <div className="form-group" style={{marginBottom:0}}>
+                      <label>{t.marca}</label>
+                      <input placeholder="Ex: Chevrolet" value={rapida.marca_veiculo} onChange={e=>setRapida(r=>({...r,marca_veiculo:e.target.value}))} />
+                    </div>
+                    <div className="form-group" style={{marginBottom:0}}>
+                      <label>{t.modelo}</label>
+                      <input placeholder="Ex: Onix" value={rapida.modelo_veiculo} onChange={e=>setRapida(r=>({...r,modelo_veiculo:e.target.value}))} />
+                    </div>
+                  </div>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}}>
+                    <div className="form-group" style={{marginBottom:0}}>
+                      <label>{t.placa}</label>
+                      <input placeholder="ABC-1234" value={rapida.placa_veiculo} onChange={e=>setRapida(r=>({...r,placa_veiculo:e.target.value.toUpperCase()}))} style={{textTransform:'uppercase'}} />
+                    </div>
+                    <div className="form-group" style={{marginBottom:0}}>
+                      <label>{t.ano}</label>
+                      <input placeholder="2022" value={rapida.ano_veiculo} onChange={e=>setRapida(r=>({...r,ano_veiculo:e.target.value}))} />
+                    </div>
+                    <div className="form-group" style={{marginBottom:0}}>
+                      <label>{t.kmAbrev||'KM'} atual</label>
+                      <input type="number" min="0" placeholder="Ex: 45000" value={rapida.km_veiculo} onChange={e=>setRapida(r=>({...r,km_veiculo:e.target.value}))} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── OS ─────────────────────────────────────────── */}
+                <div style={{marginBottom:14,padding:'12px 14px',background:'var(--gray-50)',borderRadius:10,border:'1px solid var(--gray-200)'}}>
+                  <div style={{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px',color:'var(--gray-400)',marginBottom:10}}>Ordem de Serviço</div>
+                  <div className="form-group">
+                    <label>Problema relatado</label>
+                    <textarea placeholder="Descreva o problema..." value={rapida.descricao} onChange={e=>setRapida(r=>({...r,descricao:e.target.value}))} rows={2} />
+                  </div>
+                  <div className="form-group">
+                    <label>Serviços realizados</label>
+                    <textarea placeholder="Liste os serviços feitos..." value={rapida.servicos} onChange={e=>setRapida(r=>({...r,servicos:e.target.value}))} rows={2} />
+                  </div>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+                    {!isFuncionario && !isMecanico && (
+                      <div className="form-group" style={{marginBottom:0}}>
+                        <label>{t.mecanico} responsável</label>
+                        <select value={rapida.mecanico_id} onChange={e=>setRapida(r=>({...r,mecanico_id:e.target.value}))}>
+                          <option value="">Sem {t.mecanico.toLowerCase()}</option>
+                          {mecanicos.map(m=><option key={m.id} value={m.id}>{m.nome}</option>)}
+                        </select>
+                      </div>
+                    )}
+                    {!isFuncionario && (
+                      <div className="form-group" style={{marginBottom:0}}>
+                        <label>Mão de obra (R$)</label>
+                        <input type="number" step="0.01" min="0" placeholder="0,00" value={rapida.valor_mo} onChange={e=>setRapida(r=>({...r,valor_mo:e.target.value}))} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="form-actions">
+                  <button type="button" className="btn btn-outline" onClick={()=>setModal(null)}>Cancelar</button>
+                  <button type="submit" className="btn btn-primary" disabled={rapidaSaving}>
+                    {rapidaSaving ? 'Criando…' : '⚡ Criar OS'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

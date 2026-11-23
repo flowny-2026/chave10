@@ -1,0 +1,2422 @@
+const router = require('express').Router();
+const { pool, query, queryOne, run } = require('../db');
+const { authMiddleware, oficinaSelf, naoFuncionario, naoMecanico, apenasAdminOuGerente } = require('../middleware/auth');
+const {
+  validateCliente, validateVeiculo, validateOS, validateId,
+  validateDespesa, validateLembrete, validateAgenda, validateEstoque,
+  validatePagamentoOS, validateQuery, validateOrcamento, validatePagination,
+} = require('../middleware/validate');
+const {
+  checkOwns,
+  checkClienteOwnership,
+  checkVeiculoOwnership,
+  checkClienteVeiculoOwnership,
+  checkQueryClienteOwnership,
+} = require('../middleware/authorization');
+const { validateLogoUpload } = require('../middleware/uploadValidator');
+const { audit, ACOES } = require('../services/auditService');
+const log = require('../utils/logger');
+
+router.use(authMiddleware, oficinaSelf);
+
+// oficina_id vem SEMPRE do JWT — nunca do body/query/params
+const oid = req => req.user.oficina_id;
+
+// ── Numeração unificada OS + Orçamento ───────────────────────
+// Retorna o menor número positivo ainda não usado por OS ou orçamentos da oficina.
+// Usa uma transação com LOCK para garantir atomicidade em acessos concorrentes.
+// Exemplo: se existem OS 0001, 0002, 0004 → retorna '0003' (preenche o buraco).
+async function proximoNumero(oficina_id) {
+  // Executa dentro de uma transação serializable para evitar race condition
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // Lock na linha da oficina para serializar geração de número
+    await client.query('SELECT id FROM oficinas WHERE id=$1 FOR UPDATE', [oficina_id]);
+
+    // Menor inteiro >= 1 que não existe nem em OS nem em orçamentos desta oficina.
+    // CTE "usados" coleta todos os números já ocupados; gap find pega o MIN ausente.
+    const r = await client.query(`
+      WITH usados AS (
+        SELECT CAST(NULLIF(REGEXP_REPLACE(numero,'[^0-9]','','g'), '') AS INTEGER) AS n
+        FROM ordens_servico
+        WHERE oficina_id = $1 AND numero IS NOT NULL AND numero ~ '^[0-9]+$'
+        UNION ALL
+        SELECT CAST(NULLIF(REGEXP_REPLACE(numero,'[^0-9]','','g'), '') AS INTEGER)
+        FROM orcamentos
+        WHERE oficina_id = $1 AND numero IS NOT NULL AND numero ~ '^[0-9]+$'
+      ),
+      max_usado AS (
+        SELECT COALESCE(MAX(n), 0) AS m FROM usados
+      )
+      SELECT MIN(seq) AS proximo
+      FROM generate_series(1, (SELECT m + 1 FROM max_usado)) AS seq
+      WHERE seq NOT IN (SELECT n FROM usados WHERE n IS NOT NULL)
+    `, [oficina_id]);
+
+    const proximo = parseInt(r.rows[0]?.proximo) || 1;
+    await client.query('COMMIT');
+    return String(proximo).padStart(4, '0');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+// ── Cache em memória para endpoints pesados ───────────────────
+// TTL de 60s — isolado por oficina_id + chave.
+// Evita queries repetidas ao DB quando múltiplos usuários da mesma
+// oficina carregam o dashboard ao mesmo tempo.
+const _dashCache = new Map();
+function dashCacheGet(key) {
+  const entry = _dashCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.ts > 60_000) { _dashCache.delete(key); return null; }
+  return entry.data;
+}
+function dashCacheSet(key, data) {
+  _dashCache.set(key, { data, ts: Date.now() });
+  if (_dashCache.size > 200) {
+    // limpa entradas mais antigas
+    const sorted = [..._dashCache.entries()].sort((a,b) => a[1].ts - b[1].ts);
+    sorted.slice(0, 100).forEach(([k]) => _dashCache.delete(k));
+  }
+}
+
+// DASHBOARD
+router.get('/dashboard', async (req,res) => {
+  try {
+    const id=oid(req), hoje=new Date().toISOString().split('T')[0], mesInicio=hoje.substring(0,7)+'-01';
+    const isFuncionario = req.user?.perfil === 'funcionario';
+
+    // Cache 60s — dashboard é a rota mais acessada e mais pesada
+    const cacheKey = `dashboard:${id}:${isFuncionario ? 'func' : 'full'}:${hoje}`;
+    const cached = dashCacheGet(cacheKey);
+    if (cached) return res.json(cached);
+
+    const [emAnd,finHoje,fatMes,totCli] = await Promise.all([
+      queryOne("SELECT COUNT(*) n FROM ordens_servico WHERE oficina_id=$1 AND status='em_andamento'",[id]),
+      queryOne("SELECT COUNT(*) n FROM ordens_servico WHERE oficina_id=$1 AND status='finalizado' AND data=$2",[id,hoje]),
+      isFuncionario ? Promise.resolve({n:0,mo:0,pecas:0,hoje:0}) : queryOne("SELECT COALESCE(SUM(valor),0) n, COALESCE(SUM(valor_mo),0) mo, COALESCE(SUM(valor_pecas),0) pecas, COALESCE(SUM(CASE WHEN data=$2 THEN valor ELSE 0 END),0) hoje FROM ordens_servico WHERE oficina_id=$1 AND status='finalizado' AND data>=$3",[id,hoje,mesInicio]),
+      queryOne("SELECT COUNT(*) n FROM clientes WHERE oficina_id=$1",[id]),
+    ]);
+
+    const stats={
+      emAndamento:+emAnd.n,
+      finalizadasHoje:+finHoje.n,
+      faturamentoMes:isFuncionario?null:+fatMes.n,
+      faturamentoHoje:isFuncionario?null:+fatMes.hoje,
+      moMes:isFuncionario?null:+fatMes.mo,
+      pecasMes:isFuncionario?null:+fatMes.pecas,
+      totalClientes:+totCli.n
+    };
+
+    // ── Painel do Dia — todas as queries em paralelo ──────────
+    const amanha = new Date(); amanha.setDate(amanha.getDate()+1);
+    const amanhaStr = amanha.toISOString().split('T')[0];
+    const seteDiasAtras = new Date(Date.now()-7*86400000).toISOString().split('T')[0];
+    const tresDiasAtras = new Date(Date.now()-3*86400000).toISOString().split('T')[0];
+    const seteDiasFrente = new Date(Date.now()+7*86400000).toISOString().split('T')[0];
+
+    const [
+      osProntas,
+      orcamentosAguardando,
+      agendaHoje,
+      agendaAmanha,
+      osAtrasadas,
+      despesasVencidas,
+      recentes,
+      lembretesVencendo,
+    ] = await Promise.all([
+      query(
+        "SELECT os.id, os.data, c.nome as cliente_nome, c.telefone as cliente_telefone, v.modelo as veiculo_modelo, v.placa FROM ordens_servico os LEFT JOIN clientes c ON c.id=os.cliente_id LEFT JOIN veiculos v ON v.id=os.veiculo_id WHERE os.oficina_id=$1 AND os.status='finalizado' AND os.data>=$2 ORDER BY os.data ASC LIMIT 10",
+        [id, seteDiasAtras]
+      ),
+      query(
+        "SELECT id, created_at, cliente_nome, total FROM orcamentos WHERE oficina_id=$1 AND status='pendente' ORDER BY created_at DESC LIMIT 10",
+        [id]
+      ).catch(()=>[]),
+      query(
+        "SELECT a.*, c.nome as cliente_nome, c.telefone as cliente_telefone, v.modelo as veiculo_modelo, v.placa FROM agenda a LEFT JOIN clientes c ON c.id=a.cliente_id LEFT JOIN veiculos v ON v.id=a.veiculo_id WHERE a.oficina_id=$1 AND a.data=$2 ORDER BY a.hora ASC",
+        [id, hoje]
+      ).catch(()=>[]),
+      query(
+        "SELECT a.*, c.nome as cliente_nome FROM agenda a LEFT JOIN clientes c ON c.id=a.cliente_id WHERE a.oficina_id=$1 AND a.data=$2 ORDER BY a.hora ASC",
+        [id, amanhaStr]
+      ).catch(()=>[]),
+      query(
+        "SELECT os.id, os.data, c.nome as cliente_nome, v.modelo as veiculo_modelo, v.placa FROM ordens_servico os LEFT JOIN clientes c ON c.id=os.cliente_id LEFT JOIN veiculos v ON v.id=os.veiculo_id WHERE os.oficina_id=$1 AND os.status='em_andamento' AND os.data<=$2 ORDER BY os.data ASC LIMIT 5",
+        [id, tresDiasAtras]
+      ).catch(()=>[]),
+      isFuncionario ? Promise.resolve([]) : query(
+        "SELECT id, descricao, valor, vencimento FROM despesas WHERE oficina_id=$1 AND pago=0 AND vencimento<$2 ORDER BY vencimento ASC LIMIT 5",
+        [id, hoje]
+      ).catch(()=>[]),
+      query(
+        "SELECT os.*,c.nome as cliente_nome,v.modelo as veiculo_modelo,v.placa FROM ordens_servico os LEFT JOIN clientes c ON c.id=os.cliente_id LEFT JOIN veiculos v ON v.id=os.veiculo_id WHERE os.oficina_id=$1 ORDER BY os.id DESC LIMIT 5",
+        [id]
+      ),
+      // Lembretes vencendo: não vistos, com data prevista até 7 dias à frente (ou vencidos)
+      query(
+        `SELECT l.id, l.descricao, l.tipo, l.data_previsao, l.km_previsao,
+                v.marca AS veiculo_marca, v.modelo as veiculo_modelo, v.placa,
+                c.nome as cliente_nome, c.telefone as cliente_telefone
+         FROM lembretes l
+         LEFT JOIN veiculos v ON v.id=l.veiculo_id
+         LEFT JOIN clientes c ON c.id=v.cliente_id
+         WHERE l.oficina_id=$1 AND COALESCE(l.visto,0)=0
+           AND l.data_previsao IS NOT NULL AND l.data_previsao <> ''
+           AND l.data_previsao <= $2
+         ORDER BY l.data_previsao ASC LIMIT 10`,
+        [id, seteDiasFrente]
+      ).catch(()=>[]),
+    ]);
+
+    // Faturamento hoje (nenhuma OS finalizada hoje)
+    const semFaturamentoHoje = !isFuncionario && +fatMes.hoje === 0;
+
+    const painelDoDia = {
+      osProntas,
+      orcamentosAguardando,
+      agendaHoje,
+      agendaAmanha,
+      osAtrasadas,
+      despesasVencidas,
+      lembretesVencendo,
+      semFaturamentoHoje,
+    };
+    // ──────────────────────────────────────────────────────────
+
+    const recentesFiltradas = isFuncionario
+      ? recentes.map(({valor, valor_mo, valor_pecas, ...rest}) => rest)
+      : recentes;
+
+    // ── Faturamento mensal — 6 meses em paralelo ──────────────
+    let faturamentoMensal = [];
+    if (!isFuncionario) {
+      const meses = Array.from({length:6}, (_,i) => {
+        const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - (5 - i));
+        const ano = d.getFullYear(), mes = String(d.getMonth()+1).padStart(2,'0');
+        return { ano, mes };
+      });
+      const resultsMes = await Promise.all(
+        meses.map(({ano, mes}) =>
+          queryOne(
+            "SELECT COALESCE(SUM(valor),0) total FROM ordens_servico WHERE oficina_id=$1 AND status='finalizado' AND data>=$2 AND data<=$3",
+            [id, `${ano}-${mes}-01`, `${ano}-${mes}-31`]
+          )
+        )
+      );
+      faturamentoMensal = meses.map(({ano, mes}, i) => ({
+        mes: `${mes}/${String(ano).slice(2)}`,
+        total: +resultsMes[i].total,
+      }));
+    }
+
+    const resposta = {stats, recentes:recentesFiltradas, faturamentoMensal, painelDoDia};
+    dashCacheSet(cacheKey, resposta);
+    res.json(resposta);
+  } catch(err){log.error('app_dashboard',err);res.status(500).json({error:'Erro interno'});}
+});
+
+// DASHBOARD RESUMO — indicadores por período (com filtro inicio/fim)
+// Todos os dados são reais e isolados por oficina_id (do JWT).
+// Bloqueado para funcionário/mecânico (dados financeiros).
+router.get('/dashboard-resumo', naoFuncionario, naoMecanico, async (req, res) => {
+  try {
+    const id = oid(req);
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    const hoje = new Date().toISOString().split('T')[0];
+
+    // Período: usa inicio/fim válidos; senão, mês corrente
+    let inicio = req.query.inicio;
+    let fim = req.query.fim;
+    if (!inicio || !dateRegex.test(inicio)) inicio = hoje.substring(0, 7) + '-01';
+    if (!fim || !dateRegex.test(fim)) fim = hoje;
+    if (inicio > fim) { const tmp = inicio; inicio = fim; fim = tmp; }
+
+    // Cache 60s — dashboard-resumo tem 10+ queries paralelas
+    const cacheKey = `dashboard-resumo:${id}:${inicio}:${fim}`;
+    const cached = dashCacheGet(cacheKey);
+    if (cached) return res.json(cached);
+
+    // Período anterior de mesma duração (para comparação)
+    const dInicio = new Date(inicio + 'T00:00:00');
+    const dFim    = new Date(fim + 'T00:00:00');
+    const durDias = Math.round((dFim - dInicio) / 86400000) + 1;
+    const prevFim    = new Date(dInicio.getTime() - 86400000);
+    const prevInicio = new Date(prevFim.getTime() - (durDias - 1) * 86400000);
+    const prevInicioStr = prevInicio.toISOString().split('T')[0];
+    const prevFimStr    = prevFim.toISOString().split('T')[0];
+
+    // Helpers de agregação
+    // Faturamento = OS finalizadas pela data de conclusão
+    // Despesas = pela data de VENCIMENTO quando preenchida, senão pela data de lançamento
+    // Isso evita que uma despesa lançada hoje mas com vencimento no mês seguinte
+    // entre no saldo do mês atual.
+    const sumFaturamento = (ini, f) => queryOne(
+      "SELECT COALESCE(SUM(valor),0) t FROM ordens_servico WHERE oficina_id=$1 AND status='finalizado' AND data>=$2 AND data<=$3",
+      [id, ini, f]
+    );
+    const sumDespesas = (ini, f) => queryOne(
+      "SELECT COALESCE(SUM(valor),0) t FROM despesas WHERE oficina_id=$1 AND COALESCE(vencimento, data)>=$2 AND COALESCE(vencimento, data)<=$3",
+      [id, ini, f]
+    );
+
+    const [
+      fatAtual, fatPrev,
+      despAtual, despPrev,
+      osEmAndamento, osConcluidas, osCanceladas,
+      osConcluidasPrev,
+      orcPendentes,
+      pecasVendidasRow,
+      servicosRow,
+    ] = await Promise.all([
+      sumFaturamento(inicio, fim),
+      sumFaturamento(prevInicioStr, prevFimStr),
+      sumDespesas(inicio, fim),
+      sumDespesas(prevInicioStr, prevFimStr),
+      queryOne("SELECT COUNT(*) n FROM ordens_servico WHERE oficina_id=$1 AND status='em_andamento' AND data>=$2 AND data<=$3", [id, inicio, fim]),
+      queryOne("SELECT COUNT(*) n FROM ordens_servico WHERE oficina_id=$1 AND status='finalizado' AND data>=$2 AND data<=$3", [id, inicio, fim]),
+      queryOne("SELECT COUNT(*) n FROM ordens_servico WHERE oficina_id=$1 AND status='cancelada' AND data>=$2 AND data<=$3", [id, inicio, fim]),
+      queryOne("SELECT COUNT(*) n FROM ordens_servico WHERE oficina_id=$1 AND status='finalizado' AND data>=$2 AND data<=$3", [id, prevInicioStr, prevFimStr]),
+      // Orçamentos pendentes (query corrigida — usa status='pendente', sem colunas inexistentes)
+      queryOne("SELECT COUNT(*) n FROM orcamentos WHERE oficina_id=$1 AND status='pendente'", [id]),
+      // Total em peças e mão de obra das OS finalizadas no período
+      queryOne("SELECT COALESCE(SUM(valor_mo),0) mo, COALESCE(SUM(valor_pecas),0) pecas FROM ordens_servico WHERE oficina_id=$1 AND status='finalizado' AND data>=$2 AND data<=$3", [id, inicio, fim]),
+      // reservado (placeholder para manter Promise.all alinhado) — total de OS finalizadas
+      queryOne("SELECT COUNT(*) n FROM ordens_servico WHERE oficina_id=$1 AND status='finalizado' AND data>=$2 AND data<=$3", [id, inicio, fim]),
+    ]);
+
+    const faturamento = +fatAtual.t;
+    const despesas    = +despAtual.t;
+    const lucro       = faturamento - despesas;
+    const faturamentoPrev = +fatPrev.t;
+    const despesasPrev    = +despPrev.t;
+    const lucroPrev       = faturamentoPrev - despesasPrev;
+
+    // Variação percentual (null quando não há base de comparação)
+    const variacao = (atual, prev) => (prev > 0 ? Math.round(((atual - prev) / prev) * 100) : null);
+
+    const cards = {
+      faturamento:      { valor: faturamento, variacao: variacao(faturamento, faturamentoPrev) },
+      despesas:         { valor: despesas,    variacao: variacao(despesas, despesasPrev) },
+      lucro:            { valor: lucro,        variacao: variacao(lucro, lucroPrev) },
+      osEmAndamento:    { valor: +osEmAndamento.n },
+      osConcluidas:     { valor: +osConcluidas.n, variacao: variacao(+osConcluidas.n, +osConcluidasPrev.n) },
+      orcamentosPendentes: { valor: +orcPendentes.n },
+    };
+
+    // ── Série temporal: diária se período <= 62 dias, senão mensal ──
+    let serie = [];
+    if (durDias <= 62) {
+      // Agrupamento diário
+      const [fatDia, despDia] = await Promise.all([
+        query("SELECT data, COALESCE(SUM(valor),0) t FROM ordens_servico WHERE oficina_id=$1 AND status='finalizado' AND data>=$2 AND data<=$3 GROUP BY data", [id, inicio, fim]),
+        query("SELECT COALESCE(vencimento,data) AS dia, COALESCE(SUM(valor),0) t FROM despesas WHERE oficina_id=$1 AND COALESCE(vencimento,data)>=$2 AND COALESCE(vencimento,data)<=$3 GROUP BY COALESCE(vencimento,data)", [id, inicio, fim]),
+      ]);
+      const mapaFat  = Object.fromEntries(fatDia.map(r => [r.data, +r.t]));
+      const mapaDesp = Object.fromEntries(despDia.map(r => [r.dia, +r.t]));
+      for (let i = 0; i < durDias; i++) {
+        const d = new Date(dInicio.getTime() + i * 86400000).toISOString().split('T')[0];
+        serie.push({ label: d.slice(8, 10) + '/' + d.slice(5, 7), data: d, faturamento: mapaFat[d] || 0, despesas: mapaDesp[d] || 0 });
+      }
+    } else {
+      // Agrupamento mensal
+      const [fatMes, despMes] = await Promise.all([
+        query("SELECT SUBSTRING(data,1,7) ym, COALESCE(SUM(valor),0) t FROM ordens_servico WHERE oficina_id=$1 AND status='finalizado' AND data>=$2 AND data<=$3 GROUP BY SUBSTRING(data,1,7)", [id, inicio, fim]),
+        query("SELECT SUBSTRING(COALESCE(vencimento,data),1,7) ym, COALESCE(SUM(valor),0) t FROM despesas WHERE oficina_id=$1 AND COALESCE(vencimento,data)>=$2 AND COALESCE(vencimento,data)<=$3 GROUP BY SUBSTRING(COALESCE(vencimento,data),1,7)", [id, inicio, fim]),
+      ]);
+      const mapaFat = Object.fromEntries(fatMes.map(r => [r.ym, +r.t]));
+      const mapaDesp = Object.fromEntries(despMes.map(r => [r.ym, +r.t]));
+      const cur = new Date(dInicio.getFullYear(), dInicio.getMonth(), 1);
+      const last = new Date(dFim.getFullYear(), dFim.getMonth(), 1);
+      while (cur <= last) {
+        const ym = cur.getFullYear() + '-' + String(cur.getMonth() + 1).padStart(2, '0');
+        serie.push({ label: ym.slice(5, 7) + '/' + ym.slice(2, 4), data: ym, faturamento: mapaFat[ym] || 0, despesas: mapaDesp[ym] || 0 });
+        cur.setMonth(cur.getMonth() + 1);
+      }
+    }
+
+    // ── OS por status (3 status reais) ──
+    const osPorStatus = [
+      { status: 'em_andamento', label: 'Em andamento', valor: +osEmAndamento.n },
+      { status: 'finalizado',   label: 'Concluídas',   valor: +osConcluidas.n },
+      { status: 'cancelada',    label: 'Canceladas',   valor: +osCanceladas.n },
+    ];
+
+    // ── Top 5 clientes por faturamento no período ──
+    const topClientes = await query(
+      `SELECT c.id, c.nome, COALESCE(SUM(os.valor),0) total, COUNT(os.id) qtd
+       FROM ordens_servico os JOIN clientes c ON c.id = os.cliente_id
+       WHERE os.oficina_id=$1 AND os.status='finalizado' AND os.data>=$2 AND os.data<=$3
+       GROUP BY c.id, c.nome
+       HAVING COALESCE(SUM(os.valor),0) > 0
+       ORDER BY total DESC LIMIT 5`,
+      [id, inicio, fim]
+    );
+
+    // ── Últimas OS do período ──
+    const ultimasOS = await query(
+      `SELECT os.id, os.numero, os.data, os.valor, os.status,
+              c.nome as cliente_nome, v.modelo as veiculo_modelo, v.marca as veiculo_marca, v.placa
+       FROM ordens_servico os
+       LEFT JOIN clientes c ON c.id=os.cliente_id
+       LEFT JOIN veiculos v ON v.id=os.veiculo_id
+       WHERE os.oficina_id=$1 AND os.data>=$2 AND os.data<=$3
+       ORDER BY os.id DESC LIMIT 6`,
+      [id, inicio, fim]
+    );
+
+    // ── Resumo do mês/período ──
+    const resumo = {
+      servicos:   +pecasVendidasRow.mo,
+      pecas:      +pecasVendidasRow.pecas,
+      receitas:   faturamento,
+      despesas:   despesas,
+      lucro:      lucro,
+    };
+
+    const respostaResumo = {
+      periodo: { inicio, fim, dias: durDias, agrupamento: durDias <= 62 ? 'diario' : 'mensal' },
+      cards,
+      serie,
+      osPorStatus,
+      topClientes,
+      ultimasOS,
+      resumo,
+    };
+    dashCacheSet(cacheKey, respostaResumo);
+    res.json(respostaResumo);
+  } catch (err) {
+    log.error('app_dashboard_resumo', err);
+    res.status(500).json({ error: 'Erro ao carregar resumo do dashboard' });
+  }
+});
+
+// CLIENTES
+router.get('/clientes', validateQuery, async (req,res) => {
+  try {
+    const {q}=req.query;
+    let sql="SELECT c.*,COUNT(v.id) as total_veiculos FROM clientes c LEFT JOIN veiculos v ON v.cliente_id=c.id WHERE c.oficina_id=$1";
+    const p=[oid(req)];
+    if(q&&typeof q==='string'){sql+=' AND (c.nome ILIKE $2 OR c.telefone ILIKE $2)';p.push(`%${q.slice(0,100)}%`);}
+    sql+=' GROUP BY c.id ORDER BY c.nome';
+    res.json(await query(sql,p));
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+router.post('/clientes', validateCliente, async (req,res) => {
+  try {
+    const {nome,telefone,email,obs,endereco,data_nascimento}=req.body;
+    const r=await queryOne("INSERT INTO clientes(oficina_id,nome,telefone,email,obs,endereco,data_nascimento) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id",[oid(req),nome,telefone||null,email||null,obs||null,endereco||null,data_nascimento||null]);
+    audit(req, ACOES.CRIAR_CLIENTE, 'clientes', r.id, { nome, telefone });
+    res.status(201).json({id:r.id,nome,telefone,email,obs,endereco,data_nascimento:data_nascimento||null});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// PUT /clientes/:id — checkOwns garante pertencimento à oficina antes de atualizar
+router.put('/clientes/:id', validateId, checkOwns('clientes'), validateCliente, async (req,res) => {
+  try {
+    const {nome,telefone,email,obs,endereco,data_nascimento}=req.body;
+    const result = await run("UPDATE clientes SET nome=COALESCE($1,nome),telefone=COALESCE($2,telefone),email=COALESCE($3,email),obs=COALESCE($4,obs),endereco=COALESCE($5,endereco),data_nascimento=COALESCE($6,data_nascimento) WHERE id=$7 AND oficina_id=$8",[nome,telefone||null,email||null,obs||null,endereco||null,data_nascimento||null,req.params.id,oid(req)]);
+    if(result.rowCount === 0) return res.status(404).json({error:'Cliente não encontrado'});
+    audit(req, ACOES.EDITAR_CLIENTE, 'clientes', req.params.id, { nome, telefone });
+    res.json({ok:true});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// DELETE /clientes/:id — checkOwns confirma pertencimento
+router.delete('/clientes/:id', validateId, checkOwns('clientes'), async (req,res) => {
+  try {
+    const result = await run('DELETE FROM clientes WHERE id=$1 AND oficina_id=$2',[req.params.id,oid(req)]);
+    if(result.rowCount === 0) return res.status(404).json({error:'Cliente não encontrado'});
+    audit(req, ACOES.DELETAR_CLIENTE, 'clientes', req.params.id, {});
+    res.json({ok:true});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// VEÍCULOS
+// GET /veiculos — filtro por cliente_id validado contra a oficina do usuário
+// checkQueryClienteOwnership garante que cliente_id (se informado) pertence à oficina
+router.get('/veiculos', checkQueryClienteOwnership, async (req,res) => {
+  try {
+    const clienteId = req.query.cliente_id; // já validado e normalizado pelo middleware
+    let q="SELECT v.*,c.nome as cliente_nome FROM veiculos v LEFT JOIN clientes c ON c.id=v.cliente_id WHERE v.oficina_id=$1";
+    const p=[oid(req)];
+    if(clienteId !== undefined){
+      q+=' AND v.cliente_id=$2';p.push(clienteId);
+    }
+    q+=' ORDER BY v.modelo';
+    res.json(await query(q,p));
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// POST /veiculos — cliente_id validado contra a oficina (evita IDOR write)
+router.post('/veiculos', validateVeiculo, checkClienteOwnership, async (req,res) => {
+  try {
+    const {cliente_id,placa,modelo,marca,ano,km}=req.body;
+    const r=await queryOne("INSERT INTO veiculos(oficina_id,cliente_id,placa,modelo,marca,ano,km) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id",[oid(req),cliente_id||null,placa||null,modelo,marca||null,ano||null,km||null]);
+    res.status(201).json({id:r.id,placa,modelo,marca,ano,km});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// PUT /veiculos/:id — checkOwns garante que o veículo pertence à oficina (evita IDOR)
+// checkClienteOwnership garante que o novo cliente_id (se informado) também pertence
+router.put('/veiculos/:id', validateId, checkOwns('veiculos'), validateVeiculo, checkClienteOwnership, async (req,res) => {
+  try {
+    const {cliente_id,placa,modelo,marca,ano,km}=req.body;
+    const result = await run("UPDATE veiculos SET cliente_id=COALESCE($1,cliente_id),placa=COALESCE($2,placa),modelo=COALESCE($3,modelo),marca=COALESCE($4,marca),ano=COALESCE($5,ano),km=COALESCE($6,km) WHERE id=$7 AND oficina_id=$8",[cliente_id||null,placa||null,modelo,marca||null,ano||null,km||null,req.params.id,oid(req)]);
+    if(result.rowCount === 0) return res.status(404).json({error:'Veículo não encontrado'});
+    res.json({ok:true});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// DELETE /veiculos/:id — checkOwns confirma pertencimento antes de deletar
+router.delete('/veiculos/:id', validateId, checkOwns('veiculos'), async (req,res) => {
+  try {
+    const result = await run('DELETE FROM veiculos WHERE id=$1 AND oficina_id=$2',[req.params.id,oid(req)]);
+    if(result.rowCount === 0) return res.status(404).json({error:'Veículo não encontrado'});
+    res.json({ok:true});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// ORDENS DE SERVIÇO
+router.get('/os', async (req,res) => {
+  try {
+    const {status}=req.query;
+    const perfil = req.user?.perfil;
+    const isFuncionario = perfil === 'funcionario';
+    const isMecanico    = perfil === 'mecanico';
+    if(status&&!['em_andamento','finalizado','cancelada'].includes(status)) return res.status(400).json({error:'Status inválido'});
+    let q=`SELECT os.*,
+      c.nome as cliente_nome, c.telefone as cliente_telefone,
+      c.endereco as cliente_endereco,
+      v.modelo as veiculo_modelo, v.placa, v.marca as veiculo_marca,
+      v.ano as veiculo_ano, v.km as veiculo_km,
+      u.nome as mecanico_nome,
+      -- Dados do pagamento mais recente da OS
+      pag.forma        AS pagamento_forma,
+      pag.data_pagamento,
+      pag.boleto_vencimento,
+      pag.boleto_pendente
+    FROM ordens_servico os
+    LEFT JOIN clientes  c ON c.id = os.cliente_id
+    LEFT JOIN veiculos  v ON v.id = os.veiculo_id
+    LEFT JOIN usuarios  u ON u.id = os.mecanico_id
+    LEFT JOIN LATERAL (
+      SELECT forma, data_pagamento, boleto_vencimento, boleto_pendente
+      FROM pagamentos_os
+      WHERE os_id = os.id AND oficina_id = os.oficina_id
+      ORDER BY id DESC
+      LIMIT 1
+    ) pag ON true
+    WHERE os.oficina_id=$1`;
+    const p=[oid(req)];
+    if(status){q+=' AND os.status=$2';p.push(status);}
+    // Mecânicos veem apenas OS atribuídas a eles
+    if(isMecanico){q+=` AND os.mecanico_id=$${p.length+1}`;p.push(req.user.id);}
+    q+=' ORDER BY os.id DESC';
+    const rows=(await query(q,p)).map(r=>{
+      const base = {...r,pecas_itens:r.pecas_itens?JSON.parse(r.pecas_itens):[]};
+      // Omite valores financeiros para funcionários e mecânicos (mecânicos veem apenas suas comissões)
+      if(isFuncionario || isMecanico) {
+        const {valor, valor_mo, valor_pecas, mecanico_comissao_servicos, mecanico_comissao_pecas, mecanico_comissao_total, ...rest} = base;
+        return rest;
+      }
+      return base;
+    });
+    res.json(rows);
+  } catch(err){log.error('app_get_os',err);res.status(500).json({error:'Erro interno'});}
+});
+
+// POST /os — valida que cliente_id e veiculo_id (se informados) pertencem à oficina
+router.post('/os', validateOS, checkClienteVeiculoOwnership, async (req,res) => {
+  try {
+    const {cliente_id,veiculo_id,descricao,servicos,pecas,pecas_itens,valor_mo,valor_pecas,observacao,data,mecanico_id}=req.body;
+    // descricao é opcional — garante string vazia se não informada (coluna NOT NULL)
+    const descricaoFinal = descricao ?? '';
+    const perfil = req.user?.perfil;
+    const isFuncionario = perfil === 'funcionario';
+    const isMecanico    = perfil === 'mecanico';
+    const valorMO = (isFuncionario||isMecanico) ? 0 : (parseFloat(valor_mo)||0);
+    const valorPecas = (isFuncionario||isMecanico) ? 0 : (parseFloat(valor_pecas)||0);
+    const valor = valorMO + valorPecas;
+    const id=oid(req);
+
+    // Valida mecânico (se informado) — deve ser ativo e da mesma oficina
+    let mecIdValido = null;
+    if (mecanico_id) {
+      const intMec = parseInt(mecanico_id, 10);
+      if (!Number.isInteger(intMec) || intMec <= 0) {
+        return res.status(400).json({ error: 'mecanico_id inválido' });
+      }
+      const mecCheck = await queryOne(
+        "SELECT id FROM usuarios WHERE id=$1 AND oficina_id=$2 AND perfil='mecanico' AND ativo=1",
+        [intMec, id]
+      );
+      if (!mecCheck) return res.status(400).json({ error: 'Mecânico inativo ou não encontrado' });
+      mecIdValido = intMec;
+    }
+
+    // Mecânicos sempre ficam vinculados a si mesmos
+    if (isMecanico) mecIdValido = req.user.id;
+
+    const numero = await proximoNumero(id);
+
+    // Calcula comissão se houver mecânico
+    let pctSvc=null, pctPec=null, comSvc=null, comPec=null, comTotal=null;
+    if (mecIdValido && !isFuncionario && !isMecanico) {
+      const cfg = await queryOne(
+        'SELECT * FROM mecanico_comissao_config WHERE mecanico_id=$1',
+        [mecIdValido]
+      );
+      if (cfg) {
+        pctSvc   = cfg.recebe_servicos ? parseFloat(cfg.pct_servicos) : 0;
+        pctPec   = cfg.recebe_pecas    ? parseFloat(cfg.pct_pecas)    : 0;
+        comSvc   = parseFloat((valorMO    * pctSvc / 100).toFixed(2));
+        comPec   = parseFloat((valorPecas * pctPec / 100).toFixed(2));
+        comTotal = parseFloat((comSvc + comPec).toFixed(2));
+      }
+    }
+
+    const r=await queryOne(
+      `INSERT INTO ordens_servico
+        (oficina_id,cliente_id,veiculo_id,descricao,servicos,pecas,pecas_itens,valor_mo,valor_pecas,valor,observacao,data,numero,
+         mecanico_id,mecanico_pct_servicos,mecanico_pct_pecas,mecanico_comissao_servicos,mecanico_comissao_pecas,mecanico_comissao_total)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19) RETURNING id`,
+      [id,cliente_id||null,veiculo_id||null,descricaoFinal,servicos||null,pecas||null,
+       pecas_itens?JSON.stringify(pecas_itens):null,valorMO,valorPecas,valor,
+       observacao||null,data||new Date().toISOString().split('T')[0],numero,
+       mecIdValido,pctSvc,pctPec,comSvc,comPec,comTotal]
+    );
+
+    // Cria registro de comissão se aplicável
+    if (mecIdValido && comTotal !== null && comTotal > 0 && !isFuncionario && !isMecanico) {
+      await run(`
+        INSERT INTO comissoes
+          (oficina_id,mecanico_id,os_id,pct_servicos,pct_pecas,base_servicos,base_pecas,valor_servicos,valor_pecas,valor_total,status)
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'pendente')
+        ON CONFLICT (os_id, mecanico_id) DO NOTHING
+      `, [id,mecIdValido,r.id,pctSvc||0,pctPec||0,valorMO,valorPecas,comSvc||0,comPec||0,comTotal]);
+    }
+
+    // Gera token público para o cliente acompanhar a OS
+    const crypto = require('crypto');
+    const tokenPub = crypto.randomBytes(24).toString('base64url');
+    await run('UPDATE ordens_servico SET token_publico=$1 WHERE id=$2', [tokenPub, r.id]).catch(()=>{});
+
+    audit(req, ACOES.CRIAR_OS, 'ordens_servico', r.id, { numero, cliente_id, veiculo_id, data: data||new Date().toISOString().split('T')[0], mecanico_id: mecIdValido });
+    // Invalida cache do dashboard desta oficina
+    for (const k of _dashCache.keys()) { if (k.startsWith(`dashboard:${id}:`) || k.startsWith(`dashboard-resumo:${id}:`)) _dashCache.delete(k); }
+    res.status(201).json({id:r.id,numero,token_publico:tokenPub});
+  } catch(err){log.error('app_post_os',err);res.status(500).json({error:'Erro interno'});}
+});
+
+// PUT /os/:id — checkOwns + valida cliente_id/veiculo_id do body
+router.put('/os/:id', validateId, checkOwns('ordens_servico'), validateOS, checkClienteVeiculoOwnership, async (req,res) => {
+  try {
+    const {descricao,servicos,pecas,pecas_itens,valor_mo,valor_pecas,status,observacao,cliente_id,veiculo_id,data,mecanico_id}=req.body;
+    const perfil = req.user?.perfil;
+    const isFuncionario = perfil === 'funcionario';
+    const isMecanico    = perfil === 'mecanico';
+    if(status&&!['em_andamento','finalizado','cancelada'].includes(status)) return res.status(400).json({error:'Status inválido'});
+
+    // Mecânicos só podem atualizar: descricao, servicos, observacao
+    if (isMecanico) {
+      const result = await run(
+        "UPDATE ordens_servico SET descricao=COALESCE($1,descricao),servicos=COALESCE($2,servicos),observacao=COALESCE($3,observacao) WHERE id=$4 AND oficina_id=$5 AND mecanico_id=$6",
+        [descricao||null,servicos||null,observacao||null,req.params.id,oid(req),req.user.id]
+      );
+      if(result.rowCount === 0) return res.status(404).json({error:'OS não encontrada'});
+      return res.json({ok:true});
+    }
+
+    const valorMO    = isFuncionario ? null : (valor_mo     !== undefined ? Math.max(0, parseFloat(valor_mo)    || 0) : null);
+    const valorPecas = isFuncionario ? null : (valor_pecas  !== undefined ? Math.max(0, parseFloat(valor_pecas) || 0) : null);
+    const valor      = (valorMO !== null && valorPecas !== null) ? valorMO + valorPecas : null;
+
+    // Valida mecânico se informado
+    let mecIdValido = undefined;
+    if (mecanico_id !== undefined) {
+      if (mecanico_id === null || mecanico_id === '') {
+        mecIdValido = null;
+      } else {
+        const intMec = parseInt(mecanico_id, 10);
+        if (!Number.isInteger(intMec) || intMec <= 0) {
+          return res.status(400).json({ error: 'mecanico_id inválido' });
+        }
+        const mecCheck = await queryOne(
+          "SELECT id FROM usuarios WHERE id=$1 AND oficina_id=$2 AND perfil='mecanico' AND ativo=1",
+          [intMec, oid(req)]
+        );
+        if (!mecCheck) return res.status(400).json({ error: 'Mecânico inativo ou não encontrado' });
+        mecIdValido = intMec;
+      }
+    }
+
+    // Recalcula comissão (apenas se OS não está finalizada ou se mecânico mudou)
+    const osAtual = await queryOne('SELECT * FROM ordens_servico WHERE id=$1 AND oficina_id=$2', [req.params.id, oid(req)]);
+    if (!osAtual) return res.status(404).json({ error: 'OS não encontrada' });
+
+    let pctSvc=null, pctPec=null, comSvc=null, comPec=null, comTotal=null;
+    const mecFinal = mecIdValido !== undefined ? mecIdValido : osAtual.mecanico_id;
+    const vMO      = valorMO    !== null ? valorMO    : parseFloat(osAtual.valor_mo)    || 0;
+    const vPecas   = valorPecas !== null ? valorPecas : parseFloat(osAtual.valor_pecas) || 0;
+
+    if (mecFinal && !isFuncionario) {
+      const cfg = await queryOne('SELECT * FROM mecanico_comissao_config WHERE mecanico_id=$1', [mecFinal]);
+      if (cfg) {
+        pctSvc   = cfg.recebe_servicos ? parseFloat(cfg.pct_servicos) : 0;
+        pctPec   = cfg.recebe_pecas    ? parseFloat(cfg.pct_pecas)    : 0;
+        comSvc   = parseFloat((vMO    * pctSvc / 100).toFixed(2));
+        comPec   = parseFloat((vPecas * pctPec / 100).toFixed(2));
+        comTotal = parseFloat((comSvc + comPec).toFixed(2));
+      }
+    }
+
+    const result = await run(
+      `UPDATE ordens_servico SET
+        descricao=COALESCE($1,descricao),
+        servicos=COALESCE($2,servicos),
+        pecas=COALESCE($3,pecas),
+        pecas_itens=COALESCE($4,pecas_itens),
+        valor_mo=COALESCE($5,valor_mo),
+        valor_pecas=COALESCE($6,valor_pecas),
+        valor=COALESCE($7,valor),
+        status=COALESCE($8,status),
+        observacao=COALESCE($9,observacao),
+        cliente_id=COALESCE($10,cliente_id),
+        veiculo_id=COALESCE($11,veiculo_id),
+        data=COALESCE($12,data),
+        mecanico_id=COALESCE($13,mecanico_id),
+        mecanico_pct_servicos=COALESCE($14,mecanico_pct_servicos),
+        mecanico_pct_pecas=COALESCE($15,mecanico_pct_pecas),
+        mecanico_comissao_servicos=COALESCE($16,mecanico_comissao_servicos),
+        mecanico_comissao_pecas=COALESCE($17,mecanico_comissao_pecas),
+        mecanico_comissao_total=COALESCE($18,mecanico_comissao_total)
+       WHERE id=$19 AND oficina_id=$20`,
+      [descricao||null,servicos||null,pecas||null,
+       pecas_itens?JSON.stringify(pecas_itens):null,
+       valorMO,valorPecas,valor,status||null,observacao||null,
+       cliente_id||null,veiculo_id||null,data||null,
+       mecIdValido !== undefined ? mecIdValido : null,
+       mecFinal ? pctSvc : null,
+       mecFinal ? pctPec : null,
+       mecFinal ? comSvc : null,
+       mecFinal ? comPec : null,
+       mecFinal ? comTotal : null,
+       req.params.id,oid(req)]
+    );
+    if(result.rowCount === 0) return res.status(404).json({error:'OS não encontrada'});
+
+    // Atualiza/cria comissão se mecânico presente e OS não finalizada
+    if (mecFinal && comTotal !== null && !isFuncionario && osAtual.status !== 'finalizado') {
+      await run(`
+        INSERT INTO comissoes
+          (oficina_id,mecanico_id,os_id,pct_servicos,pct_pecas,base_servicos,base_pecas,valor_servicos,valor_pecas,valor_total,status)
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'pendente')
+        ON CONFLICT (os_id, mecanico_id) DO UPDATE SET
+          pct_servicos  = EXCLUDED.pct_servicos,
+          pct_pecas     = EXCLUDED.pct_pecas,
+          base_servicos = EXCLUDED.base_servicos,
+          base_pecas    = EXCLUDED.base_pecas,
+          valor_servicos= EXCLUDED.valor_servicos,
+          valor_pecas   = EXCLUDED.valor_pecas,
+          valor_total   = EXCLUDED.valor_total
+        WHERE comissoes.status = 'pendente'
+      `, [oid(req),mecFinal,req.params.id,pctSvc||0,pctPec||0,vMO,vPecas,comSvc||0,comPec||0,comTotal]);
+    }
+
+    audit(req, ACOES.EDITAR_OS, 'ordens_servico', req.params.id, { status, cliente_id, veiculo_id, mecanico_id: mecFinal });
+    res.json({ok:true});
+  } catch(err){log.error('app_put_os',err);res.status(500).json({error:'Erro interno'});}
+});
+
+// GET /os/:id/link — retorna (ou gera) o token público de acompanhamento da OS
+router.get('/os/:id/link', validateId, checkOwns('ordens_servico'), async (req,res) => {
+  try {
+    const crypto = require('crypto');
+    let os = await queryOne('SELECT id, token_publico FROM ordens_servico WHERE id=$1 AND oficina_id=$2', [req.params.id, oid(req)]);
+    if (!os) return res.status(404).json({error:'OS não encontrada'});
+    if (!os.token_publico) {
+      const token = crypto.randomBytes(24).toString('base64url');
+      await run('UPDATE ordens_servico SET token_publico=$1 WHERE id=$2 AND oficina_id=$3', [token, req.params.id, oid(req)]);
+      os.token_publico = token;
+    }
+    const publicUrl = process.env.PUBLIC_URL || 'http://localhost:5173';
+    res.json({ token: os.token_publico, link: `${publicUrl}/acompanhar/${os.token_publico}` });
+  } catch(err){ res.status(500).json({error:'Erro interno'}); }
+});
+
+// PATCH /os/:id/status — checkOwns garante pertencimento
+router.patch('/os/:id/status', validateId, checkOwns('ordens_servico'), async (req,res) => {
+  try {
+    const status = req.body?.status;
+    if(!status || !['em_andamento','finalizado','cancelada'].includes(status)) return res.status(400).json({error:'Status inválido'});
+    const result = await run(
+      "UPDATE ordens_servico SET status=$1, data_conclusao=CASE WHEN $1='finalizado' AND data_conclusao IS NULL THEN NOW() ELSE data_conclusao END WHERE id=$2 AND oficina_id=$3",
+      [status, req.params.id, oid(req)]
+    );
+    if(result.rowCount === 0) return res.status(404).json({error:'OS não encontrada'});
+    // Ao finalizar por status (sem passar por pagamento), garante comissão e gera lembrete
+    if (status === 'finalizado') {
+      await garantirComissaoOS(oid(req), req.params.id);
+      await gerarLembreteAutomatico(oid(req), req.params.id);
+      await baixarEstoqueOS(oid(req), req.params.id);
+    }
+    audit(req, ACOES.ALTERAR_STATUS_OS, 'ordens_servico', req.params.id, { novo_status: status });
+    // Invalida cache do dashboard ao mudar status de OS
+    const oidVal = oid(req);
+    for (const k of _dashCache.keys()) { if (k.startsWith(`dashboard:${oidVal}:`) || k.startsWith(`dashboard-resumo:${oidVal}:`)) _dashCache.delete(k); }
+    res.json({ok:true});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// DELETE /os/:id — checkOwns confirma pertencimento
+router.delete('/os/:id', validateId, checkOwns('ordens_servico'), async (req,res) => {
+  try {
+    const result = await run('DELETE FROM ordens_servico WHERE id=$1 AND oficina_id=$2',[req.params.id,oid(req)]);
+    if(result.rowCount === 0) return res.status(404).json({error:'OS não encontrada'});
+    audit(req, ACOES.DELETAR_OS, 'ordens_servico', req.params.id, {});
+    res.json({ok:true});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// ── Garante a comissão do mecânico ao finalizar a OS ──────────
+// Lê a OS (mecânico atribuído + valores atuais) e a config de percentuais,
+// calcula a comissão e faz upsert na tabela `comissoes`. Também atualiza os
+// snapshots de comissão na própria OS. Idempotente: se já existe comissão para
+// (os_id, mecanico_id), atualiza os valores enquanto ela ainda estiver 'pendente'.
+async function garantirComissaoOS(oficinaId, osId) {
+  try {
+    const os = await queryOne(
+      'SELECT id, mecanico_id, valor_mo, valor_pecas FROM ordens_servico WHERE id=$1 AND oficina_id=$2',
+      [osId, oficinaId]
+    );
+    if (!os || !os.mecanico_id) return; // sem mecânico → sem comissão
+
+    const cfg = await queryOne('SELECT * FROM mecanico_comissao_config WHERE mecanico_id=$1', [os.mecanico_id]);
+    if (!cfg) return; // mecânico sem config de comissão
+
+    const vMO    = parseFloat(os.valor_mo)    || 0;
+    const vPecas = parseFloat(os.valor_pecas) || 0;
+    const pctSvc = cfg.recebe_servicos ? parseFloat(cfg.pct_servicos) : 0;
+    const pctPec = cfg.recebe_pecas    ? parseFloat(cfg.pct_pecas)    : 0;
+    const comSvc   = parseFloat((vMO    * pctSvc / 100).toFixed(2));
+    const comPec   = parseFloat((vPecas * pctPec / 100).toFixed(2));
+    const comTotal = parseFloat((comSvc + comPec).toFixed(2));
+    if (comTotal <= 0) return; // nada a pagar
+
+    // Atualiza snapshots na OS (histórico)
+    await run(
+      `UPDATE ordens_servico SET
+         mecanico_pct_servicos=$1, mecanico_pct_pecas=$2,
+         mecanico_comissao_servicos=$3, mecanico_comissao_pecas=$4, mecanico_comissao_total=$5
+       WHERE id=$6 AND oficina_id=$7`,
+      [pctSvc, pctPec, comSvc, comPec, comTotal, osId, oficinaId]
+    );
+
+    // Upsert na tabela de comissões (só recalcula enquanto pendente)
+    await run(`
+      INSERT INTO comissoes
+        (oficina_id,mecanico_id,os_id,pct_servicos,pct_pecas,base_servicos,base_pecas,valor_servicos,valor_pecas,valor_total,status)
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'pendente')
+      ON CONFLICT (os_id, mecanico_id) DO UPDATE SET
+        pct_servicos  = EXCLUDED.pct_servicos,
+        pct_pecas     = EXCLUDED.pct_pecas,
+        base_servicos = EXCLUDED.base_servicos,
+        base_pecas    = EXCLUDED.base_pecas,
+        valor_servicos= EXCLUDED.valor_servicos,
+        valor_pecas   = EXCLUDED.valor_pecas,
+        valor_total   = EXCLUDED.valor_total
+      WHERE comissoes.status = 'pendente'
+    `, [oficinaId, os.mecanico_id, osId, pctSvc, pctPec, vMO, vPecas, comSvc, comPec, comTotal]);
+  } catch (e) {
+    log.warn?.('comissao_finalizar_falhou', { osId, erro: e.message });
+  }
+}
+
+// ── Geração automática de lembrete ao finalizar uma OS ────────
+// Se a OS for de troca de óleo ou revisão (detectado por palavras-chave em
+// descricao/servicos) e tiver veículo, cria um lembrete futuro para o retorno.
+// Idempotente: não duplica se já existe um lembrete com origem_os_id = osId.
+async function gerarLembreteAutomatico(oficinaId, osId) {
+  try {
+    const os = await queryOne(
+      'SELECT id, veiculo_id, descricao, servicos FROM ordens_servico WHERE id=$1 AND oficina_id=$2',
+      [osId, oficinaId]
+    );
+    if (!os || !os.veiculo_id) return;
+
+    // Já existe lembrete originado desta OS? Não duplica.
+    const jaExiste = await queryOne(
+      'SELECT id FROM lembretes WHERE oficina_id=$1 AND origem_os_id=$2',
+      [oficinaId, osId]
+    );
+    if (jaExiste) return;
+
+    const texto = `${os.descricao || ''} ${os.servicos || ''}`.toLowerCase();
+    const ehOleo    = /(óleo|oleo|lubrific)/.test(texto);
+    const ehRevisao = /(revis|revisão|correia|filtro)/.test(texto);
+    if (!ehOleo && !ehRevisao) return; // só gera para manutenções recorrentes
+
+    // Óleo: retorno em ~6 meses; Revisão: ~12 meses
+    const meses = ehOleo ? 6 : 12;
+    const prev = new Date();
+    prev.setMonth(prev.getMonth() + meses);
+    const dataPrevisao = prev.toISOString().split('T')[0];
+
+    const tipo = ehOleo ? 'oleo' : 'revisao';
+    const descricao = ehOleo
+      ? 'Próxima troca de óleo'
+      : 'Próxima revisão';
+
+    await run(
+      `INSERT INTO lembretes(oficina_id, veiculo_id, tipo, descricao, data_previsao, origem_os_id)
+       VALUES($1,$2,$3,$4,$5,$6)`,
+      [oficinaId, os.veiculo_id, tipo, descricao, dataPrevisao, osId]
+    );
+  } catch (e) {
+    // Falha na geração de lembrete nunca deve quebrar a finalização da OS
+    log.warn?.('lembrete_auto_falhou', { osId, erro: e.message });
+  }
+}
+
+// LEMBRETES
+router.get('/lembretes', naoMecanico, async (req,res) => {
+  try {
+    res.json(await query("SELECT l.*,v.modelo as veiculo_modelo,v.placa,v.marca FROM lembretes l LEFT JOIN veiculos v ON v.id=l.veiculo_id WHERE l.oficina_id=$1 ORDER BY COALESCE(l.data_previsao,'9999')",[oid(req)]));
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// ── Baixa estoque ao finalizar OS ────────────────────────────
+// Lê pecas_itens da OS, desconta quantidade de cada item no estoque
+// (apenas itens que não são "cliente_fornece") e cria notificação
+// de alerta se a quantidade cair ao nível mínimo ou abaixo.
+// Idempotente: a coluna estoque_baixado_os_id evita baixas duplicadas.
+async function baixarEstoqueOS(oficinaId, osId) {
+  try {
+    // Verifica se já foi baixado (evita duplicata ao chamar de pagamento + status)
+    const jaFez = await queryOne(
+      "SELECT id FROM ordens_servico WHERE id=$1 AND oficina_id=$2 AND estoque_baixado=true",
+      [osId, oficinaId]
+    );
+    if (jaFez) return;
+
+    const os = await queryOne(
+      "SELECT pecas_itens FROM ordens_servico WHERE id=$1 AND oficina_id=$2",
+      [osId, oficinaId]
+    );
+    if (!os?.pecas_itens) return;
+
+    let itens = [];
+    try { itens = JSON.parse(os.pecas_itens); } catch { return; }
+    if (!Array.isArray(itens) || itens.length === 0) return;
+
+    // Marca como baixado antes de processar (evita race condition)
+    await run("UPDATE ordens_servico SET estoque_baixado=true WHERE id=$1 AND oficina_id=$2", [osId, oficinaId]);
+
+    for (const item of itens) {
+      if (!item.nome?.trim() || item.cliente_fornece) continue;
+      const qtd = parseInt(item.qtd) || 1;
+
+      // Busca item no estoque pelo nome (case-insensitive)
+      const estItem = await queryOne(
+        "SELECT id, nome, quantidade, estoque_min FROM estoque WHERE oficina_id=$1 AND LOWER(nome)=LOWER($2) AND quantidade > 0 LIMIT 1",
+        [oficinaId, item.nome.trim()]
+      );
+      if (!estItem) continue;
+
+      const novaQtd = Math.max(0, estItem.quantidade - qtd);
+      await run(
+        "UPDATE estoque SET quantidade=$1 WHERE id=$2 AND oficina_id=$3",
+        [novaQtd, estItem.id, oficinaId]
+      );
+
+      // Alerta de estoque mínimo — só cria se não existe alerta recente (últimas 24h)
+      const min = parseInt(estItem.estoque_min) || 0;
+      if (min > 0 && novaQtd <= min) {
+        const nivel = novaQtd === 0 ? 'zerado' : 'mínimo';
+        const jaTemAlerta = await queryOne(
+          `SELECT id FROM notificacoes WHERE oficina_id=$1 AND tipo='estoque_minimo'
+           AND mensagem LIKE $2 AND created_at > NOW() - INTERVAL '24 hours'`,
+          [oficinaId, `%${estItem.nome}%`]
+        );
+        if (!jaTemAlerta) {
+          await run(
+            `INSERT INTO notificacoes(oficina_id, tipo, titulo, mensagem, link)
+             VALUES($1, 'estoque_minimo', $2, $3, '/app/estoque')`,
+            [
+              oficinaId,
+              `Estoque ${nivel === 'zerado' ? 'zerado' : 'no mínimo'}: ${estItem.nome}`,
+              `${estItem.nome} está com ${novaQtd} unidade(s) em estoque${nivel === 'zerado' ? ' — ZERADO!' : ` (mínimo: ${min})`}. Faça a reposição.`,
+            ]
+          );
+        }
+      }
+    }
+  } catch (e) {
+    log.warn?.('baixar_estoque_falhou', { osId, erro: e.message });
+  }
+}
+
+// POST /lembretes — valida que veiculo_id (se informado) pertence à oficina
+router.post('/lembretes', naoMecanico, validateLembrete, checkVeiculoOwnership, async (req,res) => {
+  try {
+    const {veiculo_id,tipo,descricao,data_previsao,km_previsao}=req.body;
+    const r=await queryOne("INSERT INTO lembretes(oficina_id,veiculo_id,tipo,descricao,data_previsao,km_previsao) VALUES($1,$2,$3,$4,$5,$6) RETURNING id",[oid(req),veiculo_id||null,tipo||'outro',descricao,data_previsao||null,km_previsao||null]);
+    res.status(201).json({id:r.id});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// PUT /lembretes/:id — checkOwns + valida veiculo_id do body
+router.put('/lembretes/:id', naoMecanico, validateId, checkOwns('lembretes'), validateLembrete, checkVeiculoOwnership, async (req,res) => {
+  try {
+    const {veiculo_id,tipo,descricao,data_previsao,km_previsao,visto}=req.body;
+    const result = await run("UPDATE lembretes SET veiculo_id=COALESCE($1,veiculo_id),tipo=COALESCE($2,tipo),descricao=COALESCE($3,descricao),data_previsao=COALESCE($4,data_previsao),km_previsao=COALESCE($5,km_previsao),visto=COALESCE($6,visto) WHERE id=$7 AND oficina_id=$8",[veiculo_id||null,tipo||null,descricao||null,data_previsao||null,km_previsao||null,visto!=null?visto:null,req.params.id,oid(req)]);
+    if(result.rowCount === 0) return res.status(404).json({error:'Lembrete não encontrado'});
+    res.json({ok:true});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// PATCH /lembretes/:id/contato — registra a data do último contato (WhatsApp)
+router.patch('/lembretes/:id/contato', naoMecanico, validateId, checkOwns('lembretes'), async (req,res) => {
+  try {
+    const hoje = new Date().toISOString().split('T')[0];
+    const result = await run('UPDATE lembretes SET ultimo_contato=$1 WHERE id=$2 AND oficina_id=$3', [hoje, req.params.id, oid(req)]);
+    if(result.rowCount === 0) return res.status(404).json({error:'Lembrete não encontrado'});
+    res.json({ ok:true, ultimo_contato: hoje });
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// DELETE /lembretes/:id — checkOwns confirma pertencimento
+router.delete('/lembretes/:id', validateId, checkOwns('lembretes'), async (req,res) => {
+  try {
+    const result = await run('DELETE FROM lembretes WHERE id=$1 AND oficina_id=$2',[req.params.id,oid(req)]);
+    if(result.rowCount === 0) return res.status(404).json({error:'Lembrete não encontrado'});
+    res.json({ok:true});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// ESTOQUE
+router.get('/estoque', async (req,res) => {
+  try {
+    let rawCategoria = req.query.categoria;
+    const isFuncionario = req.user?.perfil === 'funcionario';
+    let q='SELECT * FROM estoque WHERE oficina_id=$1';const p=[oid(req)];
+    if(rawCategoria !== undefined){
+      // Sanitiza categoria: deve ser string, max 50 chars
+      if (typeof rawCategoria !== 'string') {
+        return res.status(400).json({error:'Parâmetro categoria inválido'});
+      }
+      rawCategoria = rawCategoria.trim().slice(0, 50);
+      if (rawCategoria) { q+=' AND categoria=$2'; p.push(rawCategoria); }
+    }
+    q+=' ORDER BY nome';
+    const rows = await query(q,p);
+    // Omite preços para funcionários
+    if(isFuncionario) {
+      res.json(rows.map(({preco, custo, margem, preco_venda, data_compra, ...rest}) => rest));
+    } else {
+      res.json(rows);
+    }
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+router.post('/estoque', validateEstoque, async (req,res) => {
+  try {
+    const {nome,categoria,tipo,marca,aplicacao,quantidade,estoque_min,preco,custo,margem,data_compra,obs,codigo_barras}=req.body;
+    const isFuncionario = req.user?.perfil === 'funcionario';
+    if(!nome) return res.status(400).json({error:'Nome obrigatório'});
+    const precoFinal      = isFuncionario ? 0 : (preco||0);
+    const custoFinal      = isFuncionario ? 0 : (custo||0);
+    const margemFinal     = isFuncionario ? 0 : (margem||0);
+    const precoVendaFinal = isFuncionario ? 0 : parseFloat((custoFinal * (1 + margemFinal / 100)).toFixed(2));
+    // Espelha preco_venda no campo preco para compatibilidade com OS/Orçamento
+    const precoCompativel = isFuncionario ? 0 : (precoVendaFinal > 0 ? precoVendaFinal : precoFinal);
+    const dataCompraFinal = isFuncionario ? null : (data_compra||null);
+    const r=await queryOne(
+      "INSERT INTO estoque(oficina_id,nome,categoria,tipo,marca,aplicacao,quantidade,estoque_min,preco,custo,margem,preco_venda,data_compra,obs,codigo_barras) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id",
+      [oid(req),nome,categoria||'peca',tipo||null,marca||null,aplicacao||null,quantidade||0,estoque_min||0,precoCompativel,custoFinal,margemFinal,precoVendaFinal,dataCompraFinal,obs||null,codigo_barras||null]
+    );
+    res.status(201).json({id:r.id});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// PUT /estoque/:id — checkOwns confirma pertencimento
+router.put('/estoque/:id', validateId, checkOwns('estoque'), validateEstoque, async (req,res) => {
+  try {
+    const {nome,categoria,tipo,marca,aplicacao,quantidade,estoque_min,preco,custo,margem,data_compra,obs,codigo_barras}=req.body;
+    const isFuncionario = req.user?.perfil === 'funcionario';
+    const precoFinal      = isFuncionario ? null : (preco!=null?preco:null);
+    const custoFinal      = isFuncionario ? null : (custo!=null?custo:null);
+    const margemFinal     = isFuncionario ? null : (margem!=null?margem:null);
+    // Recalcula preco_venda se custo ou margem foram enviados
+    const precoVendaFinal = (custoFinal!=null && margemFinal!=null)
+      ? parseFloat(((custoFinal||0) * (1 + (margemFinal||0) / 100)).toFixed(2))
+      : null;
+    // Espelha preco_venda no campo preco para compatibilidade
+    const precoCompativel = precoVendaFinal != null && precoVendaFinal > 0
+      ? precoVendaFinal
+      : precoFinal;
+    const dataCompraFinal = isFuncionario ? null : (data_compra||null);
+    const result = await run(
+      `UPDATE estoque SET
+         nome=COALESCE($1,nome), categoria=COALESCE($2,categoria), tipo=COALESCE($3,tipo),
+         marca=COALESCE($4,marca), aplicacao=COALESCE($5,aplicacao),
+         quantidade=COALESCE($6,quantidade), estoque_min=COALESCE($7,estoque_min),
+         preco=COALESCE($8,preco), custo=COALESCE($9,custo),
+         margem=COALESCE($10,margem), preco_venda=COALESCE($11,preco_venda),
+         data_compra=COALESCE($12,data_compra), obs=COALESCE($13,obs),
+         codigo_barras=COALESCE($14,codigo_barras)
+       WHERE id=$15 AND oficina_id=$16`,
+      [nome,categoria||null,tipo||null,marca||null,aplicacao||null,
+       quantidade!=null?quantidade:null, estoque_min!=null?estoque_min:null,
+       precoCompativel, custoFinal, margemFinal, precoVendaFinal,
+       dataCompraFinal, obs||null, codigo_barras||null,
+       req.params.id, oid(req)]
+    );
+    if(result.rowCount === 0) return res.status(404).json({error:'Item não encontrado'});
+    res.json({ok:true});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// DELETE /estoque/:id — checkOwns confirma pertencimento
+router.delete('/estoque/:id', validateId, checkOwns('estoque'), async (req,res) => {
+  try {
+    const result = await run('DELETE FROM estoque WHERE id=$1 AND oficina_id=$2',[req.params.id,oid(req)]);
+    if(result.rowCount === 0) return res.status(404).json({error:'Item não encontrado'});
+    res.json({ok:true});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// DESPESAS (restrito a admin_oficina)
+router.get('/despesas', naoFuncionario, async (req,res) => {
+  try {
+    const {inicio,fim}=req.query;
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    // Filtra por COALESCE(vencimento, data) para respeitar o período de competência:
+    // despesas com vencimento definido são alocadas no período do vencimento;
+    // despesas sem vencimento usam a data de lançamento.
+    let q='SELECT * FROM despesas WHERE oficina_id=$1';const p=[oid(req)];
+    if(inicio !== undefined){
+      if(!dateRegex.test(inicio)) return res.status(400).json({error:'Formato de data início inválido (YYYY-MM-DD)'});
+      q+=' AND COALESCE(vencimento,data)>=$2';p.push(inicio);
+    }
+    if(fim !== undefined){
+      if(!dateRegex.test(fim)) return res.status(400).json({error:'Formato de data fim inválido (YYYY-MM-DD)'});
+      q+=` AND COALESCE(vencimento,data)<=$${p.length+1}`;p.push(fim);
+    }
+    q+=' ORDER BY COALESCE(vencimento,data) DESC';
+    res.json(await query(q,p));
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+router.post('/despesas', naoFuncionario, validateDespesa, async (req,res) => {
+  try {
+    const {descricao,categoria,valor,data,vencimento,pago,obs,fornecedor_id}=req.body;
+    // Valida fornecedor_id se informado — deve pertencer à mesma oficina
+    let fId = null;
+    if (fornecedor_id) {
+      const fCheck = await queryOne('SELECT id FROM fornecedores WHERE id=$1 AND oficina_id=$2 AND ativo=true',[fornecedor_id,oid(req)]);
+      if (fCheck) fId = fCheck.id;
+    }
+    const r=await queryOne(
+      "INSERT INTO despesas(oficina_id,descricao,categoria,valor,data,vencimento,pago,obs,fornecedor_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id",
+      [oid(req),descricao,categoria||'Outros',valor,data,vencimento||null,pago?1:0,obs||null,fId]
+    );
+    res.status(201).json({id:r.id});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// PUT /despesas/:id — checkOwns confirma pertencimento
+router.put('/despesas/:id', naoFuncionario, validateId, checkOwns('despesas'), validateDespesa, async (req,res) => {
+  try {
+    const {descricao,categoria,valor,data,vencimento,pago,obs,fornecedor_id}=req.body;
+    let fId = undefined;
+    if (fornecedor_id !== undefined) {
+      if (fornecedor_id === null || fornecedor_id === '') {
+        fId = null;
+      } else {
+        const fCheck = await queryOne('SELECT id FROM fornecedores WHERE id=$1 AND oficina_id=$2 AND ativo=true',[fornecedor_id,oid(req)]);
+        fId = fCheck ? fCheck.id : null;
+      }
+    }
+    const result = await run(
+      `UPDATE despesas SET
+         descricao=COALESCE($1,descricao), categoria=COALESCE($2,categoria),
+         valor=COALESCE($3,valor), data=COALESCE($4,data),
+         vencimento=COALESCE($5,vencimento), pago=COALESCE($6,pago),
+         obs=COALESCE($7,obs),
+         fornecedor_id=CASE WHEN $8::boolean THEN $9::integer ELSE fornecedor_id END
+       WHERE id=$10 AND oficina_id=$11`,
+      [descricao||null, categoria||null, valor||null, data||null,
+       vencimento||null, pago!=null?pago:null, obs||null,
+       fId !== undefined, fId !== undefined ? fId : null,
+       req.params.id, oid(req)]
+    );
+    if(result.rowCount === 0) return res.status(404).json({error:'Despesa não encontrada'});
+    res.json({ok:true});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// PATCH /despesas/:id/pago — marca despesa como paga (sem revalidar todos os campos)
+router.patch('/despesas/:id/pago', naoFuncionario, validateId, checkOwns('despesas'), async (req,res) => {
+  try {
+    const pago = req.body?.pago !== undefined ? (req.body.pago ? 1 : 0) : 1;
+    const result = await run('UPDATE despesas SET pago=$1 WHERE id=$2 AND oficina_id=$3', [pago, req.params.id, oid(req)]);
+    if (result.rowCount === 0) return res.status(404).json({error:'Despesa não encontrada'});
+    res.json({ok:true});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// DELETE /despesas/:id — checkOwns confirma pertencimento
+router.delete('/despesas/:id', naoFuncionario, validateId, checkOwns('despesas'), async (req,res) => {
+  try {
+    const result = await run('DELETE FROM despesas WHERE id=$1 AND oficina_id=$2',[req.params.id,oid(req)]);
+    if(result.rowCount === 0) return res.status(404).json({error:'Despesa não encontrada'});
+    res.json({ok:true});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// ORÇAMENTOS
+// ── Conversão de orçamento aprovado em OS ────────────────────
+// Delega para o serviço centralizado orcamentoConversor.js
+const { converterOrcamentoAprovado } = require('../services/orcamentoConversor');
+
+router.get('/orcamentos', async (req,res) => {
+  try {
+    const isFuncionario = req.user?.perfil === 'funcionario';
+    const rows = await query("SELECT o.*,c.nome as cliente_nome,v.modelo as veiculo_modelo,v.placa FROM orcamentos o LEFT JOIN clientes c ON c.id=o.cliente_id LEFT JOIN veiculos v ON v.id=o.veiculo_id WHERE o.oficina_id=$1 ORDER BY o.id DESC",[oid(req)]);
+    const parsed = rows.map(r => {
+      let pecas_itens = [];
+      if (r.pecas_itens) {
+        try { pecas_itens = JSON.parse(r.pecas_itens); } catch (_) { pecas_itens = []; }
+      }
+      return { ...r, pecas_itens };
+    });
+    if(isFuncionario) {
+      res.json(parsed.map(({valor_mo, valor_pecas, desconto, ...rest}) => rest));
+    } else {
+      res.json(parsed);
+    }
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// POST /orcamentos — valida cliente_id e veiculo_id contra a oficina
+router.post('/orcamentos', validateOrcamento, checkClienteVeiculoOwnership, async (req,res) => {
+  try {
+    const { cliente_id, veiculo_id, descricao, servicos, obs, status, validade, valor_mo, desconto, pecas_itens, os_id, interativo } = req.body;
+    const isFuncionario = req.user?.perfil === 'funcionario';
+
+    // Funcionários não podem definir valores financeiros
+    const valorMO       = isFuncionario ? 0 : (valor_mo !== undefined ? Math.max(0, parseFloat(valor_mo) || 0) : 0);
+    const descontoFinal = isFuncionario ? 0 : (desconto !== undefined ? Math.max(0, parseFloat(desconto) || 0) : 0);
+
+    const itens = Array.isArray(pecas_itens) ? pecas_itens.filter(p => p.nome?.trim()) : [];
+    const valorPecas = isFuncionario ? 0 : itens.reduce((s,p) => s + Math.max(0, parseFloat(p.valor_unit)||0) * Math.max(0, parseFloat(p.qtd)||1), 0);
+    const pecasTexto = itens.map(p => `${p.qtd||1}x ${String(p.nome).slice(0,100)} (R$ ${parseFloat(p.valor_unit||0).toFixed(2)})`).join('\n');
+
+    const numero = await proximoNumero(oid(req));
+
+    // Valida os_id se informado
+    const osIdVal = os_id ? parseInt(os_id) : null;
+    if (osIdVal) {
+      const osCheck = await queryOne('SELECT id FROM ordens_servico WHERE id=$1 AND oficina_id=$2', [osIdVal, oid(req)]);
+      if (!osCheck) return res.status(404).json({ error: 'OS não encontrada' });
+    }
+
+    const r = await queryOne(
+      "INSERT INTO orcamentos(oficina_id,cliente_id,veiculo_id,numero,descricao,servicos,pecas,pecas_itens,valor_mo,valor_pecas,desconto,status,validade,obs,os_id,interativo) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING id",
+      [oid(req), cliente_id||null, veiculo_id||null, numero, descricao||null, servicos||null, pecasTexto||null, itens.length ? JSON.stringify(itens) : null, valorMO, valorPecas, descontoFinal, status||'pendente', validade||null, obs||null, osIdVal, !!interativo]
+    );
+    res.status(201).json({ id: r.id, numero });
+  } catch(err) { res.status(500).json({ error: 'Erro interno' }); }
+});
+
+// PUT /orcamentos/:id — checkOwns + valida cliente_id/veiculo_id do body
+router.put('/orcamentos/:id', validateId, checkOwns('orcamentos'), validateOrcamento, checkClienteVeiculoOwnership, async (req,res) => {
+  try {
+    const { descricao, servicos, obs, status, validade, valor_mo, desconto, pecas_itens, cliente_id, veiculo_id, os_id, interativo } = req.body;
+    const isFuncionario = req.user?.perfil === 'funcionario';
+
+    let itens = null;
+    if (pecas_itens !== undefined) {
+      itens = Array.isArray(pecas_itens) ? pecas_itens.filter(p => p.nome?.trim()) : null;
+    }
+
+    const valorMO       = isFuncionario ? null : (valor_mo  !== undefined ? Math.max(0, parseFloat(valor_mo)  || 0) : null);
+    const valorPecas    = (itens && !isFuncionario) ? itens.reduce((s,p) => s + Math.max(0, parseFloat(p.valor_unit)||0) * Math.max(0, parseFloat(p.qtd)||1), 0) : null;
+    const descontoFinal = isFuncionario ? null : (desconto !== undefined ? Math.max(0, parseFloat(desconto) || 0) : null);
+    const pecasTexto    = itens ? itens.map(p => `${p.qtd||1}x ${String(p.nome).slice(0,100)} (R$ ${parseFloat(p.valor_unit||0).toFixed(2)})`).join('\n') : null;
+
+    // Valida os_id se informado (deve pertencer à oficina)
+    const osIdVal = os_id ? parseInt(os_id) : null;
+    if (osIdVal) {
+      const osCheck = await queryOne('SELECT id FROM ordens_servico WHERE id=$1 AND oficina_id=$2', [osIdVal, oid(req)]);
+      if (!osCheck) return res.status(404).json({ error: 'OS não encontrada' });
+    }
+
+    const result = await run(
+      `UPDATE orcamentos SET descricao=COALESCE($1,descricao),servicos=COALESCE($2,servicos),pecas=COALESCE($3,pecas),pecas_itens=COALESCE($4,pecas_itens),valor_mo=COALESCE($5,valor_mo),valor_pecas=COALESCE($6,valor_pecas),desconto=COALESCE($7,desconto),status=COALESCE($8,status),validade=COALESCE($9,validade),obs=COALESCE($10,obs),cliente_id=COALESCE($11,cliente_id),veiculo_id=COALESCE($12,veiculo_id),os_id=COALESCE($13,os_id),interativo=COALESCE($14,interativo) WHERE id=$15 AND oficina_id=$16`,
+      [
+        descricao    || null,
+        servicos     || null,
+        pecasTexto,
+        itens ? JSON.stringify(itens) : null,
+        valorMO,
+        valorPecas,
+        descontoFinal,
+        status       || null,
+        validade     || null,
+        obs          || null,
+        cliente_id   !== undefined ? (cliente_id || null) : null,
+        veiculo_id   !== undefined ? (veiculo_id || null) : null,
+        osIdVal,
+        interativo   !== undefined ? !!interativo : null,
+        req.params.id,
+        oid(req),
+      ]
+    );
+    if(result.rowCount === 0) return res.status(404).json({error:'Orçamento não encontrado'});
+    res.json({ ok: true });
+  } catch(err) { res.status(500).json({ error: 'Erro interno' }); }
+});
+
+// PATCH /orcamentos/:id/status — checkOwns confirma pertencimento
+router.patch('/orcamentos/:id/status', validateId, checkOwns('orcamentos'), async (req,res) => {
+  try {
+    const status = req.body?.status;
+    if(!status || !['pendente','aprovado','rejeitado'].includes(status)) return res.status(400).json({error:'Status inválido'});
+    const result = await run('UPDATE orcamentos SET status=$1 WHERE id=$2 AND oficina_id=$3',[status,req.params.id,oid(req)]);
+    if(result.rowCount === 0) return res.status(404).json({error:'Orçamento não encontrado'});
+
+    // Quando aprovado pelo atendente, converte automaticamente em OS
+    let os_id_gerado = null;
+    if (status === 'aprovado') {
+      os_id_gerado = await converterOrcamentoAprovado(req.params.id, oid(req));
+    }
+
+    res.json({ ok: true, os_id: os_id_gerado });
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// DELETE /orcamentos/:id — checkOwns confirma pertencimento
+router.delete('/orcamentos/:id', validateId, checkOwns('orcamentos'), async (req,res) => {
+  try {
+    const result = await run('DELETE FROM orcamentos WHERE id=$1 AND oficina_id=$2',[req.params.id,oid(req)]);
+    if(result.rowCount === 0) return res.status(404).json({error:'Orçamento não encontrado'});
+    res.json({ok:true});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// POST /os/:id/pagamento — checkOwns confirma que a OS pertence à oficina antes de processar pagamento
+router.post('/os/:id/pagamento', validateId, checkOwns('ordens_servico'), validatePagamentoOS, async (req,res) => {
+  try {
+    const {forma, valor_total, parcelas, bandeira, taxa_maquininha, observacao,
+           boleto_vencimento, boleto_recebido_em} = req.body;
+
+    const osId = req.params.id;
+    const id = oid(req);
+    const os = await queryOne('SELECT * FROM ordens_servico WHERE id=$1 AND oficina_id=$2', [osId, id]);
+    if (!os) return res.status(404).json({error:'OS não encontrada'});
+
+    const vTotal = parseFloat(valor_total);
+    const nParcelas = forma === 'credito' ? Math.min(Math.max(parseInt(parcelas)||1, 1), 10) : 1;
+    const taxa = (forma === 'credito' || forma === 'debito') ? (parseFloat(taxa_maquininha)||0) : 0;
+    const valorLiquido = vTotal - (vTotal * taxa / 100);
+    const valorParcela = forma === 'credito' ? valorLiquido / nParcelas : valorLiquido;
+    const hoje = new Date().toISOString().split('T')[0];
+
+    // Boleto: começa pendente se não há data de recebimento confirmada
+    const boletoPendente = forma === 'boleto' && !boleto_recebido_em;
+
+    const r = await queryOne(
+      `INSERT INTO pagamentos_os(oficina_id, os_id, cliente_id, forma, valor_total, parcelas, bandeira,
+        taxa_maquininha, valor_liquido, valor_parcela, data_pagamento, observacao,
+        boleto_vencimento, boleto_recebido_em, boleto_pendente)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id`,
+      [id, osId, os.cliente_id, forma, vTotal, nParcelas, bandeira||null, taxa,
+       valorLiquido, valorParcela, hoje, observacao||null,
+       boleto_vencimento||null, boleto_recebido_em||null, boletoPendente]
+    );
+
+    // Cria registros de parcelas a receber para cartão
+    if (forma === 'credito') {
+      for (let i = 1; i <= nParcelas; i++) {
+        const dataReceb = new Date();
+        dataReceb.setDate(dataReceb.getDate() + (i * 30));
+        await run(
+          "INSERT INTO parcelas_receber(oficina_id, pagamento_os_id, os_id, cliente_id, numero_parcela, valor, data_recebimento) VALUES($1,$2,$3,$4,$5,$6,$7)",
+          [id, r.id, osId, os.cliente_id, i, valorParcela, dataReceb.toISOString().split('T')[0]]
+        );
+      }
+    } else if (forma === 'debito') {
+      const dataReceb = new Date();
+      dataReceb.setDate(dataReceb.getDate() + 1);
+      await run(
+        "INSERT INTO parcelas_receber(oficina_id, pagamento_os_id, os_id, cliente_id, numero_parcela, valor, data_recebimento) VALUES($1,$2,$3,$4,$5,$6,$7)",
+        [id, r.id, osId, os.cliente_id, 1, valorLiquido, dataReceb.toISOString().split('T')[0]]
+      );
+    }
+
+    // Finaliza a OS automaticamente, gravando timestamp de conclusão
+    await run(
+      "UPDATE ordens_servico SET status='finalizado', data_conclusao=NOW() WHERE id=$1 AND oficina_id=$2",
+      [osId, id]
+    );
+
+    // Garante a comissão do mecânico (se houver mecânico + config)
+    await garantirComissaoOS(id, osId);
+
+    // Gera lembrete de retorno (troca de óleo/revisão), se aplicável
+    await gerarLembreteAutomatico(id, osId);
+
+    // Baixa estoque das peças usadas + alerta de estoque mínimo
+    await baixarEstoqueOS(id, osId);
+
+    // Invalida cache do dashboard ao finalizar OS com pagamento
+    for (const k of _dashCache.keys()) { if (k.startsWith(`dashboard:${id}:`) || k.startsWith(`dashboard-resumo:${id}:`)) _dashCache.delete(k); }
+
+    res.status(201).json({id: r.id, valor_liquido: valorLiquido, parcelas: nParcelas, valor_parcela: valorParcela});
+  } catch(err){log.error('app_pagamento_os',err);res.status(500).json({error:'Erro interno'});}
+});
+
+// Parcelas a receber (cartão parcelado)
+router.get('/parcelas-receber', async (req,res) => {
+  try {
+    const rows = await query(
+      `SELECT pr.*, c.nome as cliente_nome, os.numero as os_numero
+       FROM parcelas_receber pr
+       LEFT JOIN clientes c ON c.id=pr.cliente_id
+       LEFT JOIN ordens_servico os ON os.id=pr.os_id
+       WHERE pr.oficina_id=$1 AND pr.recebido=0
+       ORDER BY pr.data_recebimento ASC`,
+      [oid(req)]
+    );
+    res.json(rows);
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// PATCH /parcelas-receber/:id/recebido — checkOwns confirma pertencimento
+router.patch('/parcelas-receber/:id/recebido', validateId, checkOwns('parcelas_receber'), async (req,res) => {
+  try {
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    const recebido_em = req.body?.recebido_em && dateRegex.test(req.body.recebido_em)
+      ? req.body.recebido_em
+      : new Date().toISOString().split('T')[0];
+    const result = await run(
+      'UPDATE parcelas_receber SET recebido=1, recebido_em=$1 WHERE id=$2 AND oficina_id=$3',
+      [recebido_em, req.params.id, oid(req)]
+    );
+    if(result.rowCount === 0) return res.status(404).json({error:'Parcela não encontrada'});
+    res.json({ok:true});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// ── GET /recebimentos — pagamentos efetivamente recebidos no período ──────────
+// Retorna pagamentos_os com data_pagamento no período + faturamento OS por mês (3 meses)
+router.get('/recebimentos', naoFuncionario, async (req,res) => {
+  try {
+    const id = oid(req);
+    const hoje = new Date().toISOString().split('T')[0];
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    let inicio = req.query.inicio;
+    let fim    = req.query.fim;
+    if (!inicio || !dateRegex.test(inicio)) inicio = hoje.substring(0,7)+'-01';
+    if (!fim    || !dateRegex.test(fim))    fim    = hoje;
+    if (inicio > fim) { const tmp=inicio; inicio=fim; fim=tmp; }
+
+    // Pagamentos recebidos no período (exceto boletos pendentes)
+    const recebidos = await query(
+      `SELECT p.id, p.os_id, p.forma, p.valor_total, p.valor_liquido, p.taxa_maquininha,
+              p.data_pagamento, p.boleto_recebido_em, p.boleto_pendente,
+              os.numero as os_numero, c.nome as cliente_nome
+       FROM pagamentos_os p
+       LEFT JOIN ordens_servico os ON os.id = p.os_id
+       LEFT JOIN clientes c ON c.id = p.cliente_id
+       WHERE p.oficina_id=$1
+         AND p.data_pagamento>=$2 AND p.data_pagamento<=$3
+         AND (p.boleto_pendente IS NULL OR p.boleto_pendente=false)
+       ORDER BY p.data_pagamento DESC`,
+      [id, inicio, fim]
+    );
+
+    // Total recebido no período
+    const totalRecebido = recebidos.reduce((s,p)=>s+parseFloat(p.valor_liquido||p.valor_total||0),0);
+
+    // Faturamento de OS por mês (3 meses fechados: atual, próximo, seguinte)
+    const dHoje = new Date();
+    const faturamentoMeses = await Promise.all(
+      Array.from({length:3},(_,i)=>{
+        const d   = new Date(dHoje.getFullYear(), dHoje.getMonth()+i, 1);
+        const ult = new Date(dHoje.getFullYear(), dHoje.getMonth()+i+1, 0);
+        const ini = d.toISOString().split('T')[0];
+        const fim2 = ult.toISOString().split('T')[0];
+        const ym  = ini.substring(0,7);
+        return queryOne(
+          "SELECT COALESCE(SUM(valor),0) t, COUNT(*) n FROM ordens_servico WHERE oficina_id=$1 AND status='finalizado' AND data>=$2 AND data<=$3",
+          [id, ini, fim2]
+        ).then(r=>({ ym, ini, fim: fim2, total: +r.t, quantidade: +r.n }));
+      })
+    );
+
+    res.json({ recebidos, totalRecebido, faturamentoMeses });
+  } catch(err){ log.error('app_recebimentos',err); res.status(500).json({error:'Erro interno'}); }
+});
+
+// ── GET /financeiro-resumo — KPIs consolidados do módulo financeiro ──────────
+// Retorna todos os dados necessários para a Visão Geral em uma única chamada:
+// receitas, despesas, lucro, comparativos, total a pagar, total a receber, saldo, vencidos
+router.get('/financeiro-resumo', naoFuncionario, async (req,res) => {
+  try {
+    const id = oid(req);
+    const hoje = new Date().toISOString().split('T')[0];
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+
+    // Período do request (default: mês atual)
+    let inicio = req.query.inicio;
+    let fim    = req.query.fim;
+    if (!inicio || !dateRegex.test(inicio)) inicio = hoje.substring(0,7)+'-01';
+    if (!fim    || !dateRegex.test(fim))    fim    = hoje;
+    if (inicio > fim) { const tmp=inicio; inicio=fim; fim=tmp; }
+
+    // Período anterior de mesma duração
+    const dIni = new Date(inicio+'T00:00:00');
+    const dFim = new Date(fim+'T00:00:00');
+    const dur  = Math.round((dFim-dIni)/86400000)+1;
+    const prevFim    = new Date(dIni.getTime()-86400000).toISOString().split('T')[0];
+    const prevInicio = new Date(new Date(prevFim+'T00:00:00').getTime()-(dur-1)*86400000).toISOString().split('T')[0];
+
+    const [
+      recAtual, recPrev,
+      despPagas, despPagasPrev,
+      despTotal, despTotalPrev,
+      despVencidas,
+      totalReceber, totalPagar,
+      parcelasReceber, boletosRec,
+      formasPag,
+    ] = await Promise.all([
+      // Receita = OS finalizadas no período
+      queryOne("SELECT COALESCE(SUM(valor),0) t FROM ordens_servico WHERE oficina_id=$1 AND status='finalizado' AND data>=$2 AND data<=$3",[id,inicio,fim]),
+      queryOne("SELECT COALESCE(SUM(valor),0) t FROM ordens_servico WHERE oficina_id=$1 AND status='finalizado' AND data>=$2 AND data<=$3",[id,prevInicio,prevFim]),
+      // Despesas PAGAS no período
+      queryOne("SELECT COALESCE(SUM(valor),0) t FROM despesas WHERE oficina_id=$1 AND pago=1 AND COALESCE(vencimento,data)>=$2 AND COALESCE(vencimento,data)<=$3",[id,inicio,fim]),
+      queryOne("SELECT COALESCE(SUM(valor),0) t FROM despesas WHERE oficina_id=$1 AND pago=1 AND COALESCE(vencimento,data)>=$2 AND COALESCE(vencimento,data)<=$3",[id,prevInicio,prevFim]),
+      // Despesas TOTAIS (pagas + pendentes) no período
+      queryOne("SELECT COALESCE(SUM(valor),0) t FROM despesas WHERE oficina_id=$1 AND COALESCE(vencimento,data)>=$2 AND COALESCE(vencimento,data)<=$3",[id,inicio,fim]),
+      queryOne("SELECT COALESCE(SUM(valor),0) t FROM despesas WHERE oficina_id=$1 AND COALESCE(vencimento,data)>=$2 AND COALESCE(vencimento,data)<=$3",[id,prevInicio,prevFim]),
+      // Despesas vencidas (pago=0 e vencimento < hoje)
+      queryOne("SELECT COALESCE(SUM(valor),0) t, COUNT(*) n FROM despesas WHERE oficina_id=$1 AND pago=0 AND vencimento IS NOT NULL AND vencimento<$2",[id,hoje]),
+      // Total a receber = parcelas de cartão pendentes + boletos pendentes + recebimentos manuais pendentes
+      queryOne(`SELECT
+        COALESCE((SELECT SUM(valor)         FROM parcelas_receber      WHERE oficina_id=$1 AND recebido=0),0)
+      + COALESCE((SELECT SUM(valor_liquido) FROM pagamentos_os         WHERE oficina_id=$1 AND boleto_pendente=true),0)
+      + COALESCE((SELECT SUM(valor)         FROM recebimentos_manuais  WHERE oficina_id=$1 AND recebido=0),0) AS t,
+        COALESCE((SELECT COUNT(*)           FROM parcelas_receber      WHERE oficina_id=$1 AND recebido=0),0)
+      + COALESCE((SELECT COUNT(*)           FROM pagamentos_os         WHERE oficina_id=$1 AND boleto_pendente=true),0)
+      + COALESCE((SELECT COUNT(*)           FROM recebimentos_manuais  WHERE oficina_id=$1 AND recebido=0),0) AS n`,[id]),
+      // Total a pagar (despesas não pagas)
+      queryOne("SELECT COALESCE(SUM(valor),0) t, COUNT(*) n FROM despesas WHERE oficina_id=$1 AND pago=0",[id]),
+      // Parcelas próximas 90 dias
+      queryOne(`SELECT COALESCE(SUM(valor),0) t FROM parcelas_receber WHERE oficina_id=$1 AND recebido=0 AND data_recebimento<=$2`,[id,new Date(Date.now()+90*86400000).toISOString().split('T')[0]]),
+      // Boletos pendentes
+      queryOne("SELECT COALESCE(SUM(valor_liquido),0) t, COUNT(*) n FROM pagamentos_os WHERE oficina_id=$1 AND boleto_pendente=true",[id]),
+      // Formas de pagamento no período
+      query("SELECT forma, COALESCE(SUM(valor_total),0) total FROM pagamentos_os WHERE oficina_id=$1 AND data_pagamento>=$2 AND data_pagamento<=$3 GROUP BY forma",[id,inicio,fim]),
+    ]);
+
+    const receita      = +recAtual.t;
+    const receitaPrev  = +recPrev.t;
+    const despPagasV   = +despPagas.t;
+    const despPagasPrevV = +despPagasPrev.t;
+    const despTotalV   = +despTotal.t;
+    const lucro        = receita - despPagasV;
+    const lucroPrev    = +recPrev.t - +despPagasPrev.t;
+    const saldo        = receita - despPagasV; // simplificado: receita realizada - despesas pagas
+    const variacao     = (a,p) => p>0 ? Math.round(((a-p)/p)*100) : null;
+    const margem       = receita > 0 ? Math.round((lucro/receita)*100*10)/10 : 0;
+    const margemPrev   = receitaPrev > 0 ? Math.round((lucroPrev/receitaPrev)*100*10)/10 : 0;
+
+    // Série temporal (diária ou mensal)
+    const dFimP = new Date(fim+'T00:00:00');
+    const dIniP = new Date(inicio+'T00:00:00');
+    const durP  = Math.round((dFimP-dIniP)/86400000)+1;
+    let serie = [];
+    if (durP <= 62) {
+      const [fatD, despD] = await Promise.all([
+        query("SELECT data, COALESCE(SUM(valor),0) t FROM ordens_servico WHERE oficina_id=$1 AND status='finalizado' AND data>=$2 AND data<=$3 GROUP BY data",[id,inicio,fim]),
+        query("SELECT COALESCE(vencimento,data) d, COALESCE(SUM(valor),0) t FROM despesas WHERE oficina_id=$1 AND COALESCE(vencimento,data)>=$2 AND COALESCE(vencimento,data)<=$3 GROUP BY COALESCE(vencimento,data)",[id,inicio,fim]),
+      ]);
+      const mF=Object.fromEntries(fatD.map(r=>[r.data,+r.t]));
+      const mD=Object.fromEntries(despD.map(r=>[r.d,+r.t]));
+      for(let i=0;i<durP;i++){
+        const d=new Date(dIniP.getTime()+i*86400000).toISOString().split('T')[0];
+        serie.push({label:d.slice(8,10)+'/'+d.slice(5,7),data:d,receita:mF[d]||0,despesas:mD[d]||0});
+      }
+    } else {
+      const [fatM, despM] = await Promise.all([
+        query("SELECT SUBSTRING(data,1,7) ym, COALESCE(SUM(valor),0) t FROM ordens_servico WHERE oficina_id=$1 AND status='finalizado' AND data>=$2 AND data<=$3 GROUP BY SUBSTRING(data,1,7)",[id,inicio,fim]),
+        query("SELECT SUBSTRING(COALESCE(vencimento,data),1,7) ym, COALESCE(SUM(valor),0) t FROM despesas WHERE oficina_id=$1 AND COALESCE(vencimento,data)>=$2 AND COALESCE(vencimento,data)<=$3 GROUP BY SUBSTRING(COALESCE(vencimento,data),1,7)",[id,inicio,fim]),
+      ]);
+      const mF=Object.fromEntries(fatM.map(r=>[r.ym,+r.t]));
+      const mD=Object.fromEntries(despM.map(r=>[r.ym,+r.t]));
+      const cur=new Date(dIniP.getFullYear(),dIniP.getMonth(),1);
+      const last=new Date(dFimP.getFullYear(),dFimP.getMonth(),1);
+      while(cur<=last){
+        const ym=cur.getFullYear()+'-'+String(cur.getMonth()+1).padStart(2,'0');
+        serie.push({label:ym.slice(5,7)+'/'+ym.slice(2,4),data:ym,receita:mF[ym]||0,despesas:mD[ym]||0});
+        cur.setMonth(cur.getMonth()+1);
+      }
+    }
+
+    res.json({
+      periodo: { inicio, fim, durDias: dur },
+      kpis: {
+        receita:          { valor: receita,       variacao: variacao(receita, receitaPrev) },
+        despesasPagas:    { valor: despPagasV,    variacao: variacao(despPagasV, despPagasPrevV) },
+        despesasTotal:    { valor: despTotalV,    variacao: variacao(despTotalV, +despTotalPrev.t) },
+        lucro:            { valor: lucro,          variacao: variacao(lucro, lucroPrev) },
+        margem:           { valor: margem,         anterior: margemPrev },
+        saldo:            { valor: saldo },
+        totalAReceber:    { valor: +totalReceber.t, quantidade: +totalReceber.n },
+        totalAPagar:      { valor: +totalPagar.t,   quantidade: +totalPagar.n },
+        despesasVencidas: { valor: +despVencidas.t,  quantidade: +despVencidas.n },
+        boletosRec:       { valor: +boletosRec.t,    quantidade: +boletosRec.n },
+      },
+      serie,
+      formasPagamento: formasPag.map(r=>({forma:r.forma, total:+r.total})),
+    });
+  } catch(err){ log.error('app_financeiro_resumo',err); res.status(500).json({error:'Erro interno'}); }
+});
+
+// GET /boletos-pendentes — boletos não recebidos (pagamentos_os com boleto_pendente=true)
+router.get('/boletos-pendentes', async (req,res) => {
+  try {
+    const rows = await query(
+      `SELECT p.id, p.os_id, p.valor_total, p.valor_liquido, p.boleto_vencimento, p.data_pagamento,
+              c.nome as cliente_nome, os.numero as os_numero
+       FROM pagamentos_os p
+       LEFT JOIN clientes c ON c.id = p.cliente_id
+       LEFT JOIN ordens_servico os ON os.id = p.os_id
+       WHERE p.oficina_id=$1 AND p.boleto_pendente=true
+       ORDER BY p.boleto_vencimento ASC NULLS LAST, p.data_pagamento ASC`,
+      [oid(req)]
+    );
+    res.json(rows);
+  } catch(err){ res.status(500).json({error:'Erro interno'}); }
+});
+
+// GET /os/:id/pagamentos — checkOwns garante que a OS pertence à oficina antes de listar pagamentos
+router.get('/os/:id/pagamentos', validateId, checkOwns('ordens_servico'), async (req,res) => {
+  try {
+    const rows = await query('SELECT * FROM pagamentos_os WHERE os_id=$1 AND oficina_id=$2 ORDER BY criado_em DESC', [req.params.id, oid(req)]);
+    res.json(rows);
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// PATCH /pagamentos-os/:id/boleto-recebido — confirma recebimento de boleto
+router.patch('/pagamentos-os/:id/boleto-recebido', validateId, naoFuncionario, async (req,res) => {
+  try {
+    const recebido_em = req.body?.recebido_em || new Date().toISOString().split('T')[0];
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(recebido_em)) return res.status(400).json({error:'Data inválida (YYYY-MM-DD)'});
+    const pag = await queryOne('SELECT * FROM pagamentos_os WHERE id=$1 AND oficina_id=$2',[req.params.id, oid(req)]);
+    if (!pag) return res.status(404).json({error:'Pagamento não encontrado'});
+    if (pag.forma !== 'boleto') return res.status(400).json({error:'Apenas boletos podem ser confirmados por esta rota'});
+    if (!pag.boleto_pendente) return res.status(409).json({error:'Boleto já confirmado'});
+    await run('UPDATE pagamentos_os SET boleto_recebido_em=$1, boleto_pendente=false WHERE id=$2 AND oficina_id=$3',
+      [recebido_em, req.params.id, oid(req)]);
+    res.json({ok:true, boleto_recebido_em: recebido_em});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// GET /os/:id/comprovante — retorna dados completos para geração do comprovante PDF
+// Inclui OS, cliente, veículo, pagamentos e dados da oficina (com logo e garantia)
+// Protegido: checkOwns garante isolamento entre oficinas (evita IDOR)
+router.get('/os/:id/comprovante', validateId, checkOwns('ordens_servico'), async (req,res) => {
+  try {
+    const osId = req.params.id;
+    const id   = oid(req);
+
+    // Busca OS com join completo (cliente + veículo + mecânico)
+    const os = await queryOne(
+      `SELECT os.*,
+              c.nome     AS cliente_nome,    c.telefone AS cliente_telefone,
+              c.email    AS cliente_email,   c.endereco AS cliente_endereco,
+              v.modelo   AS veiculo_modelo,  v.marca    AS veiculo_marca,
+              v.placa    AS veiculo_placa,   v.ano      AS veiculo_ano,
+              v.km       AS veiculo_km,      u.nome     AS mecanico_nome
+       FROM ordens_servico os
+       LEFT JOIN clientes  c ON c.id = os.cliente_id
+       LEFT JOIN veiculos  v ON v.id = os.veiculo_id
+       LEFT JOIN usuarios  u ON u.id = os.mecanico_id
+       WHERE os.id=$1 AND os.oficina_id=$2`,
+      [osId, id]
+    );
+    if (!os) return res.status(404).json({ error: 'OS não encontrada' });
+
+    // Parse de pecas_itens (JSON armazenado como TEXT)
+    if (os.pecas_itens && typeof os.pecas_itens === 'string') {
+      try { os.pecas_itens = JSON.parse(os.pecas_itens); } catch { os.pecas_itens = []; }
+    }
+    if (!Array.isArray(os.pecas_itens)) os.pecas_itens = [];
+
+    // Busca todos os pagamentos desta OS
+    const pagamentos = await query(
+      'SELECT * FROM pagamentos_os WHERE os_id=$1 AND oficina_id=$2 ORDER BY data_pagamento ASC, criado_em ASC',
+      [osId, id]
+    );
+
+    // Busca dados da oficina (logo, CNPJ, garantia padrão etc.)
+    const oficina = await queryOne(
+      `SELECT nome, responsavel, telefone, whatsapp, email, endereco, logo,
+              observacoes AS documento, segmento,
+              garantia_padrao_dias, garantia_padrao_condicoes
+       FROM oficinas WHERE id=$1`,
+      [id]
+    );
+    if (!oficina) return res.status(404).json({ error: 'Oficina não encontrada' });
+
+    // Não expõe logo para perfis não autorizados (funcionário/mecânico podem ver o comprovante)
+    // mas filtramos campos financeiros internos da OS
+    const perfil = req.user?.perfil;
+    const isFuncionario = perfil === 'funcionario';
+    const isMecanico    = perfil === 'mecanico';
+    if (isFuncionario || isMecanico) {
+      // Remove campos financeiros sensíveis para funcionário/mecânico
+      delete os.valor; delete os.valor_mo; delete os.valor_pecas;
+      delete os.mecanico_comissao_servicos; delete os.mecanico_comissao_pecas;
+      delete os.mecanico_comissao_total; delete os.mecanico_pct_servicos;
+      delete os.mecanico_pct_pecas;
+      for (const p of pagamentos) { delete p.taxa_maquininha; delete p.valor_liquido; }
+    }
+
+    res.json({ os, pagamentos, oficina });
+  } catch(err){ log.error('app_get_comprovante', err); res.status(500).json({ error: 'Erro interno' }); }
+});
+
+// PATCH /os/:id/garantia — atualiza dados de garantia de uma OS (antes ou após finalizar)
+// Requer perfil admin_oficina ou superior (não funcionário/mecânico)
+router.patch('/os/:id/garantia', validateId, naoFuncionario, naoMecanico, checkOwns('ordens_servico'), async (req,res) => {
+  try {
+    const { garantia_prazo_dias, garantia_condicoes, garantia_data_inicio, garantia_ativa } = req.body;
+
+    if (garantia_prazo_dias !== undefined) {
+      const dias = parseInt(garantia_prazo_dias, 10);
+      if (!Number.isInteger(dias) || dias < 0 || dias > 3650) {
+        return res.status(400).json({ error: 'Prazo de garantia inválido (0 a 3650 dias)' });
+      }
+    }
+
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (garantia_data_inicio && !dateRegex.test(garantia_data_inicio)) {
+      return res.status(400).json({ error: 'Data de início da garantia inválida (YYYY-MM-DD)' });
+    }
+
+    const condicoes = garantia_condicoes
+      ? String(garantia_condicoes).replace(/<[^>]*>/g, '').trim().slice(0, 1000) || null
+      : undefined;
+
+    // garantia_ativa: controla se a garantia está ativada nesta OS
+    const ativaVal = garantia_ativa !== undefined ? !!garantia_ativa : null;
+
+    const result = await run(
+      `UPDATE ordens_servico SET
+         garantia_ativa       = COALESCE($1, garantia_ativa),
+         garantia_prazo_dias  = COALESCE($2, garantia_prazo_dias),
+         garantia_condicoes   = COALESCE($3, garantia_condicoes),
+         garantia_data_inicio = COALESCE($4, garantia_data_inicio)
+       WHERE id=$5 AND oficina_id=$6`,
+      [
+        ativaVal,
+        garantia_prazo_dias !== undefined ? parseInt(garantia_prazo_dias, 10) : null,
+        condicoes !== undefined           ? condicoes                          : null,
+        garantia_data_inicio              || null,
+        req.params.id,
+        oid(req),
+      ]
+    );
+    if (result.rowCount === 0) return res.status(404).json({ error: 'OS não encontrada' });
+
+    audit(req, 'ATUALIZAR_GARANTIA_OS', 'ordens_servico', req.params.id, {
+      garantia_prazo_dias, garantia_data_inicio,
+    });
+    res.json({ ok: true });
+  } catch(err){ log.error('app_patch_garantia', err); res.status(500).json({ error: 'Erro interno' }); }
+});
+
+// Todos os pagamentos de OS da oficina (para gráficos)
+router.get('/pagamentos-os', async (req,res) => {
+  try {
+    // Limita a 500 registros para proteger contra dump acidental
+    const rows = await query('SELECT * FROM pagamentos_os WHERE oficina_id=$1 ORDER BY data_pagamento DESC LIMIT 500', [oid(req)]);
+    res.json(rows);
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// AGENDA
+router.get('/agenda', async (req,res) => {
+  try {
+    const {data}=req.query;
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if(data !== undefined && !dateRegex.test(data)){
+      return res.status(400).json({error:'Formato de data inválido (YYYY-MM-DD)'});
+    }
+    let q="SELECT a.*,c.nome as cliente_nome,v.modelo as veiculo_modelo FROM agenda a LEFT JOIN clientes c ON c.id=a.cliente_id LEFT JOIN veiculos v ON v.id=a.veiculo_id WHERE a.oficina_id=$1";
+    const p=[oid(req)];
+    if(data){q+=' AND a.data=$2';p.push(data);}
+    q+=' ORDER BY a.data,a.hora';
+    res.json(await query(q,p));
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// POST /agenda — valida cliente_id e veiculo_id contra a oficina
+router.post('/agenda', validateAgenda, checkClienteVeiculoOwnership, async (req,res) => {
+  try {
+    const {cliente_id,veiculo_id,titulo,data,hora,descricao}=req.body;
+    const r=await queryOne(
+      "INSERT INTO agenda(oficina_id,cliente_id,veiculo_id,titulo,data,hora,descricao) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id",
+      [oid(req),cliente_id||null,veiculo_id||null,titulo,data||new Date().toISOString().split('T')[0],hora||null,descricao||null]
+    );
+    res.status(201).json({id:r.id});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// PUT /agenda/:id — checkOwns + valida cliente_id/veiculo_id do body
+router.put('/agenda/:id', validateId, checkOwns('agenda'), validateAgenda, checkClienteVeiculoOwnership, async (req,res) => {
+  try {
+    const {cliente_id,veiculo_id,titulo,data,hora,descricao}=req.body;
+    const result = await run(
+      "UPDATE agenda SET titulo=COALESCE($1,titulo),data=COALESCE($2,data),hora=COALESCE($3,hora),descricao=COALESCE($4,descricao),cliente_id=COALESCE($5,cliente_id),veiculo_id=COALESCE($6,veiculo_id) WHERE id=$7 AND oficina_id=$8",
+      [titulo||null,data||null,hora||null,descricao||null,cliente_id||null,veiculo_id||null,req.params.id,oid(req)]
+    );
+    if(result.rowCount === 0) return res.status(404).json({error:'Agendamento não encontrado'});
+    res.json({ok:true});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// DELETE /agenda/:id — checkOwns confirma pertencimento
+router.delete('/agenda/:id', validateId, checkOwns('agenda'), async (req,res) => {
+  try {
+    const result = await run('DELETE FROM agenda WHERE id=$1 AND oficina_id=$2',[req.params.id,oid(req)]);
+    if(result.rowCount === 0) return res.status(404).json({error:'Agendamento não encontrado'});
+    res.json({ok:true});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// CONFIGURAÇÕES DA OFICINA (leitura e atualização pelos próprios usuários)
+router.get('/config', naoFuncionario, async (req,res) => {
+  try {
+    const of = await queryOne(
+      "SELECT nome, responsavel, telefone, email, endereco, logo, observacoes, whatsapp, segmento, meta_mensal, repassar_taxa_cliente, recebimento_cartao FROM oficinas WHERE id=$1",
+      [oid(req)]
+    );
+    if (!of) return res.status(404).json({ error: 'Oficina não encontrada' });
+    res.json({
+      nome:        of.nome        || '',
+      responsavel: of.responsavel || '',
+      telefone:    of.telefone    || '',
+      whatsapp:    of.whatsapp    || '',
+      email:       of.email       || '',
+      endereco:    of.endereco    || '',
+      logo:        of.logo        || null,
+      documento:   of.observacoes || '',
+      segmento:    of.segmento    || 'oficina_mecanica',
+      meta_mensal: parseFloat(of.meta_mensal) || 0,
+      repassar_taxa_cliente: of.repassar_taxa_cliente || false,
+      recebimento_cartao: of.recebimento_cartao || 'proximo_dia',
+    });
+  } catch(err){ log.error('app_get_config', err); res.status(500).json({ error: 'Erro interno' }); }
+});
+
+router.put('/config', naoFuncionario, validateLogoUpload, async (req,res) => {
+  try {
+    // Valida e sanitiza campos de configuração da oficina
+    const nomeRaw = req.body?.nome;
+    if (!nomeRaw || typeof nomeRaw !== 'string' || !nomeRaw.trim()) {
+      return res.status(400).json({ error: 'Nome da oficina é obrigatório' });
+    }
+    const nome = nomeRaw.trim().slice(0, 120);
+
+    const responsavel = req.body.responsavel ? String(req.body.responsavel).replace(/<[^>]*>/g, '').trim().slice(0, 120) || null : null;
+    const telefone    = req.body.telefone    ? String(req.body.telefone).replace(/[^\d\s\-\+\(\)]/g, '').slice(0, 30) || null : null;
+    const whatsapp    = req.body.whatsapp    ? String(req.body.whatsapp).replace(/[^\d\s\-\+\(\)]/g, '').slice(0, 30) || null : null;
+    const endereco    = req.body.endereco    ? String(req.body.endereco).replace(/<[^>]*>/g, '').trim().slice(0, 300) || null : null;
+    const documento   = req.body.documento   ? String(req.body.documento).replace(/<[^>]*>/g, '').trim().slice(0, 500) || null : null;
+    const segmento    = ['carro','moto','caminhao','jetski','barco','industrial'].includes(req.body.segmento) ? req.body.segmento : null;
+
+    // Valida email se fornecido
+    let emailVal = null;
+    if (req.body.email) {
+      const e = String(req.body.email).trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) || e.length > 254) {
+        return res.status(400).json({ error: 'E-mail inválido' });
+      }
+      emailVal = e;
+    }
+
+    // Valida logo (data URL, máx. 2MB)
+    let logo = undefined;
+    if (req.body.logo !== undefined) {
+      if (req.body.logo === null || req.body.logo === '') {
+        logo = null;
+      } else if (typeof req.body.logo === 'string') {
+        if (req.body.logo.length > 2 * 1024 * 1024 * 1.37) { // base64 overhead ~37%
+          return res.status(400).json({ error: 'Logo muito grande. Use uma imagem de até 2MB.' });
+        }
+        if (!req.body.logo.startsWith('data:image/')) {
+          return res.status(400).json({ error: 'Formato de logo inválido' });
+        }
+        logo = req.body.logo;
+      }
+    }
+
+    const recebimentoCartao = ['mesmo_dia','proximo_dia','agenda_parcelas'].includes(req.body?.recebimento_cartao)
+      ? req.body.recebimento_cartao : null;
+
+    await run(
+      `UPDATE oficinas SET
+        nome        = $1,
+        responsavel = COALESCE($2, responsavel),
+        telefone    = COALESCE($3, telefone),
+        whatsapp    = $4,
+        email       = COALESCE($5, email),
+        endereco    = $6,
+        logo        = COALESCE($7, logo),
+        observacoes = $8,
+        segmento    = COALESCE($9, segmento),
+        repassar_taxa_cliente = COALESCE($11, repassar_taxa_cliente),
+        recebimento_cartao    = COALESCE($12, recebimento_cartao)
+       WHERE id = $10`,
+      [
+        nome,
+        responsavel || null,
+        telefone    || null,
+        whatsapp    || null,
+        emailVal    || null,
+        endereco    || null,
+        logo !== undefined ? (logo || null) : null,
+        documento   || null,
+        segmento    || null,
+        oid(req),
+        req.body?.repassar_taxa_cliente !== undefined ? !!req.body.repassar_taxa_cliente : null,
+        recebimentoCartao,
+      ]
+    );
+
+    // Atualiza nome do usuário se responsável foi alterado
+    if (responsavel?.trim()) {
+      await run(
+        'UPDATE usuarios SET nome=$1 WHERE id=$2',
+        [responsavel.trim(), req.user.id]
+      );
+    }
+
+    res.json({ ok: true });
+  } catch(err){ log.error('app_put_config', err); res.status(500).json({ error: 'Erro interno' }); }
+});
+
+// ── FORNECEDORES ──────────────────────────────────────────────
+router.get('/fornecedores', naoFuncionario, async (req,res) => {
+  try {
+    res.json(await query('SELECT * FROM fornecedores WHERE oficina_id=$1 AND ativo=true ORDER BY nome',[oid(req)]));
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+router.post('/fornecedores', naoFuncionario, async (req,res) => {
+  try {
+    const { nome, cnpj_cpf, telefone, email, obs } = req.body;
+    if (!nome?.trim()) return res.status(400).json({error:'Nome é obrigatório'});
+    const r = await queryOne(
+      'INSERT INTO fornecedores(oficina_id,nome,cnpj_cpf,telefone,email,obs) VALUES($1,$2,$3,$4,$5,$6) RETURNING id',
+      [oid(req), nome.trim().slice(0,120), cnpj_cpf||null, telefone||null, email||null, obs||null]
+    );
+    res.status(201).json({id:r.id});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+router.put('/fornecedores/:id', naoFuncionario, validateId, async (req,res) => {
+  try {
+    const { nome, cnpj_cpf, telefone, email, obs } = req.body;
+    if (!nome?.trim()) return res.status(400).json({error:'Nome é obrigatório'});
+    const result = await run(
+      'UPDATE fornecedores SET nome=$1,cnpj_cpf=$2,telefone=$3,email=$4,obs=$5 WHERE id=$6 AND oficina_id=$7',
+      [nome.trim().slice(0,120), cnpj_cpf||null, telefone||null, email||null, obs||null, req.params.id, oid(req)]
+    );
+    if(result.rowCount===0) return res.status(404).json({error:'Fornecedor não encontrado'});
+    res.json({ok:true});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+router.delete('/fornecedores/:id', naoFuncionario, validateId, async (req,res) => {
+  try {
+    // Desativa em vez de deletar (preserva histórico)
+    const result = await run('UPDATE fornecedores SET ativo=false WHERE id=$1 AND oficina_id=$2',[req.params.id,oid(req)]);
+    if(result.rowCount===0) return res.status(404).json({error:'Fornecedor não encontrado'});
+    res.json({ok:true});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// ── RECEBIMENTOS MANUAIS ──────────────────────────────────────
+// Lançamentos livres de contas a receber com qualquer data futura
+router.get('/recebimentos-manuais', naoFuncionario, async (req,res) => {
+  try {
+    const rows = await query(
+      `SELECT * FROM recebimentos_manuais WHERE oficina_id=$1 ORDER BY vencimento ASC`,
+      [oid(req)]
+    );
+    res.json(rows);
+  } catch(err){ res.status(500).json({error:'Erro interno'}); }
+});
+
+router.post('/recebimentos-manuais', naoFuncionario, async (req,res) => {
+  try {
+    const { descricao, valor, vencimento, obs } = req.body;
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!descricao?.trim()) return res.status(400).json({error:'Descrição é obrigatória'});
+    const v = parseFloat(valor);
+    if (!v || v <= 0) return res.status(400).json({error:'Valor inválido'});
+    if (!vencimento || !dateRegex.test(vencimento)) return res.status(400).json({error:'Data de vencimento inválida (YYYY-MM-DD)'});
+    const r = await queryOne(
+      `INSERT INTO recebimentos_manuais(oficina_id,descricao,valor,vencimento,obs) VALUES($1,$2,$3,$4,$5) RETURNING id`,
+      [oid(req), descricao.trim().slice(0,200), v, vencimento, obs?.trim().slice(0,500)||null]
+    );
+    res.status(201).json({id:r.id});
+  } catch(err){ res.status(500).json({error:'Erro interno'}); }
+});
+
+router.put('/recebimentos-manuais/:id', naoFuncionario, validateId, async (req,res) => {
+  try {
+    const { descricao, valor, vencimento, obs } = req.body;
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!descricao?.trim()) return res.status(400).json({error:'Descrição é obrigatória'});
+    const v = parseFloat(valor);
+    if (!v || v <= 0) return res.status(400).json({error:'Valor inválido'});
+    if (!vencimento || !dateRegex.test(vencimento)) return res.status(400).json({error:'Data de vencimento inválida'});
+    const result = await run(
+      `UPDATE recebimentos_manuais SET descricao=$1,valor=$2,vencimento=$3,obs=$4 WHERE id=$5 AND oficina_id=$6`,
+      [descricao.trim().slice(0,200), v, vencimento, obs?.trim().slice(0,500)||null, req.params.id, oid(req)]
+    );
+    if(result.rowCount===0) return res.status(404).json({error:'Lançamento não encontrado'});
+    res.json({ok:true});
+  } catch(err){ res.status(500).json({error:'Erro interno'}); }
+});
+
+router.patch('/recebimentos-manuais/:id/receber', naoFuncionario, validateId, async (req,res) => {
+  try {
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    const recebido_em = req.body?.recebido_em && dateRegex.test(req.body.recebido_em)
+      ? req.body.recebido_em
+      : new Date().toISOString().split('T')[0];
+    const result = await run(
+      `UPDATE recebimentos_manuais SET recebido=1, recebido_em=$1 WHERE id=$2 AND oficina_id=$3`,
+      [recebido_em, req.params.id, oid(req)]
+    );
+    if(result.rowCount===0) return res.status(404).json({error:'Lançamento não encontrado'});
+    res.json({ok:true});
+  } catch(err){ res.status(500).json({error:'Erro interno'}); }
+});
+
+router.delete('/recebimentos-manuais/:id', naoFuncionario, validateId, async (req,res) => {
+  try {
+    const result = await run(
+      `DELETE FROM recebimentos_manuais WHERE id=$1 AND oficina_id=$2`,
+      [req.params.id, oid(req)]
+    );
+    if(result.rowCount===0) return res.status(404).json({error:'Lançamento não encontrado'});
+    res.json({ok:true});
+  } catch(err){ res.status(500).json({error:'Erro interno'}); }
+});
+
+// ── CATEGORIAS DE DESPESAS ────────────────────────────────────
+router.get('/categorias-despesas', naoFuncionario, async (req,res) => {
+  try {
+    res.json(await query('SELECT * FROM categorias_despesas WHERE oficina_id=$1 ORDER BY nome',[oid(req)]));
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+router.post('/categorias-despesas', naoFuncionario, async (req,res) => {
+  try {
+    const { nome, icone } = req.body;
+    if (!nome?.trim()) return res.status(400).json({error:'Nome é obrigatório'});
+    const r = await queryOne(
+      'INSERT INTO categorias_despesas(oficina_id,nome,icone) VALUES($1,$2,$3) ON CONFLICT(oficina_id,nome) DO NOTHING RETURNING id',
+      [oid(req), nome.trim().slice(0,60), icone||'📦']
+    );
+    if(!r) return res.status(409).json({error:'Categoria já existe'});
+    res.status(201).json({id:r.id});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+router.put('/categorias-despesas/:id', naoFuncionario, validateId, async (req,res) => {
+  try {
+    const { nome, icone, ativo } = req.body;
+    if (!nome?.trim()) return res.status(400).json({error:'Nome é obrigatório'});
+    const result = await run(
+      'UPDATE categorias_despesas SET nome=$1,icone=$2,ativo=$3 WHERE id=$4 AND oficina_id=$5',
+      [nome.trim().slice(0,60), icone||'📦', ativo!==false, req.params.id, oid(req)]
+    );
+    if(result.rowCount===0) return res.status(404).json({error:'Categoria não encontrada'});
+    res.json({ok:true});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+router.delete('/categorias-despesas/:id', naoFuncionario, validateId, async (req,res) => {
+  try {
+    // Verifica se há despesas vinculadas
+    const uso = await queryOne('SELECT COUNT(*) n FROM despesas WHERE categoria_id=$1 AND oficina_id=$2',[req.params.id,oid(req)]);
+    if(+uso.n > 0) return res.status(409).json({error:'Categoria em uso. Desative-a em vez de excluir.',uso:+uso.n});
+    const result = await run('DELETE FROM categorias_despesas WHERE id=$1 AND oficina_id=$2',[req.params.id,oid(req)]);
+    if(result.rowCount===0) return res.status(404).json({error:'Categoria não encontrada'});
+    res.json({ok:true});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// ── CONFIGURAÇÃO: repassar taxa ao cliente ────────────────────
+router.patch('/config/taxa-cliente', naoFuncionario, async (req,res) => {
+  try {
+    const repassar = req.body?.repassar_taxa_cliente === true;
+    await run('UPDATE oficinas SET repassar_taxa_cliente=$1 WHERE id=$2',[repassar,oid(req)]);
+    res.json({ok:true, repassar_taxa_cliente: repassar});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// ── META MENSAL DE FATURAMENTO (por oficina, sincronizada) ────
+// GET  /app/meta  → { meta_mensal }
+// PUT  /app/meta  { meta } → salva a meta mensal da oficina
+router.get('/meta', naoFuncionario, async (req,res) => {
+  try {
+    const of = await queryOne('SELECT meta_mensal FROM oficinas WHERE id=$1', [oid(req)]);
+    res.json({ meta_mensal: parseFloat(of?.meta_mensal) || 0 });
+  } catch(err){ log.error('app_get_meta', err); res.status(500).json({ error: 'Erro interno' }); }
+});
+
+router.put('/meta', naoFuncionario, async (req,res) => {
+  try {
+    const valor = parseFloat(req.body?.meta);
+    if (!Number.isFinite(valor) || valor < 0 || valor > 1e12) {
+      return res.status(400).json({ error: 'Meta inválida' });
+    }
+    const meta = Math.round(valor * 100) / 100;
+    await run('UPDATE oficinas SET meta_mensal=$1 WHERE id=$2', [meta, oid(req)]);
+    res.json({ ok: true, meta_mensal: meta });
+  } catch(err){ log.error('app_put_meta', err); res.status(500).json({ error: 'Erro interno' }); }
+});
+
+// ── NOTIFICAÇÕES ──────────────────────────────────────────────
+router.get('/notificacoes', async (req, res) => {
+  try {
+    const rows = await query(
+      `SELECT id, tipo, titulo, mensagem, link, lido, created_at
+       FROM notificacoes WHERE oficina_id=$1 ORDER BY created_at DESC LIMIT 50`,
+      [oid(req)]
+    );
+    const naoLidas = rows.filter(n => !n.lido).length;
+    res.json({ notificacoes: rows, naoLidas });
+  } catch (err) { res.status(500).json({ error: 'Erro interno' }); }
+});
+
+router.patch('/notificacoes/:id/lida', validateId, async (req, res) => {
+  try {
+    await run('UPDATE notificacoes SET lido=true WHERE id=$1 AND oficina_id=$2', [req.params.id, oid(req)]);
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: 'Erro interno' }); }
+});
+
+router.patch('/notificacoes/marcar-todas', async (req, res) => {
+  try {
+    await run('UPDATE notificacoes SET lido=true WHERE oficina_id=$1 AND lido=false', [oid(req)]);
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: 'Erro interno' }); }
+});
+
+// ── EXPORTAR DADOS ────────────────────────────────────────────
+router.get('/exportar', async (req, res) => {
+  try {
+    const id = oid(req);
+    const [clientes, veiculos, os, orcamentos, despesas, estoque] = await Promise.all([
+      query('SELECT * FROM clientes WHERE oficina_id=$1 ORDER BY id', [id]),
+      query('SELECT * FROM veiculos WHERE oficina_id=$1 ORDER BY id', [id]),
+      query('SELECT id,oficina_id,cliente_id,veiculo_id,descricao,servicos,pecas,pecas_itens,valor_mo,valor_pecas,valor,status,observacao,data,numero FROM ordens_servico WHERE oficina_id=$1 ORDER BY id', [id]),
+      query('SELECT id,oficina_id,cliente_id,veiculo_id,numero,descricao,servicos,pecas_itens,valor_mo,valor_pecas,desconto,status,validade,obs,criado_em FROM orcamentos WHERE oficina_id=$1 ORDER BY id', [id]),
+      query('SELECT id,oficina_id,descricao,categoria,valor,data,vencimento,pago,obs,fornecedor_id,criado_em FROM despesas WHERE oficina_id=$1 ORDER BY id', [id]),
+      query('SELECT id,oficina_id,nome,categoria,tipo,marca,aplicacao,quantidade,estoque_min,preco,custo,margem,preco_venda,data_compra,obs,codigo_barras,criado_em FROM estoque WHERE oficina_id=$1 ORDER BY id', [id]),
+    ]);
+
+    const exportData = {
+      exportedAt: new Date().toISOString(),
+      oficina_id: id,
+      versao: '1.0',
+      dados: { clientes, veiculos, ordens_servico: os, orcamentos, despesas, estoque },
+      totais: {
+        clientes: clientes.length,
+        veiculos: veiculos.length,
+        ordens_servico: os.length,
+        orcamentos: orcamentos.length,
+        despesas: despesas.length,
+        estoque: estoque.length,
+      },
+    };
+
+    res.setHeader('Content-Type', 'application/json');
+    res.json(exportData);
+  } catch (err) {
+    log.error('app_exportar', err);
+    res.status(500).json({ error: 'Erro ao exportar dados' });
+  }
+});
+
+// ── LIMPAR DADOS OPERACIONAIS (preserva cadastro da oficina) ──
+// Apaga todos os dados operacionais (OS, orçamentos, clientes, veículos,
+// despesas, estoque, agenda, lembretes, pagamentos, parcelas, notificações).
+// Preserva: oficina, usuários, configurações, categorias, fornecedores.
+// Requer confirmação por senha do usuário para evitar acionamento acidental.
+router.post('/limpar-dados', naoFuncionario, async (req, res) => {
+  try {
+    const { senha_confirmacao } = req.body;
+    if (!senha_confirmacao || typeof senha_confirmacao !== 'string') {
+      return res.status(400).json({ error: 'Informe sua senha para confirmar a operação' });
+    }
+
+    // Verifica senha do usuário logado
+    const bcrypt = require('bcryptjs');
+    const usuario = await queryOne('SELECT senha_hash FROM usuarios WHERE id=$1', [req.user.id]);
+    if (!usuario) return res.status(404).json({ error: 'Usuário não encontrado' });
+    const senhaOk = await bcrypt.compare(senha_confirmacao, usuario.senha_hash);
+    if (!senhaOk) return res.status(401).json({ error: 'Senha incorreta' });
+
+    const id = oid(req);
+
+    // Apaga na ordem correta respeitando as FKs
+    await run('DELETE FROM notificacoes        WHERE oficina_id=$1', [id]);
+    await run('DELETE FROM audit_logs          WHERE oficina_id=$1', [id]).catch(()=>{});
+    await run('DELETE FROM comissoes           WHERE oficina_id=$1', [id]).catch(()=>{});
+    await run('DELETE FROM parcelas_receber    WHERE oficina_id=$1', [id]);
+    await run('DELETE FROM pagamentos_os       WHERE oficina_id=$1', [id]);
+    await run('DELETE FROM os_fotos            WHERE oficina_id=$1', [id]).catch(()=>{});
+    await run('DELETE FROM orcamento_itens     WHERE oficina_id=$1', [id]).catch(()=>{});
+    await run('DELETE FROM approval_actions    WHERE oficina_id=$1', [id]).catch(()=>{});
+    await run('DELETE FROM approval_links      WHERE oficina_id=$1', [id]).catch(()=>{});
+    await run('DELETE FROM orcamentos          WHERE oficina_id=$1', [id]);
+    await run('DELETE FROM ordens_servico      WHERE oficina_id=$1', [id]);
+    await run('DELETE FROM lembretes           WHERE oficina_id=$1', [id]);
+    await run('DELETE FROM agenda              WHERE oficina_id=$1', [id]);
+    await run('DELETE FROM despesas            WHERE oficina_id=$1', [id]);
+    await run('DELETE FROM estoque             WHERE oficina_id=$1', [id]);
+    await run('DELETE FROM veiculos            WHERE oficina_id=$1', [id]);
+    await run('DELETE FROM clientes            WHERE oficina_id=$1', [id]);
+
+    // Reseta o contador de numeração
+    await run('UPDATE oficinas SET proximo_numero=1 WHERE id=$1', [id]);
+
+    // Invalida cache do dashboard
+    for (const k of _dashCache.keys()) {
+      if (k.startsWith(`dashboard:${id}:`) || k.startsWith(`dashboard-resumo:${id}:`)) {
+        _dashCache.delete(k);
+      }
+    }
+
+    audit(req, 'LIMPAR_DADOS_OPERACIONAIS', 'oficinas', id, { aviso: 'todos os dados operacionais foram apagados' });
+    log.info('dados_operacionais_limpos', { oficina_id: id, usuario_id: req.user.id });
+
+    res.json({ ok: true, mensagem: 'Dados operacionais apagados com sucesso. Configurações e cadastro da oficina foram preservados.' });
+  } catch (err) {
+    log.error('app_limpar_dados', err);
+    res.status(500).json({ error: 'Erro ao limpar dados' });
+  }
+});
+
+// ── CONSULTA DE PLACA POR FOTO (OCR — Simples API) ────────────
+// Proxy seguro: a chave da Simples API fica só no servidor (SIMPLES_API_KEY).
+// Recebe a imagem em base64, envia para o OCR e retorna a placa + dados do
+// veículo (marca/modelo/ano/cor) quando a confiança for alta.
+router.post('/consulta-placa', async (req, res) => {
+  try {
+    const apiKey = process.env.SIMPLES_API_KEY;
+    if (!apiKey) {
+      log.error('consulta_placa', 'SIMPLES_API_KEY não configurada');
+      return res.status(503).json({ error: 'Consulta de placa não configurada no servidor' });
+    }
+
+    const { image } = req.body || {};
+    if (!image || typeof image !== 'string' || image.length < 100) {
+      return res.status(400).json({ error: 'Imagem inválida ou ausente' });
+    }
+    // Limite de tamanho defensivo (~8MB em base64) antes de repassar
+    if (image.length > 11 * 1024 * 1024) {
+      return res.status(413).json({ error: 'Imagem muito grande. Máximo ~8MB.' });
+    }
+
+    const axios = require('axios');
+    let resp;
+    try {
+      resp = await axios.post(
+        'https://api.simplesapi.com.br/v1/ocr/plate',
+        { image, include_vehicle_info: true },
+        {
+          headers: {
+            authorization: 'Bearer ' + apiKey,
+            'Content-Type': 'application/json',
+          },
+          timeout: 65000, // a API pode levar até 60s
+        }
+      );
+    } catch (apiErr) {
+      const status = apiErr.response?.status;
+      if (status === 401 || status === 403) {
+        log.error('consulta_placa', 'Chave da Simples API inválida ou sem acesso');
+        return res.status(502).json({ error: 'Falha de autenticação no serviço de placa' });
+      }
+      if (status === 422) {
+        return res.status(422).json({ error: 'Não foi possível ler a placa na imagem. Tente uma foto mais nítida.' });
+      }
+      if (status === 429) {
+        return res.status(429).json({ error: 'Limite de consultas atingido. Tente novamente mais tarde.' });
+      }
+      log.error('consulta_placa_api', apiErr.message || apiErr);
+      return res.status(502).json({ error: 'Serviço de consulta de placa indisponível' });
+    }
+
+    const data = resp.data || {};
+    const plates = Array.isArray(data.plates) ? data.plates : [];
+    if (!plates.length) {
+      return res.status(404).json({ error: 'Nenhuma placa detectada na imagem' });
+    }
+
+    // Usa a placa de maior confiança
+    const melhor = plates.reduce((a, b) => ((b.confidence || 0) > (a.confidence || 0) ? b : a));
+    const info = melhor.vehicle_info || melhor.vehicle || {};
+
+    // Normaliza os campos (a API pode variar a nomenclatura)
+    const pick = (...keys) => {
+      for (const k of keys) {
+        const v = info[k] ?? melhor[k];
+        if (v != null && String(v).trim() !== '') return String(v).trim();
+      }
+      return '';
+    };
+
+    res.json({
+      placa:      (melhor.plate || '').toUpperCase(),
+      tipo:       melhor.plate_type || '',
+      confianca:  melhor.confidence ?? null,
+      marca:      pick('marca', 'brand', 'make', 'MARCA'),
+      modelo:     pick('modelo', 'model', 'MODELO'),
+      ano:        pick('ano', 'year', 'anoModelo', 'ano_modelo', 'ANO'),
+      cor:        pick('cor', 'color', 'COR'),
+    });
+  } catch (err) {
+    log.error('consulta_placa', err);
+    res.status(500).json({ error: 'Erro interno ao consultar placa' });
+  }
+});
+
+// ── CENTRAL DE PÓS-VENDA / FOLLOW-UPS ─────────────────────────
+// Retorna 4 grupos de sugestões de contato. Não envia nada — só identifica
+// quem contatar e devolve os dados para o frontend montar a mensagem.
+router.get('/pos-venda', naoFuncionario, async (req, res) => {
+  try {
+    const id = oid(req);
+    const hoje = new Date().toISOString().split('T')[0];
+    const trintaDiasAtras = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
+    const tresDiasAtras   = new Date(Date.now() -  3 * 86400000).toISOString().split('T')[0];
+    const quinzeDiasFrente = new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0];
+    // Janela de aniversário: hoje + próximos 7 dias, comparando só MM-DD
+    const mmddHoje = hoje.slice(5); // 'MM-DD'
+    const mmddFim  = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0].slice(5);
+
+    const [posOS, revisoes, orcamentos, aniversarios] = await Promise.all([
+      // 1) Pós-venda: OS finalizadas nos últimos 30 dias, com cliente que tem telefone
+      query(
+        `SELECT os.id, os.data, os.valor,
+                c.id AS cliente_id, c.nome AS cliente_nome, c.telefone AS cliente_telefone,
+                v.marca AS veiculo_marca, v.modelo AS veiculo_modelo, v.placa
+         FROM ordens_servico os
+         LEFT JOIN clientes c ON c.id = os.cliente_id
+         LEFT JOIN veiculos v ON v.id = os.veiculo_id
+         WHERE os.oficina_id = $1 AND os.status = 'finalizado'
+           AND os.data >= $2
+           AND c.telefone IS NOT NULL AND c.telefone <> ''
+         ORDER BY os.data DESC LIMIT 30`,
+        [id, trintaDiasAtras]
+      ).catch(() => []),
+
+      // 2) Revisão/retorno: lembretes não vistos com previsão até 15 dias à frente (ou vencidos)
+      query(
+        `SELECT l.id, l.descricao, l.tipo, l.data_previsao, l.km_previsao,
+                v.marca AS veiculo_marca, v.modelo AS veiculo_modelo, v.placa,
+                c.id AS cliente_id, c.nome AS cliente_nome, c.telefone AS cliente_telefone
+         FROM lembretes l
+         LEFT JOIN veiculos v ON v.id = l.veiculo_id
+         LEFT JOIN clientes c ON c.id = v.cliente_id
+         WHERE l.oficina_id = $1 AND COALESCE(l.visto,0) = 0
+           AND l.data_previsao IS NOT NULL AND l.data_previsao <> ''
+           AND l.data_previsao <= $2
+           AND c.telefone IS NOT NULL AND c.telefone <> ''
+         ORDER BY l.data_previsao ASC LIMIT 30`,
+        [id, quinzeDiasFrente]
+      ).catch(() => []),
+
+      // 3) Orçamento parado: pendentes criados há mais de 3 dias
+      query(
+        `SELECT o.id, o.numero, o.criado_em, o.valor_mo, o.valor_pecas, o.desconto,
+                c.id AS cliente_id, c.nome AS cliente_nome, c.telefone AS cliente_telefone,
+                v.marca AS veiculo_marca, v.modelo AS veiculo_modelo, v.placa
+         FROM orcamentos o
+         LEFT JOIN clientes c ON c.id = o.cliente_id
+         LEFT JOIN veiculos v ON v.id = o.veiculo_id
+         WHERE o.oficina_id = $1 AND o.status = 'pendente'
+           AND o.criado_em IS NOT NULL AND SUBSTRING(o.criado_em, 1, 10) <= $2
+           AND c.telefone IS NOT NULL AND c.telefone <> ''
+         ORDER BY o.criado_em ASC LIMIT 30`,
+        [id, tresDiasAtras]
+      ).catch(() => []),
+
+      // 4) Aniversariantes: nascimento (MM-DD) entre hoje e +7 dias
+      query(
+        `SELECT c.id AS cliente_id, c.nome AS cliente_nome, c.telefone AS cliente_telefone,
+                c.data_nascimento
+         FROM clientes c
+         WHERE c.oficina_id = $1
+           AND c.data_nascimento IS NOT NULL AND c.data_nascimento <> ''
+           AND c.telefone IS NOT NULL AND c.telefone <> ''
+           AND (
+             CASE WHEN $2 <= $3
+                  THEN SUBSTRING(c.data_nascimento, 6, 5) BETWEEN $2 AND $3
+                  ELSE (SUBSTRING(c.data_nascimento, 6, 5) >= $2 OR SUBSTRING(c.data_nascimento, 6, 5) <= $3)
+             END
+           )
+         ORDER BY SUBSTRING(c.data_nascimento, 6, 5) ASC LIMIT 30`,
+        [id, mmddHoje, mmddFim]
+      ).catch(() => []),
+    ]);
+
+    // Calcula total do orçamento no backend (evita expor lógica sensível de valores)
+    const orcamentosComTotal = orcamentos.map(o => {
+      const total = (parseFloat(o.valor_mo) || 0) + (parseFloat(o.valor_pecas) || 0) - (parseFloat(o.desconto) || 0);
+      return { ...o, total: Math.max(0, total) };
+    });
+
+    res.json({
+      posOS,
+      revisoes,
+      orcamentos: orcamentosComTotal,
+      aniversarios,
+      contadores: {
+        posOS: posOS.length,
+        revisoes: revisoes.length,
+        orcamentos: orcamentosComTotal.length,
+        aniversarios: aniversarios.length,
+      },
+    });
+  } catch (err) {
+    log.error('pos_venda', err);
+    res.status(500).json({ error: 'Erro ao carregar central de pós-venda' });
+  }
+});
+
+module.exports = router;
