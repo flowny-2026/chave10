@@ -312,6 +312,20 @@ INSERT INTO despesas(oficina_id,descricao,categoria,valor,data,vencimento,pago) 
 -- =============================================================
 -- 10. 20 RECEBIMENTOS MANUAIS (cheques e acordos futuros)
 -- =============================================================
+
+-- Cria a tabela se ainda não existir (migration pode não ter rodado)
+CREATE TABLE IF NOT EXISTS recebimentos_manuais (
+  id          SERIAL PRIMARY KEY,
+  oficina_id  INTEGER NOT NULL REFERENCES oficinas(id) ON DELETE CASCADE,
+  descricao   TEXT NOT NULL,
+  valor       REAL NOT NULL,
+  vencimento  TEXT NOT NULL,
+  recebido    INTEGER NOT NULL DEFAULT 0,
+  recebido_em TEXT,
+  obs         TEXT,
+  criado_em   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_receb_manuais_oficina ON recebimentos_manuais(oficina_id, recebido, vencimento);
 INSERT INTO recebimentos_manuais(oficina_id,descricao,valor,vencimento,recebido) VALUES
 (oid,'Cheque pré-datado — Carlos Mendes (OS #0012)',1850.00,(hoje+15*INTERVAL'1 day')::TEXT,0),
 (oid,'Cheque pré-datado — Fernanda Lima (OS #0018)',940.00,(hoje+22*INTERVAL'1 day')::TEXT,0),
