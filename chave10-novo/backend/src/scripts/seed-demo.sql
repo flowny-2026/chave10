@@ -85,6 +85,12 @@ BEGIN
 -- =============================================================
 -- 1. REMOVE CONTA DEMO ANTERIOR
 -- =============================================================
+DELETE FROM referral_repasses     WHERE indicador_id IN (SELECT id FROM referral_indicadores WHERE oficina_id IN (SELECT oficina_id FROM usuarios WHERE email = 'teste@teste.com'));
+DELETE FROM referral_comissoes    WHERE indicador_id IN (SELECT id FROM referral_indicadores WHERE oficina_id IN (SELECT oficina_id FROM usuarios WHERE email = 'teste@teste.com'));
+DELETE FROM referral_indicacoes   WHERE indicador_id IN (SELECT id FROM referral_indicadores WHERE oficina_id IN (SELECT oficina_id FROM usuarios WHERE email = 'teste@teste.com'));
+DELETE FROM referral_cliques      WHERE codigo_id    IN (SELECT id FROM referral_codigos     WHERE indicador_id IN (SELECT id FROM referral_indicadores WHERE oficina_id IN (SELECT oficina_id FROM usuarios WHERE email = 'teste@teste.com')));
+DELETE FROM referral_codigos      WHERE indicador_id IN (SELECT id FROM referral_indicadores WHERE oficina_id IN (SELECT oficina_id FROM usuarios WHERE email = 'teste@teste.com'));
+DELETE FROM referral_indicadores  WHERE oficina_id   IN (SELECT oficina_id FROM usuarios WHERE email = 'teste@teste.com');
 DELETE FROM oficinas WHERE id IN (
   SELECT oficina_id FROM usuarios WHERE email = 'teste@teste.com'
 );
