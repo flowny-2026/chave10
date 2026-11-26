@@ -251,12 +251,18 @@ function validateVeiculo(req, res, next) {
 
 /** Middleware: valida OS — valor_mo e valor_pecas separadamente, limita pecas_itens, rejeita campos extras */
 function validateOS(req, res, next) {
-  const descricao = str(req.body?.descricao, 1000);
-  if (!descricao) return res.status(400).json({ error: 'Descrição da OS é obrigatória' });
+  // descricao (problema relatado) — opcional
+  const descricao = req.body?.descricao ? (str(req.body.descricao, 1000) || undefined) : undefined;
 
   const observacao = req.body.observacao ? (safeText(req.body.observacao, 500) || undefined) : undefined;
-  const servicos   = req.body.servicos   ? (safeText(req.body.servicos, 2000)  || undefined) : undefined;
-  const pecas      = req.body.pecas      ? (safeText(req.body.pecas, 2000)     || undefined) : undefined;
+
+  // servicos (serviços realizados) — obrigatório
+  const servicos = req.body.servicos ? (safeText(req.body.servicos, 2000) || undefined) : undefined;
+  if (req.method === 'POST' && !servicos) {
+    return res.status(400).json({ error: 'Serviços realizados é obrigatório' });
+  }
+
+  const pecas = req.body.pecas ? (safeText(req.body.pecas, 2000) || undefined) : undefined;
 
   let valor_mo, valor_pecas;
   if (req.body.valor_mo !== undefined) {
@@ -300,7 +306,7 @@ function validateOS(req, res, next) {
 
   // Strip campos desconhecidos
   req.body = {
-    descricao,
+    ...(descricao   !== undefined  && { descricao }),
     ...(observacao  !== undefined  && { observacao }),
     ...(servicos    !== undefined  && { servicos }),
     ...(pecas       !== undefined  && { pecas }),
