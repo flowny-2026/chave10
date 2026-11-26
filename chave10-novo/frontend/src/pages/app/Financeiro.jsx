@@ -86,6 +86,7 @@ export default function AppFinanceiro() {
   const [recebimentos, setRecebimentos]   = useState(null);
   const [recebimentoCartao, setRecebimentoCartao] = useState('proximo_dia');
   const [diaDetalhe, setDiaDetalhe]       = useState(null); // data selecionada no grid 7 dias
+  const [modalEditar, setModalEditar]     = useState(null); // { tipo:'boleto'|'parcela', item, dataRecebimento }
   const [loading, setLoading]             = useState(false);
   const [toast, setToast]                 = useState({msg:'',type:''});
 
@@ -472,20 +473,6 @@ export default function AppFinanceiro() {
           return new Date(+y, +m-1, 1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
         };
 
-        // ── Previsão próximos 7 dias (apenas boletos) ──
-        const dias7 = Array.from({length:7},(_,i)=>{
-          const d = new Date(hojeDate.getTime() + i*86400000);
-          return d.toISOString().split('T')[0];
-        });
-        const previsao7 = dias7.map(dia => {
-          const bolsDia = boletosPendentes.filter(b => b.boleto_vencimento === dia);
-          const total   = bolsDia.reduce((s,b) => s + parseFloat(b.valor_liquido||b.valor_total||0), 0);
-          return { dia, total, itens: bolsDia };
-        });
-
-        // Itens do dia selecionado para o modal de detalhe
-        const itensDia = diaDetalhe ? (previsao7.find(d=>d.dia===diaDetalhe)?.itens || []) : [];
-
         return (
           <div>
             {/* ── 4 KPIs principais ── */}
@@ -536,108 +523,6 @@ export default function AppFinanceiro() {
               </div>
             </div>
 
-            {/* ── Previsão próximos 7 dias ── */}
-            <div className="card" style={{marginBottom:20}}>
-              <div className="card-header">
-                <div className="card-title">Previsão — próximos 7 dias</div>
-                <span style={{fontSize:12,color:'var(--gray-400)'}}>Apenas boletos pendentes</span>
-              </div>
-              <div className="table-wrapper">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Vencimento</th>
-                      <th>Tipo</th>
-                      <th>Valor previsto</th>
-                      <th>Status</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {previsao7.map(({dia, total, itens}) => {
-                      const isHoje  = dia === hojeStr;
-                      const isAtras = dia < hojeStr;
-                      return (
-                        <tr key={dia} style={{background: isHoje?'#fff7ed':isAtras?'#fef2f2':''}}>
-                          <td style={{fontWeight: isHoje||isAtras?700:400, whiteSpace:'nowrap'}}>
-                            {fmt.date(dia)}
-                            {isHoje && <span style={{marginLeft:6,fontSize:11,background:'#F97316',color:'#fff',borderRadius:4,padding:'1px 6px'}}>Hoje</span>}
-                          </td>
-                          <td><span className="badge badge-gray">📄 Boleto</span></td>
-                          <td>
-                            {total > 0
-                              ? <strong style={{color: isAtras?'var(--danger)':'var(--success)'}}>{fmt.currency(total)}</strong>
-                              : <span style={{color:'var(--gray-300)',fontSize:12}}>—</span>
-                            }
-                          </td>
-                          <td>
-                            {total === 0
-                              ? <span style={{fontSize:12,color:'var(--gray-300)'}}>Sem previsão</span>
-                              : isAtras ? <span className="badge badge-red">Vencido</span>
-                              : isHoje  ? <span className="badge badge-green">Hoje</span>
-                              : <span className="badge badge-gray">Pendente</span>
-                            }
-                          </td>
-                          <td>
-                            {itens.length > 0 && (
-                              <button className="btn btn-ghost btn-sm"
-                                onClick={() => setDiaDetalhe(diaDetalhe===dia ? null : dia)}
-                                title={`${itens.length} boleto(s) neste dia`}>
-                                {itens.length} boleto{itens.length>1?'s':''} {diaDetalhe===dia?'▲':'▼'}
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Detalhe do dia selecionado */}
-              {diaDetalhe && itensDia.length > 0 && (
-                <div style={{marginTop:12,border:'1px solid #e5e7eb',borderRadius:8,overflow:'hidden'}}>
-                  <div style={{background:'#f9fafb',padding:'8px 14px',fontSize:12,fontWeight:700,color:'#374151',borderBottom:'1px solid #e5e7eb'}}>
-                    Boletos em {fmt.date(diaDetalhe)}
-                  </div>
-                  <table style={{width:'100%',borderCollapse:'collapse'}}>
-                    <thead>
-                      <tr style={{background:'#f9fafb'}}>
-                        <th style={{padding:'8px 12px',fontSize:12,textAlign:'left',fontWeight:600,color:'#6b7280'}}>Cliente</th>
-                        <th style={{padding:'8px 12px',fontSize:12,textAlign:'left',fontWeight:600,color:'#6b7280'}}>OS</th>
-                        <th style={{padding:'8px 12px',fontSize:12,textAlign:'right',fontWeight:600,color:'#6b7280'}}>Valor</th>
-                        <th style={{padding:'8px 12px',fontSize:12,textAlign:'center',fontWeight:600,color:'#6b7280'}}>Ação</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {itensDia.map(b => (
-                        <tr key={b.id} style={{borderTop:'1px solid #f3f4f6'}}>
-                          <td style={{padding:'8px 12px',fontSize:13}}>{b.cliente_nome||'—'}</td>
-                          <td style={{padding:'8px 12px',fontSize:13,color:'var(--brand)',fontWeight:600}}>
-                            #{b.os_numero||String(b.os_id).padStart(4,'0')}
-                          </td>
-                          <td style={{padding:'8px 12px',fontSize:13,textAlign:'right',fontWeight:700,color:'var(--success)'}}>
-                            {fmt.currency(b.valor_liquido||b.valor_total)}
-                          </td>
-                          <td style={{padding:'8px 12px',textAlign:'center'}}>
-                            <button className="btn btn-success btn-sm" title="Confirmar recebimento"
-                              onClick={async()=>{
-                                try {
-                                  await api.app.boletosPendentes.confirmar(b.id,{recebido_em:hojeStr});
-                                  loadBoletos(); loadResumo(); loadRecebimentos();
-                                  if(itensDia.length<=1) setDiaDetalhe(null);
-                                  showToast('Boleto confirmado!');
-                                } catch(err){ showToast(err?.error||'Erro','error'); }
-                              }}>✓ Recebido</button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-
             {/* ── Tabela completa de boletos pendentes ── */}
             {boletosPendentes.length > 0 && (
               <div className="card" style={{marginBottom:20}}>
@@ -651,6 +536,7 @@ export default function AppFinanceiro() {
                       <tr>
                         <th>Vencimento</th>
                         <th>Cliente</th>
+                        <th>Placa</th>
                         <th>OS</th>
                         <th>Valor</th>
                         <th>Data recebimento</th>
@@ -666,20 +552,27 @@ export default function AppFinanceiro() {
                         return (
                           <tr key={b.id} className={isV?'fin-row-atrasado':isH?'fin-row-hoje':''}>
                             <td style={{whiteSpace:'nowrap',fontWeight:isV||isH?700:400}}>{venc?fmt.date(venc):'—'}</td>
-                            <td style={{maxWidth:130,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{b.cliente_nome||'—'}</td>
+                            <td style={{maxWidth:120,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{b.cliente_nome||'—'}</td>
+                            <td style={{fontWeight:600,color:'var(--gray-700)',whiteSpace:'nowrap'}}>{b.placa||'—'}</td>
                             <td><strong style={{color:'var(--brand)'}}>#{b.os_numero||String(b.os_id).padStart(4,'0')}</strong></td>
                             <td><strong style={{color:'var(--success)',whiteSpace:'nowrap'}}>{fmt.currency(b.valor_liquido||b.valor_total)}</strong></td>
                             <td style={{fontSize:12,color:'var(--gray-500)'}}>{venc?fmt.date(venc)+' (prev.)':'—'}</td>
                             <td>{isV?<span className="badge badge-red">Vencido</span>:isH?<span className="badge badge-green">Hoje</span>:<span className="badge badge-gray">Aguardando</span>}</td>
                             <td>
-                              <button className="btn btn-success btn-sm" title="Confirmar recebimento"
-                                onClick={async()=>{
-                                  try {
-                                    await api.app.boletosPendentes.confirmar(b.id,{recebido_em:hojeStr});
-                                    loadBoletos(); loadResumo(); loadRecebimentos();
-                                    showToast('Boleto confirmado!');
-                                  } catch(err){ showToast(err?.error||'Erro','error'); }
-                                }}>✓</button>
+                              <div style={{display:'flex',gap:4}}>
+                                <button className="btn btn-success btn-sm" title="Confirmar recebimento"
+                                  onClick={async()=>{
+                                    try {
+                                      await api.app.boletosPendentes.confirmar(b.id,{recebido_em:hojeStr});
+                                      loadBoletos(); loadResumo(); loadRecebimentos();
+                                      showToast('Boleto confirmado!');
+                                    } catch(err){ showToast(err?.error||'Erro','error'); }
+                                  }}>✓</button>
+                                <button className="btn btn-ghost btn-sm" title="Editar / corrigir"
+                                  onClick={()=>setModalEditar({tipo:'boleto', item:b, dataRecebimento:hojeStr})}>
+                                  ✎
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -714,7 +607,15 @@ export default function AppFinanceiro() {
                             <td><strong style={{color:'var(--success)',whiteSpace:'nowrap'}}>{fmt.currency(p.valor)}</strong></td>
                             <td style={{fontSize:12,color:'var(--gray-500)'}}>{fmt.date(p.data_recebimento)+' (prev.)'}</td>
                             <td>{isA?<span className="badge badge-red">Atrasado</span>:isH?<span className="badge badge-green">Hoje</span>:<span className="badge badge-gray">Agendado</span>}</td>
-                            <td><button className="btn btn-success btn-sm" onClick={()=>marcarRecebido(p.id)}>✓</button></td>
+                            <td>
+                              <div style={{display:'flex',gap:4}}>
+                                <button className="btn btn-success btn-sm" onClick={()=>marcarRecebido(p.id)} title="Confirmar recebido">✓</button>
+                                <button className="btn btn-ghost btn-sm" title="Editar / corrigir"
+                                  onClick={()=>setModalEditar({tipo:'parcela', item:p, dataRecebimento:hojeStr})}>
+                                  ✎
+                                </button>
+                              </div>
+                            </td>
                           </tr>
                         );
                       })}
@@ -1059,6 +960,74 @@ export default function AppFinanceiro() {
       )}
 
       <Toast msg={toast.msg} type={toast.type} />
+
+      {/* Modal editar recebimento */}
+      {modalEditar && (
+        <div className="modal-overlay open" style={{zIndex:500}}>
+          <div className="modal" style={{maxWidth:400}}>
+            <div className="modal-header">
+              <h2>✎ Editar recebimento</h2>
+              <button className="modal-close" onClick={()=>setModalEditar(null)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <p style={{fontSize:13,color:'var(--gray-600)',marginBottom:16}}>
+                {modalEditar.tipo==='boleto'
+                  ? `Boleto — ${modalEditar.item.cliente_nome||'—'} · OS #${modalEditar.item.os_numero||modalEditar.item.os_id}`
+                  : `Parcela ${modalEditar.item.numero_parcela}ª — ${modalEditar.item.cliente_nome||'—'} · OS #${modalEditar.item.os_numero||modalEditar.item.os_id}`
+                }
+              </p>
+              <div className="form-group" style={{marginBottom:16}}>
+                <label>Data de recebimento *</label>
+                <input type="date" value={modalEditar.dataRecebimento}
+                  onChange={e=>setModalEditar(m=>({...m,dataRecebimento:e.target.value}))} />
+              </div>
+              <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:8}}>
+                <button className="btn btn-success" style={{flex:1}}
+                  disabled={!modalEditar.dataRecebimento}
+                  onClick={async()=>{
+                    try {
+                      if (modalEditar.tipo==='boleto') {
+                        await api.app.boletosPendentes.confirmar(modalEditar.item.id,{recebido_em:modalEditar.dataRecebimento});
+                        loadBoletos();
+                      } else {
+                        await api.app.parcelasReceber.marcarRecebido(modalEditar.item.id);
+                        loadParcelas();
+                      }
+                      loadResumo(); loadRecebimentos();
+                      setModalEditar(null);
+                      showToast('Recebimento confirmado!');
+                    } catch(err){ showToast(err?.error||'Erro','error'); }
+                  }}>
+                  ✓ Confirmar recebimento
+                </button>
+              </div>
+              <div style={{borderTop:'1px solid var(--gray-200)',paddingTop:12,marginTop:4}}>
+                <p style={{fontSize:12,color:'var(--gray-500)',marginBottom:8}}>
+                  Baixou na linha errada? Desfaça o recebimento:
+                </p>
+                <button className="btn btn-outline" style={{color:'var(--danger)',borderColor:'var(--danger)',width:'100%'}}
+                  onClick={async()=>{
+                    if (!window.confirm('Desfazer o recebimento deste lançamento?')) return;
+                    try {
+                      if (modalEditar.tipo==='boleto') {
+                        await api.app.boletosPendentes.estornar(modalEditar.item.id);
+                        loadBoletos();
+                      } else {
+                        await api.app.parcelasReceber.estornar(modalEditar.item.id);
+                        loadParcelas();
+                      }
+                      loadResumo(); loadRecebimentos();
+                      setModalEditar(null);
+                      showToast('Recebimento desfeito');
+                    } catch(err){ showToast(err?.error||'Erro','error'); }
+                  }}>
+                  ↩ Desfazer recebimento
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

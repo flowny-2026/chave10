@@ -454,14 +454,19 @@ router.delete('/veiculos/:id', validateId, checkOwns('veiculos'), async (req,res
 // ORDENS DE SERVIÇO
 router.get('/os', async (req,res) => {
   try {
-    const {status}=req.query;
+    const {status, inicio, fim} = req.query;
     const perfil = req.user?.perfil;
     const isFuncionario = perfil === 'funcionario';
     const isMecanico    = perfil === 'mecanico';
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if(status&&!['em_andamento','finalizado','cancelada'].includes(status)) return res.status(400).json({error:'Status inválido'});
+    if(inicio && !dateRegex.test(inicio)) return res.status(400).json({error:'Data início inválida'});
+    if(fim    && !dateRegex.test(fim))    return res.status(400).json({error:'Data fim inválida'});
     let q="SELECT os.*,c.nome as cliente_nome,c.telefone as cliente_telefone,c.endereco as cliente_endereco,v.modelo as veiculo_modelo,v.placa,v.marca as veiculo_marca,v.ano as veiculo_ano,v.km as veiculo_km,u.nome as mecanico_nome FROM ordens_servico os LEFT JOIN clientes c ON c.id=os.cliente_id LEFT JOIN veiculos v ON v.id=os.veiculo_id LEFT JOIN usuarios u ON u.id=os.mecanico_id WHERE os.oficina_id=$1";
     const p=[oid(req)];
-    if(status){q+=' AND os.status=$2';p.push(status);}
+    if(status){ q+=` AND os.status=$${p.length+1}`; p.push(status); }
+    if(inicio){ q+=` AND os.data>=$${p.length+1}`; p.push(inicio); }
+    if(fim){    q+=` AND os.data<=$${p.length+1}`; p.push(fim); }
     // Mecânicos veem apenas OS atribuídas a eles
     if(isMecanico){q+=` AND os.mecanico_id=$${p.length+1}`;p.push(req.user.id);}
     q+=' ORDER BY os.id DESC';
@@ -1354,6 +1359,15 @@ router.patch('/parcelas-receber/:id/recebido', validateId, checkOwns('parcelas_r
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
 
+// PATCH /parcelas-receber/:id/estornar — reverte recebimento de parcela
+router.patch('/parcelas-receber/:id/estornar', validateId, checkOwns('parcelas_receber'), async (req,res) => {
+  try {
+    const result = await run('UPDATE parcelas_receber SET recebido=0 WHERE id=$1 AND oficina_id=$2', [req.params.id, oid(req)]);
+    if(result.rowCount === 0) return res.status(404).json({error:'Parcela não encontrada'});
+    res.json({ok:true});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
 // ── GET /recebimentos — pagamentos efetivamente recebidos no período ──────────
 // Retorna pagamentos_os com data_pagamento no período + faturamento OS por mês (3 meses)
 router.get('/recebimentos', naoFuncionario, async (req,res) => {
@@ -1529,11 +1543,16 @@ router.get('/boletos-pendentes', async (req,res) => {
   try {
     const rows = await query(
       `SELECT p.id, p.os_id, p.valor_total, p.valor_liquido, p.boleto_vencimento, p.data_pagamento,
-              c.nome as cliente_nome, os.numero as os_numero
+              c.nome as cliente_nome, os.numero as os_numero,
+              v.placa, v.modelo as veiculo_modelo
        FROM pagamentos_os p
        LEFT JOIN clientes c ON c.id = p.cliente_id
        LEFT JOIN ordens_servico os ON os.id = p.os_id
-       WHERE p.oficina_id=$1 AND p.boleto_pendente=true
+       LEFT JOIN veiculos v ON v.id = os.veiculo_id
+       WHERE p.oficina_id=$1
+         AND p.forma='boleto'
+         AND p.boleto_recebido_em IS NULL
+         AND (p.boleto_pendente=true OR (p.boleto_vencimento IS NOT NULL AND (p.boleto_pendente IS NULL OR p.boleto_pendente=false)))
        ORDER BY p.boleto_vencimento ASC NULLS LAST, p.data_pagamento ASC`,
       [oid(req)]
     );
@@ -1562,6 +1581,18 @@ router.patch('/pagamentos-os/:id/boleto-recebido', validateId, naoFuncionario, a
     await run('UPDATE pagamentos_os SET boleto_recebido_em=$1, boleto_pendente=false WHERE id=$2 AND oficina_id=$3',
       [recebido_em, req.params.id, oid(req)]);
     res.json({ok:true, boleto_recebido_em: recebido_em});
+  } catch(err){res.status(500).json({error:'Erro interno'});}
+});
+
+// PATCH /pagamentos-os/:id/boleto-estornar — reverte confirmação de boleto
+router.patch('/pagamentos-os/:id/boleto-estornar', validateId, naoFuncionario, async (req,res) => {
+  try {
+    const pag = await queryOne('SELECT * FROM pagamentos_os WHERE id=$1 AND oficina_id=$2',[req.params.id, oid(req)]);
+    if (!pag) return res.status(404).json({error:'Pagamento não encontrado'});
+    if (pag.forma !== 'boleto') return res.status(400).json({error:'Apenas boletos'});
+    await run('UPDATE pagamentos_os SET boleto_recebido_em=NULL, boleto_pendente=true WHERE id=$2 AND oficina_id=$3',
+      [req.params.id, oid(req)]);
+    res.json({ok:true});
   } catch(err){res.status(500).json({error:'Erro interno'});}
 });
 

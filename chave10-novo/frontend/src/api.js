@@ -141,7 +141,7 @@ export const api = {
       consultaPlaca: (image)         => post('/app/consulta-placa', { image }),
     },
     os: {
-      list:    (status)              => get('/app/os' + (status ? '?status='+status : '')),
+      list:    (status, inicio, fim) => get('/app/os' + (() => { const p=[]; if(status) p.push('status='+status); if(inicio) p.push('inicio='+inicio); if(fim) p.push('fim='+fim); return p.length?'?'+p.join('&'):''; })()),
       create:  (data)                => post('/app/os', data),
       update:  (id, data)            => put('/app/os/'+id, data),
       setStatus:(id, status)         => patch('/app/os/'+id+'/status', { status }),
@@ -193,10 +193,12 @@ export const api = {
     parcelasReceber: {
       list:    ()                    => get('/app/parcelas-receber'),
       marcarRecebido: (id)           => patch('/app/parcelas-receber/'+id+'/recebido', {}),
+      estornar:       (id)           => patch('/app/parcelas-receber/'+id+'/estornar', {}),
     },
     boletosPendentes: {
       list:    ()                    => get('/app/boletos-pendentes'),
       confirmar: (id, data)          => patch('/app/pagamentos-os/'+id+'/boleto-recebido', data),
+      estornar:  (id)                => patch('/app/pagamentos-os/'+id+'/boleto-estornar', {}),
     },
     financeiroResumo: {
       get: (inicio, fim) => get('/app/financeiro-resumo'+(inicio||fim?'?'+(inicio?'inicio='+inicio:'')+(inicio&&fim?'&':'')+(fim?'fim='+fim:''):'')),

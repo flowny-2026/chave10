@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../../api';
 import { offlineManager, OPERATION_TYPES, useOfflineManager } from '../../utils/offlineManager';
@@ -33,7 +33,7 @@ function Toast({ msg, type }) {
   return <div className={`toast show ${type}`} style={{position:'fixed',bottom:24,right:24,zIndex:300}}>{msg}</div>;
 }
 
-// Gera HTML para impressão/PDF — recebe `t` para termos do segmento
+// Gera HTML para impress�o/PDF � recebe `t` para termos do segmento
 function gerarHTMLOS(os, clientes, veiculos, oficina, t) {
   const c = clientes.find(x=>x.id===os.cliente_id);
   const v = veiculos.find(x=>x.id===os.veiculo_id);
@@ -77,10 +77,10 @@ function gerarHTMLOS(os, clientes, veiculos, oficina, t) {
         : `<div class="oficina-nome">${oficina?.nome || 'Minha Oficina'}</div>`
       }
       ${oficina?.logo && oficina?.nome ? `<div class="oficina-nome" style="font-size:15px">${oficina.nome}</div>` : ''}
-      ${oficina?.endereco   ? `<div class="oficina-detalhe">📍 ${oficina.endereco}</div>` : ''}
-      ${oficina?.telefone   ? `<div class="oficina-detalhe">📞 ${oficina.telefone}</div>` : ''}
-      ${oficina?.whatsapp   ? `<div class="oficina-detalhe">💬 WhatsApp: ${oficina.whatsapp}</div>` : ''}
-      ${oficina?.email      ? `<div class="oficina-detalhe">✉ ${oficina.email}</div>` : ''}
+      ${oficina?.endereco   ? `<div class="oficina-detalhe">?? ${oficina.endereco}</div>` : ''}
+      ${oficina?.telefone   ? `<div class="oficina-detalhe">?? ${oficina.telefone}</div>` : ''}
+      ${oficina?.whatsapp   ? `<div class="oficina-detalhe">?? WhatsApp: ${oficina.whatsapp}</div>` : ''}
+      ${oficina?.email      ? `<div class="oficina-detalhe">? ${oficina.email}</div>` : ''}
       ${(oficina?.documento || oficina?.cnpj_cpf) ? `<div class="oficina-detalhe">CNPJ/CPF: ${oficina.documento || oficina.cnpj_cpf}</div>` : ''}
     </div>
     <div style="text-align:right">
@@ -93,37 +93,37 @@ function gerarHTMLOS(os, clientes, veiculos, oficina, t) {
   <div class="section">
     <div class="section-title">Cliente</div>
     <div class="grid-2">
-      <div class="field"><label>Nome</label><span>${c?.nome||'—'}</span></div>
-      <div class="field"><label>Telefone</label><span>${c?.telefone||'—'}</span></div>
-      <div class="field"><label>Email</label><span>${c?.email||'—'}</span></div>
-      <div class="field"><label>Endereço</label><span>${c?.endereco||'—'}</span></div>
+      <div class="field"><label>Nome</label><span>${c?.nome||'�'}</span></div>
+      <div class="field"><label>Telefone</label><span>${c?.telefone||'�'}</span></div>
+      <div class="field"><label>Email</label><span>${c?.email||'�'}</span></div>
+      <div class="field"><label>Endere�o</label><span>${c?.endereco||'�'}</span></div>
     </div>
   </div>
 
   <div class="section">
     <div class="section-title">${t.veiculo}</div>
     <div class="grid-2">
-      <div class="field"><label>${t.veiculo}</label><span>${v?`${v.marca} ${v.modelo}`:'—'}</span></div>
-      <div class="field"><label>${t.placa}</label><span>${v?.placa||'—'}</span></div>
-      <div class="field"><label>${t.ano}</label><span>${v?.ano||'—'}</span></div>
-      <div class="field"><label>${t.kmAbrev}</label><span>${v?.km?parseInt(v.km).toLocaleString('pt-BR')+` ${t.kmUnit}`:'—'}</span></div>
+      <div class="field"><label>${t.veiculo}</label><span>${v?`${v.marca} ${v.modelo}`:'�'}</span></div>
+      <div class="field"><label>${t.placa}</label><span>${v?.placa||'�'}</span></div>
+      <div class="field"><label>${t.ano}</label><span>${v?.ano||'�'}</span></div>
+      <div class="field"><label>${t.kmAbrev}</label><span>${v?.km?parseInt(v.km).toLocaleString('pt-BR')+` ${t.kmUnit}`:'�'}</span></div>
     </div>
   </div>
 
   <div class="section">
     <div class="section-title">Problema relatado</div>
-    <p style="background:#F9FAFB;padding:10px 12px;border-radius:6px">${os.descricao||'—'}</p>
+    <p style="background:#F9FAFB;padding:10px 12px;border-radius:6px">${os.descricao||'�'}</p>
   </div>
 
-  ${os.servicos?`<div class="section"><div class="section-title">Serviços realizados</div><p style="background:#F9FAFB;padding:10px 12px;border-radius:6px">${os.servicos}</p></div>`:''}
+  ${os.servicos?`<div class="section"><div class="section-title">Servi�os realizados</div><p style="background:#F9FAFB;padding:10px 12px;border-radius:6px">${os.servicos}</p></div>`:''}
 
   <div class="section">
     <div class="section-title">${t.pecas} utilizadas</div>
     ${pecas.length ? `
     <table>
-      <thead><tr><th>Descrição</th><th style="text-align:center">Qtd</th><th style="text-align:right">Valor unit.</th><th style="text-align:right">Subtotal</th></tr></thead>
+      <thead><tr><th>Descri��o</th><th style="text-align:center">Qtd</th><th style="text-align:right">Valor unit.</th><th style="text-align:right">Subtotal</th></tr></thead>
       <tbody>
-        ${pecas.map(p=>`<tr><td>${p.nome||'—'}</td><td style="text-align:center">${p.qtd||1}</td><td style="text-align:right">${fmt.currency(p.valor_unit)}</td><td style="text-align:right">${fmt.currency((parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1))}</td></tr>`).join('')}
+        ${pecas.map(p=>`<tr><td>${p.nome||'�'}</td><td style="text-align:center">${p.qtd||1}</td><td style="text-align:right">${fmt.currency(p.valor_unit)}</td><td style="text-align:right">${fmt.currency((parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1))}</td></tr>`).join('')}
       </tbody>
     </table>` : `<p style="color:#9CA3AF;font-size:12px">Nenhuma ${t.peca.toLowerCase()} registrada</p>`}
   </div>
@@ -132,27 +132,27 @@ function gerarHTMLOS(os, clientes, veiculos, oficina, t) {
     <div class="section-title">Valores</div>
     ${moItens.length > 0 ? `
     <table style="margin-bottom:8px">
-      <thead><tr><th>Serviço / Mão de obra</th><th style="text-align:right">Valor</th></tr></thead>
+      <thead><tr><th>Servi�o / M�o de obra</th><th style="text-align:right">Valor</th></tr></thead>
       <tbody>
-        ${moItens.map(m=>`<tr><td>${m.descricao||'—'}</td><td style="text-align:right">${fmt.currency(m.valor)}</td></tr>`).join('')}
+        ${moItens.map(m=>`<tr><td>${m.descricao||'�'}</td><td style="text-align:right">${fmt.currency(m.valor)}</td></tr>`).join('')}
       </tbody>
     </table>
-    <div class="total-row"><span>Total mão de obra</span><span>${fmt.currency(totalMO)}</span></div>
-    ` : `<div class="total-row"><span>Mão de obra</span><span>${fmt.currency(os.valor_mo)}</span></div>`}
+    <div class="total-row"><span>Total m�o de obra</span><span>${fmt.currency(totalMO)}</span></div>
+    ` : `<div class="total-row"><span>M�o de obra</span><span>${fmt.currency(os.valor_mo)}</span></div>`}
     <div class="total-row"><span>Total ${t.pecas.toLowerCase()}</span><span>${fmt.currency(totalPecas)}</span></div>
     <div class="total-final"><span style="font-size:15px;font-weight:700">TOTAL</span><span class="val">${fmt.currency(total)}</span></div>
   </div>
 
-  ${os.observacao?`<div class="section"><div class="section-title">Observações</div><p style="background:#F9FAFB;padding:10px 12px;border-radius:6px">${os.observacao}</p></div>`:''}
+  ${os.observacao?`<div class="section"><div class="section-title">Observa��es</div><p style="background:#F9FAFB;padding:10px 12px;border-radius:6px">${os.observacao}</p></div>`:''}
 
   <div class="footer">
-    ${oficina?.nome||''}${oficina?.telefone?' · '+oficina.telefone:''}${oficina?.email?' · '+oficina.email:''}<br/>
+    ${oficina?.nome||''}${oficina?.telefone?' � '+oficina.telefone:''}${oficina?.email?' � '+oficina.email:''}<br/>
     Documento gerado em ${new Date().toLocaleDateString('pt-BR')}
   </div>
   </body></html>`;
 }
 
-/** Formulário inline para configurar garantia de uma OS específica */
+/** Formul�rio inline para configurar garantia de uma OS espec�fica */
 function GarantiaForm({ osId, os, oficina, onSave }) {
   const [prazo, setPrazo] = useState(String(os.garantia_prazo_dias ?? oficina.garantia_padrao_dias ?? 90));
   const [cond, setCond]   = useState(os.garantia_condicoes ?? oficina.garantia_padrao_condicoes ?? '');
@@ -168,7 +168,7 @@ function GarantiaForm({ osId, os, oficina, onSave }) {
       });
       if (onSave) await onSave();
     } catch {
-      // falha silenciosa — o toast é disparado pelo pai
+      // falha silenciosa � o toast � disparado pelo pai
     } finally {
       setLoading(false);
     }
@@ -183,11 +183,11 @@ function GarantiaForm({ osId, os, oficina, onSave }) {
         </div>
         <div className="form-group" style={{display:'flex',alignItems:'flex-end',gap:6}}>
           <div style={{flex:1}}>
-            <label style={{fontSize:12}}>Condições (opcional)</label>
-            <input type="text" placeholder="Ex: peças e mão de obra" value={cond} onChange={e=>setCond(e.target.value)} maxLength={200} style={{height:36}} />
+            <label style={{fontSize:12}}>Condi��es (opcional)</label>
+            <input type="text" placeholder="Ex: pe�as e m�o de obra" value={cond} onChange={e=>setCond(e.target.value)} maxLength={200} style={{height:36}} />
           </div>
           <button className="btn btn-primary" type="submit" disabled={loading} style={{height:36,padding:'0 14px',flexShrink:0}}>
-            {loading ? '…' : 'Salvar'}
+            {loading ? '�' : 'Salvar'}
           </button>
         </div>
       </div>
@@ -197,10 +197,10 @@ function GarantiaForm({ osId, os, oficina, onSave }) {
 
 export default function AppOS() {
   const t = useSegmento();
-  // Funcionário e mecânico não veem valores financeiros
+  // Funcion�rio e mec�nico n�o veem valores financeiros
   const isFuncionario = (() => { try { const p = JSON.parse(localStorage.getItem('c10_user'))?.perfil; return p === 'funcionario' || p === 'mecanico'; } catch { return false; } })();
   const isMecanico    = (() => { try { return JSON.parse(localStorage.getItem('c10_user'))?.perfil === 'mecanico'; } catch { return false; } })();
-  // Configuração da oficina: repassar taxa da maquininha ao cliente
+  // Configura��o da oficina: repassar taxa da maquininha ao cliente
   const [repassarTaxaCliente, setRepassarTaxaCliente] = useState(
     () => { try { return JSON.parse(localStorage.getItem('c10_oficina'))?.repassar_taxa_cliente === true; } catch { return false; } }
   );
@@ -209,22 +209,45 @@ export default function AppOS() {
   const [clientes, setClientes] = useState([]);
   const [veiculos, setVeiculos] = useState([]);
   const [mecanicos, setMecanicos] = useState([]);
-  const [estoquePecas, setEstoquePecas] = useState([]); // peças do estoque p/ autocompletar
+  const [estoquePecas, setEstoquePecas] = useState([]);
   const [search, setSearch]     = useState(() => searchParams.get('q') || '');
   const [statusFiltro, setStatusFiltro] = useState('');
+
+  // -- Filtro de per�odo --------------------------------------
+  const hoje = new Date();
+  const mesAtualInicio = hoje.toISOString().slice(0,7) + '-01';
+  const mesAtualFim    = hoje.toISOString().slice(0,10);
+  const [periodoTipo, setPeriodoTipo]   = useState('mes_atual');
+  const [periodoInicio, setPeriodoInicio] = useState(mesAtualInicio);
+  const [periodoFim, setPeriodoFim]       = useState(mesAtualFim);
+
+  function calcPeriodoOS(tipo) {
+    const hj = new Date();
+    const hStr = hj.toISOString().slice(0,10);
+    switch(tipo) {
+      case 'hoje':        return { ini: hStr, fim: hStr };
+      case '7':           { const d=new Date(); d.setDate(d.getDate()-6); return { ini:d.toISOString().slice(0,10), fim:hStr }; }
+      case '30':          { const d=new Date(); d.setDate(d.getDate()-29); return { ini:d.toISOString().slice(0,10), fim:hStr }; }
+      case 'mes_atual':   return { ini: hStr.slice(0,7)+'-01', fim: hStr };
+      case 'mes_anterior':{ const d=new Date(hj.getFullYear(),hj.getMonth()-1,1); const f=new Date(hj.getFullYear(),hj.getMonth(),0); return { ini:d.toISOString().slice(0,10), fim:f.toISOString().slice(0,10) }; }
+      case 'todos':       return { ini: null, fim: null };
+      case 'custom':      return { ini: periodoInicio, fim: periodoFim };
+      default:            return { ini: hStr.slice(0,7)+'-01', fim: hStr };
+    }
+  }
   const [modal, setModal]       = useState(null);
   const [form, setForm]         = useState({ cliente_id:'', veiculo_id:'', mecanico_id:null, descricao:'', servicos:'', pecas_itens:[novaPeca()], mo_itens:[novaMO()], valor_mo:'', data:new Date().toISOString().split('T')[0], status:'em_andamento', observacao:'' });
   const [editing, setEditing]   = useState(null);
 
-  // ── OS Rápida ─────────────────────────────────────────────────────
+  // -- OS R�pida -----------------------------------------------------
   const RAPIDA_EMPTY = { nome_cliente:'', telefone_cliente:'', endereco_cliente:'', marca_veiculo:'', modelo_veiculo:'', placa_veiculo:'', ano_veiculo:'', km_veiculo:'', descricao:'', servicos:'', mecanico_id:'', valor_mo:'' };
   const [rapida, setRapida]         = useState(RAPIDA_EMPTY);
   const [rapidaSaving, setRapidaSaving] = useState(false);
 
   async function saveRapida(e) {
     e.preventDefault();
-    if (!rapida.nome_cliente.trim())   { showToast('Nome do cliente é obrigatório','error'); return; }
-    if (!rapida.descricao.trim())      { showToast('Problema/descrição é obrigatório','error'); return; }
+    if (!rapida.nome_cliente.trim())   { showToast('Nome do cliente � obrigat�rio','error'); return; }
+    if (!rapida.descricao.trim())      { showToast('Problema/descri��o � obrigat�rio','error'); return; }
     setRapidaSaving(true);
     try {
       // 1. Cria cliente
@@ -234,7 +257,7 @@ export default function AppOS() {
         endereco: rapida.endereco_cliente.trim() || null,
       });
       let veiculo_id = null;
-      // 2. Cria veículo (se preencheu pelo menos modelo)
+      // 2. Cria ve�culo (se preencheu pelo menos modelo)
       if (rapida.modelo_veiculo.trim()) {
         const novoVeiculo = await api.app.veiculos.create({
           cliente_id: novoCliente.id,
@@ -264,25 +287,25 @@ export default function AppOS() {
       // 4. Recarrega listas
       const [c, v] = await Promise.all([api.app.clientes.list(), api.app.veiculos.list()]);
       setClientes(c); setVeiculos(v);
-      load(statusFiltro);
+      load(statusFiltro,periodoTipo);
       setRapida(RAPIDA_EMPTY);
       setModal(null);
       showToast('OS criada com sucesso!');
     } catch (err) {
-      showToast(err?.error || 'Erro ao criar OS rápida','error');
+      showToast(err?.error || 'Erro ao criar OS r�pida','error');
     } finally {
       setRapidaSaving(false);
     }
   }
 
-  // ── Novo cliente inline (dentro do modal de OS completa) ──────────
+  // -- Novo cliente inline (dentro do modal de OS completa) ----------
   const [novoClienteOpen, setNovoClienteOpen]   = useState(false);
   const [novoClienteForm, setNovoClienteForm]   = useState({ nome:'', telefone:'', endereco:'' });
   const [novoClienteSaving, setNovoClienteSaving] = useState(false);
 
   async function criarClienteInline(e) {
     if (e?.preventDefault) e.preventDefault();
-    if (!novoClienteForm.nome.trim()) { showToast('Nome é obrigatório','error'); return; }
+    if (!novoClienteForm.nome.trim()) { showToast('Nome � obrigat�rio','error'); return; }
     setNovoClienteSaving(true);
     try {
       const novo = await api.app.clientes.create({ nome: novoClienteForm.nome.trim(), telefone: novoClienteForm.telefone.trim() || null, endereco: novoClienteForm.endereco.trim() || null });
@@ -299,14 +322,14 @@ export default function AppOS() {
     }
   }
 
-  // ── Novo veículo inline (dentro do modal de OS completa) ──────────
+  // -- Novo ve�culo inline (dentro do modal de OS completa) ----------
   const [novoVeiculoOpen, setNovoVeiculoOpen]   = useState(false);
   const [novoVeiculoForm, setNovoVeiculoForm]   = useState({ marca:'', modelo:'', placa:'', ano:'', km:'' });
   const [novoVeiculoSaving, setNovoVeiculoSaving] = useState(false);
 
   async function criarVeiculoInline(e) {
     if (e?.preventDefault) e.preventDefault();
-    if (!novoVeiculoForm.modelo.trim()) { showToast('Modelo é obrigatório','error'); return; }
+    if (!novoVeiculoForm.modelo.trim()) { showToast('Modelo � obrigat�rio','error'); return; }
     setNovoVeiculoSaving(true);
     try {
       const clienteId = form.cliente_id || null;
@@ -323,9 +346,9 @@ export default function AppOS() {
       setForm(f => ({ ...f, veiculo_id: String(novo.id) }));
       setNovoVeiculoForm({ marca:'', modelo:'', placa:'', ano:'', km:'' });
       setNovoVeiculoOpen(false);
-      showToast('Veículo criado!');
+      showToast('Ve�culo criado!');
     } catch (err) {
-      showToast(err?.error || 'Erro ao criar veículo','error');
+      showToast(err?.error || 'Erro ao criar ve�culo','error');
     } finally {
       setNovoVeiculoSaving(false);
     }
@@ -336,7 +359,7 @@ export default function AppOS() {
   const [pagSaving, setPagSaving] = useState(false);
   const [pendingPhotos, setPendingPhotos] = useState([]); // fotos selecionadas antes de salvar
 
-  // Handler para selecionar fotos no formulário (antes de salvar)
+  // Handler para selecionar fotos no formul�rio (antes de salvar)
   function handlePendingPhotos(e) {
     const files = e.target.files;
     if (!files?.length) return;
@@ -405,20 +428,22 @@ export default function AppOS() {
     if (modal === 'form' && !editing) {
       const draft = offlineManager.getDraft('os', DRAFT_ID);
       if (draft && (draft.descricao || draft.servicos)) {
-        const shouldRecover = window.confirm('Você tem um rascunho salvo. Deseja recuperá-lo?');
+        const shouldRecover = window.confirm('Voc� tem um rascunho salvo. Deseja recuper�-lo?');
         if (shouldRecover) {
           setForm(draft);
           showToast('Rascunho recuperado!', 'success');
         } else {
-          // Remove rascunho se usuário não quiser
+          // Remove rascunho se usu�rio n�o quiser
           offlineManager.removeDraft('os', DRAFT_ID);
         }
       }
     }
   }, [modal, editing]);
 
-  async function load(status) {
-    try { const data = await api.app.os.list(status||undefined); setOsList(data); }
+  async function load(status, tipo, ini, fim) {
+    const t   = tipo !== undefined ? tipo : periodoTipo;
+    const per = t === 'custom' ? { ini: ini||periodoInicio, fim: fim||periodoFim } : calcPeriodoOS(t);
+    try { const data = await api.app.os.list(status||undefined, per.ini||undefined, per.fim||undefined); setOsList(data); }
     catch { setOsList([]); }
   }
 
@@ -436,7 +461,7 @@ export default function AppOS() {
         setRepassarTaxaCliente(cfg.repassar_taxa_cliente === true);
       }
     }).catch(() => {});
-    load();
+    load(undefined, 'mes_atual');
   }, []);
 
   function openCreate() {
@@ -449,14 +474,14 @@ export default function AppOS() {
 
   function openEdit(os) {
     const pecas = os.pecas_itens && os.pecas_itens.length ? os.pecas_itens : [novaPeca()];
-    const moIt  = os.mo_itens   && os.mo_itens.length   ? os.mo_itens.map(m=>({...m,id:m.id||Date.now()+Math.random()})) : (os.valor_mo ? [{ ...novaMO(), descricao:'Mão de obra', valor: String(os.valor_mo) }] : [novaMO()]);
+    const moIt  = os.mo_itens   && os.mo_itens.length   ? os.mo_itens.map(m=>({...m,id:m.id||Date.now()+Math.random()})) : (os.valor_mo ? [{ ...novaMO(), descricao:'M�o de obra', valor: String(os.valor_mo) }] : [novaMO()]);
     setForm({ cliente_id:os.cliente_id||'', veiculo_id:os.veiculo_id||'', mecanico_id:os.mecanico_id||null, descricao:os.descricao||'', servicos:os.servicos||'', pecas_itens:pecas.map(p=>({...p,id:p.id||Date.now()})), mo_itens:moIt, valor_mo:os.valor_mo||'', data:os.data||new Date().toISOString().split('T')[0], status:os.status||'em_andamento', observacao:os.observacao||'' });
     setEditing(os.id); setModal('form');
   }
 
   function setPeca(id, field, val) { setForm(f=>({...f, pecas_itens: f.pecas_itens.map(p=>p.id===id?{...p,[field]:val}:p)})); }
-  // Ao digitar/selecionar o nome da peça, se casar com um item do estoque,
-  // preenche automaticamente o valor unitário (só se ainda estiver vazio/zero).
+  // Ao digitar/selecionar o nome da pe�a, se casar com um item do estoque,
+  // preenche automaticamente o valor unit�rio (s� se ainda estiver vazio/zero).
   function setPecaNome(id, nome) {
     setForm(f=>({
       ...f,
@@ -475,7 +500,7 @@ export default function AppOS() {
   function addPeca() { setForm(f=>({...f, pecas_itens:[...f.pecas_itens, novaPeca()]})); }
   function removePeca(id) { setForm(f=>({...f, pecas_itens: f.pecas_itens.filter(p=>p.id!==id)})); }
 
-  // ── Mão de obra detalhada ─────────────────────────────────────────
+  // -- M�o de obra detalhada -----------------------------------------
   function setMO(id, field, val) { setForm(f=>({...f, mo_itens: f.mo_itens.map(m=>m.id===id?{...m,[field]:val}:m)})); }
   function addMO()    { setForm(f=>({...f, mo_itens:[...f.mo_itens, novaMO()]})); }
   function removeMO(id) { setForm(f=>({...f, mo_itens: f.mo_itens.filter(m=>m.id!==id)})); }
@@ -483,7 +508,7 @@ export default function AppOS() {
 
   async function save(e) {
     e.preventDefault();
-    if (!form.descricao.trim()) { showToast('Problema/descrição é obrigatório','error'); return; }
+    if (!form.descricao.trim()) { showToast('Problema/descri��o � obrigat�rio','error'); return; }
     
     try {
       const pecasValidas = form.pecas_itens.filter(p=>p.nome.trim());
@@ -516,7 +541,7 @@ export default function AppOS() {
         if (pendingPhotos.length > 0 && osId) {
           try {
             const { compressImages } = await import('../../utils/imageCompressor');
-            // pendingPhotos já tem .file (File) — precisa comprimir antes
+            // pendingPhotos j� tem .file (File) � precisa comprimir antes
             const filesToCompress = pendingPhotos.map(p => p.file).filter(Boolean);
             if (filesToCompress.length > 0) {
               const compressed = await compressImages(filesToCompress);
@@ -532,20 +557,20 @@ export default function AppOS() {
               }
             }
           } catch (fotoErr) {
-            console.warn('Fotos não enviadas:', fotoErr);
-            // Não falha a OS por causa das fotos
+            console.warn('Fotos n�o enviadas:', fotoErr);
+            // N�o falha a OS por causa das fotos
           }
         }
         
-        // Remove rascunho após sucesso
+        // Remove rascunho ap�s sucesso
         offlineManager.removeDraft('os', DRAFT_ID);
         setPendingPhotos([]);
         
         setModal(null); 
-        load(statusFiltro); 
-        showToast(editing?'OS atualizada!':'Ordem de serviço salva!');
+        load(statusFiltro,periodoTipo); 
+        showToast(editing?'OS atualizada!':'Ordem de servi�o salva!');
       } else {
-        // Offline: adiciona à fila
+        // Offline: adiciona � fila
         const operationType = editing ? OPERATION_TYPES.UPDATE_OS : OPERATION_TYPES.CREATE_OS;
         const operationData = editing ? { id: editing, ...payload } : payload;
         
@@ -558,10 +583,10 @@ export default function AppOS() {
         offlineManager.removeDraft('os', DRAFT_ID);
         
         setModal(null);
-        showToast('Você está offline! OS salva e será enviada automaticamente quando voltar online.', 'info');
+        showToast('Voc� est� offline! OS salva e ser� enviada automaticamente quando voltar online.', 'info');
       }
     } catch (err) {
-      // Se falhar mesmo online, adiciona à fila
+      // Se falhar mesmo online, adiciona � fila
       const pecasValidas = form.pecas_itens.filter(p=>p.nome.trim());
       const totalPecas = pecasValidas.reduce((s,p)=>s+(parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1),0);
       const moValidas  = (form.mo_itens||[]).filter(m=>m.descricao.trim()||parseFloat(m.valor)>0);
@@ -587,7 +612,7 @@ export default function AppOS() {
       });
       
       setModal(null);
-      showToast('Erro de conexão. OS salva localmente e será sincronizada automaticamente.', 'warning');
+      showToast('Erro de conex�o. OS salva localmente e ser� sincronizada automaticamente.', 'warning');
     }
   }
 
@@ -611,7 +636,7 @@ export default function AppOS() {
         ? { ...pagForm, valor_total: pagForm.valor_total + (pagForm.valor_total * taxaPct / 100) }
         : pagForm;
       await api.app.os.pagamento(pagForm.os_id, payload);
-      await load(statusFiltro);
+      await load(statusFiltro,periodoTipo);
       setViewing(v => v ? { ...v, status: 'finalizado' } : v);
       setModal('comprovante');
       abrirComprovante(pagForm.os_id);
@@ -629,7 +654,7 @@ export default function AppOS() {
       const dados = await api.app.os.comprovante(osId);
       setComprovante(dados);
     } catch (err) {
-      showToast('Não foi possível carregar o comprovante', 'error');
+      showToast('N�o foi poss�vel carregar o comprovante', 'error');
       setModal(viewing ? 'view' : null);
     } finally {
       setComprovanteLoading(false);
@@ -646,14 +671,14 @@ export default function AppOS() {
   async function baixarComprovanteOSPDF() {
     if (!comprovante) return;
     const { os, oficina, pagamentos: pags } = comprovante;
-    showToast('⏳ Gerando PDF…');
+    showToast('? Gerando PDF�');
     const result = await downloadComprovanteOSPDF(os, oficina, pags);
     if (result.success) {
-      showToast(`✅ PDF salvo: ${result.filename}`);
+      showToast(`? PDF salvo: ${result.filename}`);
     } else {
-      // Fallback: usa impressão via browser se jsPDF falhar
+      // Fallback: usa impress�o via browser se jsPDF falhar
       imprimirComprovante();
-      showToast('PDF gerado via impressão do navegador');
+      showToast('PDF gerado via impress�o do navegador');
     }
   }
 
@@ -670,8 +695,8 @@ export default function AppOS() {
     : pagForm.valor_total;
 
   // Quando repassar taxa ao cliente: total cobrado = valor_os + taxa
-  // Quando não repassar: total cobrado = valor_os (taxa sai da oficina)
-  // repassarTaxaOs: valor por OS — começa com a config global da oficina
+  // Quando n�o repassar: total cobrado = valor_os (taxa sai da oficina)
+  // repassarTaxaOs: valor por OS � come�a com a config global da oficina
   const repassarTaxaOs = pagForm.repassar_taxa_os !== undefined ? pagForm.repassar_taxa_os : repassarTaxaCliente;
   const taxaValor = pagForm.taxa_maquininha && parseFloat(pagForm.taxa_maquininha) > 0
     ? pagForm.valor_total * parseFloat(pagForm.taxa_maquininha) / 100
@@ -680,14 +705,14 @@ export default function AppOS() {
   const liquidoOficina = pagForm.valor_total - taxaValor;
   async function reabrir(id) {
     await api.app.os.setStatus(id, 'em_andamento');
-    await load(statusFiltro);
+    await load(statusFiltro,periodoTipo);
     // Atualiza viewing para refletir o novo status imediatamente no modal
     setViewing(v => v && v.id === id ? { ...v, status: 'em_andamento' } : v);
     showToast('OS reaberta');
   }
   async function remove(id) {
-    if (!window.confirm('Deseja excluir esta ordem de serviço?')) return;
-    await api.app.os.remove(id); load(statusFiltro); showToast('OS excluída');
+    if (!window.confirm('Deseja excluir esta ordem de servi�o?')) return;
+    await api.app.os.remove(id); load(statusFiltro,periodoTipo); showToast('OS exclu�da');
   }
 
   async function imprimir(os) {
@@ -713,16 +738,16 @@ export default function AppOS() {
     const total = (parseFloat(os.valor_mo)||0)+totalPecas;
     const v = veiculos.find(x=>x.id===os.veiculo_id);
     const oficina = (() => { try { return JSON.parse(localStorage.getItem('c10_oficina'))||{}; } catch { return {}; } })();
-    let msg = `*OS #${os.numero || String(os.id).padStart(4,'0')} — ${oficina.nome||'Chave 10'}*\n`;
+    let msg = `*OS #${os.numero || String(os.id).padStart(4,'0')} � ${oficina.nome||'Chave 10'}*\n`;
     msg += `Data: ${fmt.date(os.data)}\n`;
-    msg += `${tw.veiculo}: ${v?`${v.marca} ${v.modelo} — ${v.placa}`:'—'}\n\n`;
+    msg += `${tw.veiculo}: ${v?`${v.marca} ${v.modelo} � ${v.placa}`:'�'}\n\n`;
     msg += `*Problema:* ${os.descricao}\n`;
-    if (os.servicos) msg += `*Serviços:* ${os.servicos}\n`;
+    if (os.servicos) msg += `*Servi�os:* ${os.servicos}\n`;
     if (pecas.length) {
       msg += `\n*${tw.pecas} utilizadas:*\n`;
-      pecas.filter(p=>p.nome).forEach(p=>{ msg += `• ${p.qtd}x ${p.nome} — ${fmt.currency((parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1))}\n`; });
+      pecas.filter(p=>p.nome).forEach(p=>{ msg += `� ${p.qtd}x ${p.nome} � ${fmt.currency((parseFloat(p.valor_unit)||0)*(parseFloat(p.qtd)||1))}\n`; });
     }
-    msg += `\n*Mão de obra:* ${fmt.currency(os.valor_mo)}`;
+    msg += `\n*M�o de obra:* ${fmt.currency(os.valor_mo)}`;
     msg += `\n*Total ${tw.pecas.toLowerCase()}:* ${fmt.currency(totalPecas)}`;
     msg += `\n*TOTAL: ${fmt.currency(total)}*`;
     const tel = c.telefone.replace(/\D/g,'');
@@ -738,7 +763,7 @@ export default function AppOS() {
   }
   const [viewPagamentos, setViewPagamentos] = useState([]);
   const [viewFotos, setViewFotos] = useState([]);
-  // Estado do modal de comprovante (pós-finalização ou visualização avulsa)
+  // Estado do modal de comprovante (p�s-finaliza��o ou visualiza��o avulsa)
   const [comprovante, setComprovante] = useState(null); // { os, oficina, pagamentos } | null
   const [comprovanteLoading, setComprovanteLoading] = useState(false);
 
@@ -765,17 +790,40 @@ export default function AppOS() {
       <div className="page-header">
         <div><div className="page-title">{t.oss}</div><div className="page-subtitle">{listaFiltrada.length} ordem(ns)</div></div>
         <div style={{display:'flex',gap:8}}>
-          <button className="btn btn-outline" onClick={()=>{setRapida(RAPIDA_EMPTY);setModal('rapida');}}>⚡ OS Rápida</button>
+          <button className="btn btn-outline" onClick={()=>{setRapida(RAPIDA_EMPTY);setModal('rapida');}}>? OS R�pida</button>
           <button className="btn btn-primary" onClick={openCreate}>+ {t.novaOs}</button>
         </div>
       </div>
       <div className="search-bar">
         <div className="search-input-wrap">
           <svg className="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" placeholder={`Buscar por cliente, ${t.veiculo.toLowerCase()} ou nº OS...`} value={search} onChange={e=>setSearch(e.target.value)} />
+          <input type="text" placeholder={`Buscar por cliente, ${t.veiculo.toLowerCase()} ou n� OS...`} value={search} onChange={e=>setSearch(e.target.value)} />
         </div>
-        <select className="dash-select" value={statusFiltro} onChange={e=>{setStatusFiltro(e.target.value);load(e.target.value);}}>
-          <option value="">Todos</option>
+        <select className="dash-select" value={periodoTipo} onChange={e=>{
+          const tipo = e.target.value;
+          setPeriodoTipo(tipo);
+          if (tipo !== 'custom') load(statusFiltro||undefined, tipo);
+        }}>
+          <option value="hoje">Hoje</option>
+          <option value="7">�ltimos 7 dias</option>
+          <option value="30">�ltimos 30 dias</option>
+          <option value="mes_atual">M�s atual</option>
+          <option value="mes_anterior">M�s anterior</option>
+          <option value="todos">Todos</option>
+          <option value="custom">Personalizado</option>
+        </select>
+        {periodoTipo === 'custom' && (
+          <>
+            <input type="date" value={periodoInicio} onChange={e=>setPeriodoInicio(e.target.value)}
+              style={{padding:'6px 8px',borderRadius:6,border:'1px solid var(--gray-300)',fontSize:12}} />
+            <span style={{fontSize:12,color:'var(--gray-400)'}}>at�</span>
+            <input type="date" value={periodoFim} onChange={e=>setPeriodoFim(e.target.value)}
+              style={{padding:'6px 8px',borderRadius:6,border:'1px solid var(--gray-300)',fontSize:12}} />
+            <button className="btn btn-primary btn-sm" onClick={()=>load(statusFiltro||undefined,'custom')}>Filtrar</button>
+          </>
+        )}
+        <select className="dash-select" value={statusFiltro} onChange={e=>{setStatusFiltro(e.target.value);load(e.target.value,periodoTipo);}}>
+          <option value="">Todos status</option>
           <option value="em_andamento">Em andamento</option>
           <option value="finalizado">Finalizados</option>
         </select>
@@ -787,7 +835,7 @@ export default function AppOS() {
           <div className="os-table-desktop">
             <div className="table-wrapper">
               <table>
-                <thead><tr><th>OS</th><th>Data</th><th>Cliente</th><th>{t.veiculo}</th><th>Problema</th><th>{t.mecanico}</th>{!isFuncionario&&<th>Total</th>}<th>Status</th><th>Ações</th></tr></thead>
+                <thead><tr><th>OS</th><th>Data</th><th>Cliente</th><th>{t.veiculo}</th><th>Problema</th><th>{t.mecanico}</th>{!isFuncionario&&<th>Total</th>}<th>Status</th><th>A��es</th></tr></thead>
                 <tbody>
                   {listaFiltrada.map(os => {
                     const total = parseFloat(os.valor_mo||0)+parseFloat(os.valor_pecas||0)||parseFloat(os.valor||0);
@@ -795,10 +843,10 @@ export default function AppOS() {
                       <tr key={os.id}>
                         <td><strong style={{color:'var(--brand)'}}>#{os.numero || String(os.id).padStart(4,'0')}</strong></td>
                         <td style={{color:'var(--gray-500)',fontSize:12}}>{fmt.date(os.data)}</td>
-                        <td>{os.cliente_nome||'—'}</td>
-                        <td><div>{os.veiculo_modelo||'—'}</div>{os.placa&&<small style={{color:'var(--gray-400)'}}>{os.placa}</small>}</td>
+                        <td>{os.cliente_nome||'�'}</td>
+                        <td><div>{os.veiculo_modelo||'�'}</div>{os.placa&&<small style={{color:'var(--gray-400)'}}>{os.placa}</small>}</td>
                         <td style={{maxWidth:180,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{os.descricao}</td>
-                        <td style={{fontSize:12,color:'var(--gray-500)'}}>{os.mecanico_nome||<span style={{color:'var(--gray-300)'}}>—</span>}</td>
+                        <td style={{fontSize:12,color:'var(--gray-500)'}}>{os.mecanico_nome||<span style={{color:'var(--gray-300)'}}>�</span>}</td>
                         {!isFuncionario&&<td><strong>{fmt.currency(total)}</strong></td>}
                         <td><span className={`badge ${STATUS_CLASS[os.status]||'badge-gray'}`}>{STATUS_LABEL[os.status]||os.status}</span></td>
                         <td>
@@ -809,11 +857,11 @@ export default function AppOS() {
                             {os.token_publico && (
                               <button className="btn btn-outline btn-sm" title="Compartilhar link com cliente"
                                 onClick={()=>{const url=`${window.location.origin}/acompanhar/${os.token_publico}`;navigator.clipboard?.writeText(url).then(()=>showToast('Link copiado!')).catch(()=>showToast(url));}}>
-                                🔗
+                                ??
                               </button>
                             )}
                             {os.status==='finalizado'&&!isFuncionario&&(
-                              <button className="btn btn-outline btn-sm" onClick={()=>{setModal('comprovante');abrirComprovante(os.id);}} title="Comprovante">📄</button>
+                              <button className="btn btn-outline btn-sm" onClick={()=>{setModal('comprovante');abrirComprovante(os.id);}} title="Comprovante">??</button>
                             )}
                             <button className="btn btn-outline btn-sm" onClick={()=>openEdit(os)} title="Editar"><IcoEdit /></button>
                             <button className="btn btn-outline btn-sm" onClick={()=>remove(os.id)} title="Excluir"><IcoTrash /></button>
@@ -839,7 +887,7 @@ export default function AppOS() {
                   </div>
                   <div className="os-card-cliente">{os.cliente_nome||'Sem cliente'}</div>
                   <div className="os-card-info">
-                    <span>{os.veiculo_modelo||'—'}{os.placa?` · ${os.placa}`:''}</span>
+                    <span>{os.veiculo_modelo||'�'}{os.placa?` � ${os.placa}`:''}</span>
                     <span>{fmt.date(os.data)}</span>
                   </div>
                   <div className="os-card-desc">{os.descricao}</div>
@@ -862,7 +910,7 @@ export default function AppOS() {
           </div>
           </>
         ) : (
-          <div className="empty-state"><div className="empty-icon">📋</div><p>Nenhuma ordem encontrada</p><button className="btn btn-primary" onClick={openCreate}>Criar primeira OS</button></div>
+          <div className="empty-state"><div className="empty-icon">??</div><p>Nenhuma ordem encontrada</p><button className="btn btn-primary" onClick={openCreate}>Criar primeira OS</button></div>
         )}
       </div>
 
@@ -871,8 +919,8 @@ export default function AppOS() {
         <div className="modal-overlay open">
           <div className="modal" style={{maxWidth:680}}>
             <div className="modal-header">
-              <h2>{editing ? `Editar OS #${osList.find(o=>o.id===editing)?.numero || String(editing).padStart(4,'0')}` : 'Nova Ordem de Serviço'}</h2>
-              <button className="modal-close" onClick={()=>setModal(null)}>✕</button>
+              <h2>{editing ? `Editar OS #${osList.find(o=>o.id===editing)?.numero || String(editing).padStart(4,'0')}` : 'Nova Ordem de Servi�o'}</h2>
+              <button className="modal-close" onClick={()=>setModal(null)}>?</button>
             </div>
             
             {/* Alertas de status */}
@@ -892,10 +940,10 @@ export default function AppOS() {
                 </svg>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>
-                    Você está offline
+                    Voc� est� offline
                   </div>
                   <div style={{ fontSize: 12, color: 'rgba(255,255,255,.8)' }}>
-                    A OS será salva localmente e sincronizada quando a conexão voltar
+                    A OS ser� salva localmente e sincronizada quando a conex�o voltar
                   </div>
                 </div>
               </div>
@@ -916,10 +964,10 @@ export default function AppOS() {
                 </svg>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>
-                    Sincronizando operações pendentes...
+                    Sincronizando opera��es pendentes...
                   </div>
                   <div style={{ fontSize: 12, color: 'rgba(255,255,255,.8)' }}>
-                    {pendingCount} operação{pendingCount > 1 ? 'ões' : ''} sendo processada{pendingCount > 1 ? 's' : ''}
+                    {pendingCount} opera��o{pendingCount > 1 ? '�es' : ''} sendo processada{pendingCount > 1 ? 's' : ''}
                   </div>
                 </div>
               </div>
@@ -961,7 +1009,7 @@ export default function AppOS() {
                     <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
                       <label style={{marginBottom:0}}>Cliente</label>
                       <button type="button" onClick={()=>{setNovoClienteOpen(o=>!o);setNovoVeiculoOpen(false);}} className="btn btn-primary btn-sm" style={{fontSize:12,fontWeight:700,padding:'4px 10px',lineHeight:1.4}}>
-                        {novoClienteOpen ? '✕ Cancelar' : '+ Novo'}
+                        {novoClienteOpen ? '? Cancelar' : '+ Novo'}
                       </button>
                     </div>
                     {novoClienteOpen ? (
@@ -969,10 +1017,10 @@ export default function AppOS() {
                         <input placeholder="Nome *" value={novoClienteForm.nome} onChange={e=>setNovoClienteForm(f=>({...f,nome:e.target.value}))} autoFocus style={{padding:'7px 10px',fontSize:13}}
                           onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();criarClienteInline(e);}}} />
                         <input placeholder="Telefone" value={novoClienteForm.telefone} onChange={e=>setNovoClienteForm(f=>({...f,telefone:e.target.value}))} style={{padding:'7px 10px',fontSize:13}} />
-                        <input placeholder="Endereço" value={novoClienteForm.endereco} onChange={e=>setNovoClienteForm(f=>({...f,endereco:e.target.value}))} style={{padding:'7px 10px',fontSize:13}} />
+                        <input placeholder="Endere�o" value={novoClienteForm.endereco} onChange={e=>setNovoClienteForm(f=>({...f,endereco:e.target.value}))} style={{padding:'7px 10px',fontSize:13}} />
                         <button type="button" className="btn btn-primary btn-sm" disabled={novoClienteSaving}
                           onClick={criarClienteInline} style={{alignSelf:'flex-end'}}>
-                          {novoClienteSaving ? 'Salvando…' : 'Criar cliente'}
+                          {novoClienteSaving ? 'Salvando�' : 'Criar cliente'}
                         </button>
                       </div>
                     ) : (
@@ -986,7 +1034,7 @@ export default function AppOS() {
                     <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
                       <label style={{marginBottom:0}}>{t.veiculo}</label>
                       <button type="button" onClick={()=>{setNovoVeiculoOpen(o=>!o);setNovoClienteOpen(false);}} className="btn btn-primary btn-sm" style={{fontSize:12,fontWeight:700,padding:'4px 10px',lineHeight:1.4}}>
-                        {novoVeiculoOpen ? '✕ Cancelar' : '+ Novo'}
+                        {novoVeiculoOpen ? '? Cancelar' : '+ Novo'}
                       </button>
                     </div>
                     {novoVeiculoOpen ? (
@@ -1000,19 +1048,19 @@ export default function AppOS() {
                         </div>
                         <button type="button" className="btn btn-primary btn-sm" disabled={novoVeiculoSaving}
                           onClick={criarVeiculoInline} style={{alignSelf:'flex-end'}}>
-                          {novoVeiculoSaving ? 'Salvando…' : `Criar ${t.veiculo.toLowerCase()}`}
+                          {novoVeiculoSaving ? 'Salvando�' : `Criar ${t.veiculo.toLowerCase()}`}
                         </button>
                       </div>
                     ) : (
                       <select value={form.veiculo_id} onChange={e=>setForm(f=>({...f,veiculo_id:e.target.value}))}>
                         <option value="">Selecionar...</option>
-                        {veiculosFiltrados.map(v=><option key={v.id} value={v.id}>{v.marca} {v.modelo} — {v.placa}</option>)}
+                        {veiculosFiltrados.map(v=><option key={v.id} value={v.id}>{v.marca} {v.modelo} � {v.placa}</option>)}
                       </select>
                     )}
                   </div>
                   {!isFuncionario && !isMecanico && (
                   <div className="form-group">
-                    <label>{t.mecanico} responsável</label>
+                    <label>{t.mecanico} respons�vel</label>
                     <select value={form.mecanico_id||''} onChange={e=>setForm(f=>({...f,mecanico_id:e.target.value||null}))}>
                       <option value="">Sem {t.mecanico.toLowerCase()}</option>
                       {mecanicos.map(m=><option key={m.id} value={m.id}>{m.nome}</option>)}
@@ -1020,13 +1068,13 @@ export default function AppOS() {
                   </div>
                   )}
                   <div className="form-group full"><label>Problema relatado *</label><textarea value={form.descricao} onChange={e=>setForm(f=>({...f,descricao:e.target.value}))} placeholder="Descreva o problema..." required /></div>
-                  <div className="form-group full"><label>Serviços realizados</label><textarea value={form.servicos} onChange={e=>setForm(f=>({...f,servicos:e.target.value}))} placeholder="Liste os serviços feitos..." /></div>
+                  <div className="form-group full"><label>Servi�os realizados</label><textarea value={form.servicos} onChange={e=>setForm(f=>({...f,servicos:e.target.value}))} placeholder="Liste os servi�os feitos..." /></div>
                 </div>
 
-                {/* Peças detalhadas */}
+                {/* Pe�as detalhadas */}
                 {!isFuncionario && (
                 <div style={{marginTop:16,marginBottom:16}}>
-                  {/* Sugestões do estoque para autocompletar o nome da peça */}
+                  {/* Sugest�es do estoque para autocompletar o nome da pe�a */}
                   <datalist id="estoque-pecas-os">
                     {estoquePecas.map(e => <option key={e.id} value={e.nome} />)}
                   </datalist>
@@ -1037,8 +1085,8 @@ export default function AppOS() {
                   <div style={{background:'var(--gray-50)',borderRadius:'var(--r-sm)',overflow:'hidden',border:'1px solid var(--gray-200)'}}>
                     {form.pecas_itens.map((p,i)=>(
                       <div key={p.id} style={{padding:'10px',borderBottom:'1px solid var(--gray-200)'}}>
-                        {/* Linha 1: Descrição (autocompletar do estoque) */}
-                        <input list="estoque-pecas-os" value={p.nome} onChange={e=>setPecaNome(p.id,e.target.value)} placeholder="Ex: Filtro de óleo Bosch" style={{padding:'7px 10px',fontSize:13,width:'100%',marginBottom:8}} />
+                        {/* Linha 1: Descri��o (autocompletar do estoque) */}
+                        <input list="estoque-pecas-os" value={p.nome} onChange={e=>setPecaNome(p.id,e.target.value)} placeholder="Ex: Filtro de �leo Bosch" style={{padding:'7px 10px',fontSize:13,width:'100%',marginBottom:8}} />
                         {/* Linha 2: Qtd + Valor + checkbox + remover */}
                         <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
                           <div style={{display:'flex',alignItems:'center',gap:4}}>
@@ -1053,7 +1101,7 @@ export default function AppOS() {
                             <input type="checkbox" checked={!!p.cliente_fornece} onChange={e=>setPeca(p.id,'cliente_fornece',e.target.checked)} style={{width:14,height:14}} />
                             {t.peca} do cliente
                           </label>
-                          <button type="button" onClick={()=>removePeca(p.id)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--danger)',fontSize:18}} disabled={form.pecas_itens.length===1}>×</button>
+                          <button type="button" onClick={()=>removePeca(p.id)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--danger)',fontSize:18}} disabled={form.pecas_itens.length===1}>�</button>
                         </div>
                         {/* Subtotal da linha */}
                         {!p.cliente_fornece && parseFloat(p.valor_unit) > 0 && (
@@ -1074,14 +1122,14 @@ export default function AppOS() {
                   {!isFuncionario && (
                   <div className="form-group full">
                     <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
-                      <label style={{marginBottom:0,fontWeight:700}}>Mão de obra</label>
-                      <button type="button" className="btn btn-outline btn-sm" onClick={addMO}>+ Adicionar serviço</button>
+                      <label style={{marginBottom:0,fontWeight:700}}>M�o de obra</label>
+                      <button type="button" className="btn btn-outline btn-sm" onClick={addMO}>+ Adicionar servi�o</button>
                     </div>
                     <div style={{background:'var(--gray-50)',borderRadius:'var(--r-sm)',overflow:'hidden',border:'1px solid var(--gray-200)'}}>
                       {(form.mo_itens||[]).map((m)=>(
                         <div key={m.id} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 10px',borderBottom:'1px solid var(--gray-200)'}}>
                           <input
-                            placeholder="Descrição do serviço (ex: Troca de óleo)"
+                            placeholder="Descri��o do servi�o (ex: Troca de �leo)"
                             value={m.descricao}
                             onChange={e=>setMO(m.id,'descricao',e.target.value)}
                             style={{flex:1,padding:'7px 10px',fontSize:13}}
@@ -1093,11 +1141,11 @@ export default function AppOS() {
                             onChange={e=>setMO(m.id,'valor',e.target.value)}
                             style={{width:110,padding:'7px 10px',fontSize:13,textAlign:'right'}}
                           />
-                          <button type="button" onClick={()=>removeMO(m.id)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--danger)',fontSize:18,flexShrink:0}} disabled={(form.mo_itens||[]).length===1}>×</button>
+                          <button type="button" onClick={()=>removeMO(m.id)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--danger)',fontSize:18,flexShrink:0}} disabled={(form.mo_itens||[]).length===1}>�</button>
                         </div>
                       ))}
                       <div style={{display:'flex',justifyContent:'flex-end',padding:'8px 10px',fontSize:12,fontWeight:600,color:'var(--gray-600)'}}>
-                        Total mão de obra: <strong style={{marginLeft:8,color:'var(--gray-900)'}}>{fmt.currency(totalMOForm)}</strong>
+                        Total m�o de obra: <strong style={{marginLeft:8,color:'var(--gray-900)'}}>{fmt.currency(totalMOForm)}</strong>
                       </div>
                     </div>
                   </div>
@@ -1116,10 +1164,10 @@ export default function AppOS() {
                       <option value="finalizado">Finalizado</option>
                     </select>
                   </div>
-                  <div className="form-group full"><label>Observações</label><input value={form.observacao} onChange={e=>setForm(f=>({...f,observacao:e.target.value}))} placeholder="Observações adicionais..." /></div>
+                  <div className="form-group full"><label>Observa��es</label><input value={form.observacao} onChange={e=>setForm(f=>({...f,observacao:e.target.value}))} placeholder="Observa��es adicionais..." /></div>
                 </div>
 
-                {/* Upload de fotos — disponível na criação e edição */}
+                {/* Upload de fotos � dispon�vel na cria��o e edi��o */}
                 <div style={{ marginTop: 16, marginBottom: 16, padding: '14px 16px', background: 'var(--gray-50)', borderRadius: 10, border: '1px solid var(--gray-200)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gray-700)' }}>
@@ -1153,7 +1201,7 @@ export default function AppOS() {
                             position: 'absolute', top: 2, right: 2, width: 18, height: 18, borderRadius: '50%',
                             background: 'rgba(220,38,38,.85)', color: '#fff', border: 'none', fontSize: 10, cursor: 'pointer',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          }}>✕</button>
+                          }}>?</button>
                         </div>
                       ))}
                     </div>
@@ -1185,16 +1233,16 @@ export default function AppOS() {
             <div className="modal" style={{maxWidth:620}}>
               <div className="modal-header">
                 <h2>OS #{viewing.numero || String(viewing.id).padStart(4,'0')}</h2>
-                <button className="modal-close" onClick={()=>setModal(null)}>✕</button>
+                <button className="modal-close" onClick={()=>setModal(null)}>?</button>
               </div>
               <div className="modal-body">
                 <div className="os-view-fields">
                   {[
-                    {l:'Cliente',v:viewing.cliente_nome||'—'},
-                    {l:t.veiculo,v:(viewing.veiculo_marca?viewing.veiculo_marca+' ':'')+( viewing.veiculo_modelo||'—')},
-                    {l:t.placa,v:viewing.placa||'—'},
+                    {l:'Cliente',v:viewing.cliente_nome||'�'},
+                    {l:t.veiculo,v:(viewing.veiculo_marca?viewing.veiculo_marca+' ':'')+( viewing.veiculo_modelo||'�')},
+                    {l:t.placa,v:viewing.placa||'�'},
                     {l:'Data',v:fmt.date(viewing.data)},
-                    ...(viewing.mecanico_nome ? [{l:'Mecânico',v:viewing.mecanico_nome}] : []),
+                    ...(viewing.mecanico_nome ? [{l:'Mec�nico',v:viewing.mecanico_nome}] : []),
                     {l:'Status',v:<span className={`badge ${STATUS_CLASS[viewing.status]||'badge-gray'}`}>{STATUS_LABEL[viewing.status]||viewing.status}</span>}
                   ].map(item=>(
                     <div key={item.l} className="os-view-field">
@@ -1204,14 +1252,14 @@ export default function AppOS() {
                   ))}
                 </div>
 
-                {[{t:'Problema relatado',v:viewing.descricao},{t:'Serviços realizados',v:viewing.servicos},{t:'Observação',v:viewing.observacao}].filter(s=>s.v).map(s=>(
+                {[{t:'Problema relatado',v:viewing.descricao},{t:'Servi�os realizados',v:viewing.servicos},{t:'Observa��o',v:viewing.observacao}].filter(s=>s.v).map(s=>(
                   <div key={s.t} style={{marginBottom:12}}>
                     <div className="os-view-label">{s.t}</div>
                     <div className="os-view-text-block">{s.v}</div>
                   </div>
                 ))}
 
-                {/* Peças — cards no mobile em vez de tabela */}
+                {/* Pe�as � cards no mobile em vez de tabela */}
                 <div style={{marginBottom:12}}>
                   <div className="os-view-label">{t.pecas} utilizadas</div>
                   {pecas.filter(p=>p.nome).length ? (
@@ -1231,7 +1279,7 @@ export default function AppOS() {
                         </div>
                       ))}
                     </div>
-                  ) : <p style={{fontSize:13,color:'var(--gray-400)'}}>Nenhuma peça registrada</p>}
+                  ) : <p style={{fontSize:13,color:'var(--gray-400)'}}>Nenhuma pe�a registrada</p>}
                 </div>
 
                 {!isFuncionario && (
@@ -1240,19 +1288,19 @@ export default function AppOS() {
                   {moItensView.length > 0 ? (
                     moItensView.map((m,i)=>(
                       <div key={i} className="os-view-total-item">
-                        <span>{m.descricao||'Mão de obra'}</span>
+                        <span>{m.descricao||'M�o de obra'}</span>
                         <span>{fmt.currency(m.valor)}</span>
                       </div>
                     ))
                   ) : (
                     <div className="os-view-total-item">
-                      <span>Mão de obra</span>
+                      <span>M�o de obra</span>
                       <span>{fmt.currency(viewing.valor_mo)}</span>
                     </div>
                   )}
                   {moItensView.length > 1 && (
                     <div className="os-view-total-item" style={{fontWeight:700}}>
-                      <span>Total mão de obra</span>
+                      <span>Total m�o de obra</span>
                       <span>{fmt.currency(totalMOView)}</span>
                     </div>
                   )}
@@ -1268,25 +1316,25 @@ export default function AppOS() {
                 </>
                 )}
 
-                {/* Histórico de pagamento */}
+                {/* Hist�rico de pagamento */}
                 {viewPagamentos.length > 0 && (
                   <div style={{marginBottom:16}}>
-                    <div style={{fontSize:11,fontWeight:700,color:'var(--gray-400)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:8}}>💳 Pagamento registrado</div>
+                    <div style={{fontSize:11,fontWeight:700,color:'var(--gray-400)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:8}}>?? Pagamento registrado</div>
                     {viewPagamentos.map(pag => {
-                      const formaLabel = {pix:'PIX',dinheiro:'Dinheiro',debito:'Débito',credito:'Crédito',boleto:'Boleto'}[pag.forma]||pag.forma;
+                      const formaLabel = {pix:'PIX',dinheiro:'Dinheiro',debito:'D�bito',credito:'Cr�dito',boleto:'Boleto'}[pag.forma]||pag.forma;
                       return (
                         <div key={pag.id} style={{background:'var(--gray-50)',borderRadius:'var(--r-sm)',padding:'12px 14px',border:'1px solid var(--gray-200)',marginBottom:8}}>
                           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
                             <span style={{fontSize:13,fontWeight:700,color:'var(--gray-800)'}}>
-                              {pag.forma==='pix'?'📱':pag.forma==='dinheiro'?'💵':'💳'} {formaLabel}
+                              {pag.forma==='pix'?'??':pag.forma==='dinheiro'?'??':'??'} {formaLabel}
                               {pag.forma==='credito'&&pag.parcelas>1?` ${pag.parcelas}x`:''}
-                              {pag.bandeira?` · ${pag.bandeira.charAt(0).toUpperCase()+pag.bandeira.slice(1)}`:''}
+                              {pag.bandeira?` � ${pag.bandeira.charAt(0).toUpperCase()+pag.bandeira.slice(1)}`:''}
                             </span>
                             <span style={{fontSize:13,fontWeight:700,color:'var(--success)'}}>{fmt.currency(pag.valor_total)}</span>
                           </div>
                           {pag.taxa_maquininha > 0 && (
                             <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--gray-500)'}}>
-                              <span>Taxa {pag.taxa_maquininha}% → Líquido:</span>
+                              <span>Taxa {pag.taxa_maquininha}% ? L�quido:</span>
                               <span style={{fontWeight:600,color:'var(--gray-700)'}}>{fmt.currency(pag.valor_liquido)}</span>
                             </div>
                           )}
@@ -1324,17 +1372,17 @@ export default function AppOS() {
                         }
                         const url = `${window.location.origin}/acompanhar/${token}`;
                         await navigator.clipboard?.writeText(url);
-                        showToast('🔗 Link copiado! Envie ao cliente.');
+                        showToast('?? Link copiado! Envie ao cliente.');
                       } catch { showToast('Erro ao gerar link','error'); }
                     }}>
-                    🔗 Link cliente
+                    ?? Link cliente
                   </button>
                   {viewing.status==='finalizado'&&!isFuncionario&&(
-                    <button className="btn btn-outline" onClick={()=>{setModal('comprovante');abrirComprovante(viewing.id);}}>📄 Comprovante</button>
+                    <button className="btn btn-outline" onClick={()=>{setModal('comprovante');abrirComprovante(viewing.id);}}>?? Comprovante</button>
                   )}
                   <button className="btn btn-primary" onClick={()=>openEdit(viewing)}><IcoEdit /> Editar</button>
                   {viewing.status==='em_andamento'&&<button className="btn btn-success" onClick={()=>finalizar(viewing.id)}>Finalizar</button>}
-                  {viewing.status==='finalizado'&&<button className="btn btn-outline" onClick={()=>reabrir(viewing.id)}>↩ Reabrir</button>}
+                  {viewing.status==='finalizado'&&<button className="btn btn-outline" onClick={()=>reabrir(viewing.id)}>? Reabrir</button>}
                 </div>
               </div>
             </div>
@@ -1344,19 +1392,19 @@ export default function AppOS() {
 
       <Toast msg={toast.msg} type={toast.type} />
 
-      {/* ══ Modal Comprovante de Serviço ══════════════════════════ */}
+      {/* -- Modal Comprovante de Servi�o -------------------------- */}
       {modal==='comprovante' && (
         <div className="modal-overlay open" style={{zIndex:400}}>
           <div className="modal" style={{maxWidth:560}}>
             <div className="modal-header">
-              <h2>📄 Comprovante de Serviço</h2>
-              <button className="modal-close" onClick={()=>{setModal(null);setComprovante(null);}}>✕</button>
+              <h2>?? Comprovante de Servi�o</h2>
+              <button className="modal-close" onClick={()=>{setModal(null);setComprovante(null);}}>?</button>
             </div>
             <div className="modal-body">
               {comprovanteLoading ? (
                 <div style={{textAlign:'center',padding:'40px 0',color:'var(--gray-400)'}}>
-                  <div style={{fontSize:32,marginBottom:12}}>⏳</div>
-                  <div style={{fontSize:14}}>Carregando comprovante…</div>
+                  <div style={{fontSize:32,marginBottom:12}}>?</div>
+                  <div style={{fontSize:14}}>Carregando comprovante�</div>
                 </div>
               ) : comprovante ? (
                 <>
@@ -1364,29 +1412,29 @@ export default function AppOS() {
                   <div style={{background:'var(--brand-light,#f0f6ff)',border:'1px solid var(--brand-200,#c7d9f0)',borderRadius:'var(--r-md,8px)',padding:'16px 18px',marginBottom:20}}>
                     <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
                       <span style={{fontSize:12,fontWeight:700,color:'var(--brand)',textTransform:'uppercase',letterSpacing:'.5px'}}>
-                        OS Nº {comprovante.os.numero || String(comprovante.os.id).padStart(4,'0')}
+                        OS N� {comprovante.os.numero || String(comprovante.os.id).padStart(4,'0')}
                       </span>
-                      <span style={{display:'inline-block',padding:'2px 10px',borderRadius:20,fontSize:11,fontWeight:700,background:'#f0fdf4',color:'#16a34a',border:'1px solid #bbf7d0'}}>✓ Finalizado</span>
+                      <span style={{display:'inline-block',padding:'2px 10px',borderRadius:20,fontSize:11,fontWeight:700,background:'#f0fdf4',color:'#16a34a',border:'1px solid #bbf7d0'}}>? Finalizado</span>
                     </div>
                     <div style={{fontSize:14,fontWeight:600,color:'var(--gray-800)',marginBottom:4}}>
-                      {comprovante.os.cliente_nome || '—'}
+                      {comprovante.os.cliente_nome || '�'}
                     </div>
                     <div style={{fontSize:12,color:'var(--gray-500)'}}>
                       {[comprovante.os.veiculo_marca, comprovante.os.veiculo_modelo].filter(Boolean).join(' ')}
-                      {(comprovante.os.veiculo_placa||comprovante.os.placa) ? ` · ${comprovante.os.veiculo_placa||comprovante.os.placa}` : ''}
+                      {(comprovante.os.veiculo_placa||comprovante.os.placa) ? ` � ${comprovante.os.veiculo_placa||comprovante.os.placa}` : ''}
                     </div>
                     {(() => {
                       const totalMO    = parseFloat(comprovante.os.valor_mo)    || 0;
                       const totalPecas = parseFloat(comprovante.os.valor_pecas) || 0;
                       const total      = totalMO + totalPecas;
-                      // Só mostra garantia se foi explicitamente ativada nesta OS
+                      // S� mostra garantia se foi explicitamente ativada nesta OS
                       const garantiaDias = comprovante.os.garantia_ativa
                         ? (comprovante.os.garantia_prazo_dias || comprovante.oficina.garantia_padrao_dias || 0)
                         : 0;
                       return (
                         <div style={{marginTop:10,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                           <span style={{fontSize:12,color:'var(--gray-500)'}}>
-                            {garantiaDias > 0 ? `🛡️ Garantia: ${garantiaDias} dias` : ''}
+                            {garantiaDias > 0 ? `??? Garantia: ${garantiaDias} dias` : ''}
                           </span>
                           <span style={{fontFamily:'Poppins,sans-serif',fontSize:20,fontWeight:800,color:'var(--accent,#F97316)'}}>
                             {(() => { const v = total; return 'R$\u00a0' + v.toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.'); })()}
@@ -1396,11 +1444,11 @@ export default function AppOS() {
                     })()}
                   </div>
 
-                  {/* Configuração de garantia — opt-in por OS */}
+                  {/* Configura��o de garantia � opt-in por OS */}
                   {!isFuncionario && !isMecanico && (
                     <details style={{marginBottom:16,background:'var(--gray-50)',borderRadius:'var(--r-sm,6px)',border:'1px solid var(--gray-200)'}}>
                       <summary style={{padding:'10px 14px',cursor:'pointer',fontSize:12,fontWeight:600,color:'var(--gray-700)',userSelect:'none'}}>
-                        🛡️ {comprovante.os.garantia_ativa ? 'Garantia configurada' : 'Informar garantia (opcional)'}
+                        ??? {comprovante.os.garantia_ativa ? 'Garantia configurada' : 'Informar garantia (opcional)'}
                       </summary>
                       {/* Toggle para ativar/desativar garantia */}
                       <div style={{padding:'8px 14px',borderBottom:'1px solid var(--gray-200)',display:'flex',alignItems:'center',gap:10}}>
@@ -1443,13 +1491,13 @@ export default function AppOS() {
                     </details>
                   )}
 
-                  {/* Botões de ação */}
+                  {/* Bot�es de a��o */}
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}}>
                     <button className="btn btn-outline" style={{display:'flex',alignItems:'center',justifyContent:'center',gap:6}} onClick={imprimirComprovante}>
                       <IcoPrint /> Visualizar / Imprimir
                     </button>
                     <button className="btn btn-outline" style={{display:'flex',alignItems:'center',justifyContent:'center',gap:6}} onClick={baixarComprovanteOSPDF}>
-                      📥 Baixar PDF
+                      ?? Baixar PDF
                     </button>
                     <button className="btn btn-success" style={{display:'flex',alignItems:'center',justifyContent:'center',gap:6}} onClick={enviarComprovanteWhatsApp}
                       disabled={!comprovante.os.cliente_telefone}
@@ -1457,22 +1505,22 @@ export default function AppOS() {
                       <IcoWhatsApp /> Enviar pelo WhatsApp
                     </button>
                     <button className="btn btn-primary" onClick={()=>{setModal(null);setComprovante(null);}}>
-                      ✓ Voltar para OS
+                      ? Voltar para OS
                     </button>
                   </div>
                   {!comprovante.os.cliente_telefone && (
                     <p style={{fontSize:11,color:'var(--gray-400)',textAlign:'center',marginTop:4}}>
-                      ⚠️ WhatsApp indisponível — cliente sem telefone cadastrado
+                      ?? WhatsApp indispon�vel � cliente sem telefone cadastrado
                     </p>
                   )}
                   <p style={{fontSize:11,color:'var(--gray-400)',textAlign:'center',marginTop:8,fontStyle:'italic'}}>
-                    Para enviar pelo WhatsApp, baixe o PDF primeiro e depois anexe na conversa que será aberta.
+                    Para enviar pelo WhatsApp, baixe o PDF primeiro e depois anexe na conversa que ser� aberta.
                   </p>
                 </>
               ) : (
                 <div style={{textAlign:'center',padding:'40px 0',color:'var(--gray-400)'}}>
-                  <div style={{fontSize:32,marginBottom:12}}>⚠️</div>
-                  <div style={{fontSize:14}}>Não foi possível carregar o comprovante.</div>
+                  <div style={{fontSize:32,marginBottom:12}}>??</div>
+                  <div style={{fontSize:14}}>N�o foi poss�vel carregar o comprovante.</div>
                   <button className="btn btn-outline" style={{marginTop:12}} onClick={()=>{setModal(null);setComprovante(null);}}>Fechar</button>
                 </div>
               )}
@@ -1486,8 +1534,8 @@ export default function AppOS() {
         <div className="modal-overlay open">
           <div className="modal" style={{maxWidth:520}}>
             <div className="modal-header">
-              <h2>Dar baixa — Forma de pagamento</h2>
-              <button className="modal-close" onClick={()=>setModal(null)}>✕</button>
+              <h2>Dar baixa � Forma de pagamento</h2>
+              <button className="modal-close" onClick={()=>setModal(null)}>?</button>
             </div>
             <div className="modal-body">
               <form onSubmit={confirmarPagamento}>
@@ -1498,7 +1546,7 @@ export default function AppOS() {
                 </div>
                 {repassarTaxaOs && (pagForm.forma==='credito'||pagForm.forma==='debito') && taxaValor > 0 && (
                   <div style={{background:'#fff7ed',border:'1px solid rgba(249,115,22,.3)',borderRadius:'var(--r-sm)',padding:'10px 14px',marginBottom:16,fontSize:12,color:'#c05c0a',fontWeight:600}}>
-                    ⚡ Taxa repassada ao cliente — o total cobrado será {fmt.currency(totalComTaxa)}
+                    ? Taxa repassada ao cliente � o total cobrado ser� {fmt.currency(totalComTaxa)}
                   </div>
                 )}
 
@@ -1509,8 +1557,8 @@ export default function AppOS() {
                     {[
                       {v:'pix',label:'PIX'},
                       {v:'dinheiro',label:'Dinheiro'},
-                      {v:'debito',label:'Débito'},
-                      {v:'credito',label:'Crédito'},
+                      {v:'debito',label:'D�bito'},
+                      {v:'credito',label:'Cr�dito'},
                       {v:'boleto',label:'Boleto'},
                     ].map(f=>(
                       <button key={f.v} type="button"
@@ -1522,7 +1570,7 @@ export default function AppOS() {
                   </div>
                 </div>
 
-                {/* Opções de crédito */}
+                {/* Op��es de cr�dito */}
                 {pagForm.forma==='credito' && (
                   <div style={{background:'var(--gray-50)',borderRadius:'var(--r-sm)',padding:16,marginBottom:16,border:'1px solid var(--gray-200)'}}>
                     <div className="form-grid" style={{gap:12}}>
@@ -1551,7 +1599,7 @@ export default function AppOS() {
                         <input type="number" step="0.01" min="0" max="99" placeholder="Ex: 3.5" value={pagForm.taxa_maquininha} onChange={e=>setPagForm(p=>({...p,taxa_maquininha:e.target.value}))} />
                       </div>
                     </div>
-                    {/* Checkbox: repassar taxa ao cliente — por OS */}
+                    {/* Checkbox: repassar taxa ao cliente � por OS */}
                     <label style={{display:'flex',alignItems:'center',gap:10,cursor:'pointer',marginBottom:8,
                         padding:'10px 12px',background:'var(--gray-50)',borderRadius:'var(--r-sm)',
                         border:`1px solid ${repassarTaxaOs?'var(--accent)':'var(--gray-200)'}`,transition:'border-color .15s'}}>
@@ -1568,7 +1616,7 @@ export default function AppOS() {
                     {taxaValor > 0 && (
                       <div style={{marginTop:12,padding:'12px 14px',background:'#fff',borderRadius:'var(--r-sm)',border:`1px solid ${repassarTaxaCliente ? 'var(--accent)' : 'var(--gray-200)'}`}}>
                         <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--gray-500)',marginBottom:6}}>
-                          <span>Serviço</span>
+                          <span>Servi�o</span>
                           <span>{fmt.currency(pagForm.valor_total)}</span>
                         </div>
                         <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:repassarTaxaCliente?'var(--accent)':'var(--danger)',marginBottom:6}}>
@@ -1583,7 +1631,7 @@ export default function AppOS() {
                             </>
                           ) : (
                             <>
-                              <span>Você recebe</span>
+                              <span>Voc� recebe</span>
                               <span style={{color:'var(--success)'}}>{fmt.currency(liquidoOficina)}</span>
                             </>
                           )}
@@ -1604,7 +1652,7 @@ export default function AppOS() {
                   </div>
                 )}
 
-                {/* Opções de débito */}
+                {/* Op��es de d�bito */}
                 {pagForm.forma==='debito' && (
                   <div style={{background:'var(--gray-50)',borderRadius:'var(--r-sm)',padding:16,marginBottom:16,border:'1px solid var(--gray-200)'}}>
                     <div className="form-grid" style={{gap:12}}>
@@ -1623,8 +1671,8 @@ export default function AppOS() {
                         <input type="number" step="0.01" min="0" max="99" placeholder="Ex: 1.5" value={pagForm.taxa_maquininha} onChange={e=>setPagForm(p=>({...p,taxa_maquininha:e.target.value}))} />
                       </div>
                     </div>
-                    {/* Checkbox: repassar taxa ao cliente — por OS */}
-                    {/* Checkbox: repassar taxa ao cliente — por OS */}
+                    {/* Checkbox: repassar taxa ao cliente � por OS */}
+                    {/* Checkbox: repassar taxa ao cliente � por OS */}
                     <label style={{display:'flex',alignItems:'center',gap:10,cursor:'pointer',marginBottom:8,
                         padding:'10px 12px',background:'var(--gray-50)',borderRadius:'var(--r-sm)',
                         border:`1px solid ${repassarTaxaOs?'var(--accent)':'var(--gray-200)'}`,transition:'border-color .15s'}}>
@@ -1641,7 +1689,7 @@ export default function AppOS() {
                     {taxaValor > 0 && (
                       <div style={{marginTop:12,padding:'12px 14px',background:'#fff',borderRadius:'var(--r-sm)',border:`1px solid ${repassarTaxaOs ? 'var(--accent)' : 'var(--gray-200)'}`}}>
                         <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--gray-500)',marginBottom:6}}>
-                          <span>Serviço</span><span>{fmt.currency(pagForm.valor_total)}</span>
+                          <span>Servi�o</span><span>{fmt.currency(pagForm.valor_total)}</span>
                         </div>
                         <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:repassarTaxaOs?'var(--accent)':'var(--danger)',marginBottom:6}}>
                           <span>Taxa ({pagForm.taxa_maquininha}%)</span>
@@ -1651,7 +1699,7 @@ export default function AppOS() {
                           {repassarTaxaOs ? (
                             <><span style={{color:'var(--accent)'}}>Total cobrado do cliente</span><span style={{color:'var(--accent)'}}>{fmt.currency(totalComTaxa)}</span></>
                           ) : (
-                            <><span>Você recebe</span><span style={{color:'var(--success)'}}>{fmt.currency(liquidoOficina)}</span></>
+                            <><span>Voc� recebe</span><span style={{color:'var(--success)'}}>{fmt.currency(liquidoOficina)}</span></>
                           )}
                         </div>
                         {repassarTaxaOs && <div style={{fontSize:11,color:'var(--gray-400)',marginTop:4}}>Receita da oficina: {fmt.currency(pagForm.valor_total)}</div>}
@@ -1659,7 +1707,7 @@ export default function AppOS() {
                     )}
                   </div>
                 )}
-                {/* Opções de boleto */}
+                {/* Op��es de boleto */}
                 {pagForm.forma==='boleto' && (
                   <div style={{background:'var(--gray-50)',borderRadius:'var(--r-sm)',padding:16,marginBottom:16,border:'1px solid var(--gray-200)'}}>
                     <div className="form-grid" style={{gap:12}}>
@@ -1668,28 +1716,28 @@ export default function AppOS() {
                         <input type="date" value={pagForm.boleto_vencimento||''} onChange={e=>setPagForm(p=>({...p,boleto_vencimento:e.target.value}))} />
                       </div>
                       <div className="form-group">
-                        <label>Data de recebimento <span style={{fontSize:11,color:'var(--gray-400)'}}>(preencha se já recebeu)</span></label>
+                        <label>Data de recebimento <span style={{fontSize:11,color:'var(--gray-400)'}}>(preencha se j� recebeu)</span></label>
                         <input type="date" value={pagForm.boleto_recebido_em||''} onChange={e=>setPagForm(p=>({...p,boleto_recebido_em:e.target.value}))} />
                       </div>
                     </div>
                     <div style={{fontSize:12,color:'var(--gray-500)',marginTop:8}}>
                       {pagForm.boleto_recebido_em
-                        ? '✓ Boleto será registrado como recebido.'
-                        : '⏳ Boleto ficará pendente até a confirmação do recebimento.'}
+                        ? '? Boleto ser� registrado como recebido.'
+                        : '? Boleto ficar� pendente at� a confirma��o do recebimento.'}
                     </div>
                   </div>
                 )}
 
-                {/* Observação */}
+                {/* Observa��o */}
                 <div className="form-group" style={{marginBottom:20}}>
-                  <label>Observação (opcional)</label>
-                  <input value={pagForm.observacao} onChange={e=>setPagForm(p=>({...p,observacao:e.target.value}))} placeholder="Ex: Cliente pagou com 2 cartões..." />
+                  <label>Observa��o (opcional)</label>
+                  <input value={pagForm.observacao} onChange={e=>setPagForm(p=>({...p,observacao:e.target.value}))} placeholder="Ex: Cliente pagou com 2 cart�es..." />
                 </div>
 
                 <div className="form-actions">
                   <button type="button" className="btn btn-outline" onClick={()=>setModal(null)}>Cancelar</button>
                   <button type="submit" className="btn btn-primary" disabled={!pagForm.forma || pagSaving}>
-                    {pagSaving ? 'Registrando…' : 'Confirmar pagamento e finalizar'}
+                    {pagSaving ? 'Registrando�' : 'Confirmar pagamento e finalizar'}
                   </button>
                 </div>
               </form>
@@ -1698,21 +1746,21 @@ export default function AppOS() {
         </div>
       )}
 
-      {/* ══ Modal OS Rápida ══════════════════════════════════════════ */}
+      {/* -- Modal OS R�pida ------------------------------------------ */}
       {modal === 'rapida' && (
         <div className="modal-overlay open">
           <div className="modal" style={{maxWidth: 520}}>
             <div className="modal-header">
               <div>
-                <h2>⚡ OS Rápida</h2>
+                <h2>? OS R�pida</h2>
                 <div style={{fontSize:12,color:'var(--gray-400)',marginTop:2}}>Preencha e crie cliente, {t.veiculo.toLowerCase()} e OS de uma vez</div>
               </div>
-              <button className="modal-close" onClick={()=>setModal(null)}>✕</button>
+              <button className="modal-close" onClick={()=>setModal(null)}>?</button>
             </div>
             <div className="modal-body">
               <form onSubmit={saveRapida}>
 
-                {/* ── Cliente ────────────────────────────────────── */}
+                {/* -- Cliente -------------------------------------- */}
                 <div style={{marginBottom:14,padding:'12px 14px',background:'var(--gray-50)',borderRadius:10,border:'1px solid var(--gray-200)'}}>
                   <div style={{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px',color:'var(--gray-400)',marginBottom:10}}>Cliente</div>
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}}>
@@ -1726,12 +1774,12 @@ export default function AppOS() {
                     </div>
                   </div>
                   <div className="form-group" style={{marginBottom:0}}>
-                    <label>Endereço</label>
-                    <input placeholder="Rua, número, bairro..." value={rapida.endereco_cliente} onChange={e=>setRapida(r=>({...r,endereco_cliente:e.target.value}))} />
+                    <label>Endere�o</label>
+                    <input placeholder="Rua, n�mero, bairro..." value={rapida.endereco_cliente} onChange={e=>setRapida(r=>({...r,endereco_cliente:e.target.value}))} />
                   </div>
                 </div>
 
-                {/* ── Veículo ────────────────────────────────────── */}
+                {/* -- Ve�culo -------------------------------------- */}
                 <div style={{marginBottom:14,padding:'12px 14px',background:'var(--gray-50)',borderRadius:10,border:'1px solid var(--gray-200)'}}>
                   <div style={{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px',color:'var(--gray-400)',marginBottom:10}}>
                     {t.veiculo} <span style={{fontWeight:400,color:'var(--gray-300)'}}>(opcional)</span>
@@ -1762,21 +1810,21 @@ export default function AppOS() {
                   </div>
                 </div>
 
-                {/* ── OS ─────────────────────────────────────────── */}
+                {/* -- OS ------------------------------------------- */}
                 <div style={{marginBottom:14,padding:'12px 14px',background:'var(--gray-50)',borderRadius:10,border:'1px solid var(--gray-200)'}}>
-                  <div style={{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px',color:'var(--gray-400)',marginBottom:10}}>Ordem de Serviço</div>
+                  <div style={{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px',color:'var(--gray-400)',marginBottom:10}}>Ordem de Servi�o</div>
                   <div className="form-group">
                     <label>Problema relatado *</label>
                     <textarea placeholder="Descreva o problema..." value={rapida.descricao} onChange={e=>setRapida(r=>({...r,descricao:e.target.value}))} rows={2} required />
                   </div>
                   <div className="form-group">
-                    <label>Serviços realizados</label>
-                    <textarea placeholder="Liste os serviços feitos..." value={rapida.servicos} onChange={e=>setRapida(r=>({...r,servicos:e.target.value}))} rows={2} />
+                    <label>Servi�os realizados</label>
+                    <textarea placeholder="Liste os servi�os feitos..." value={rapida.servicos} onChange={e=>setRapida(r=>({...r,servicos:e.target.value}))} rows={2} />
                   </div>
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
                     {!isFuncionario && !isMecanico && (
                       <div className="form-group" style={{marginBottom:0}}>
-                        <label>{t.mecanico} responsável</label>
+                        <label>{t.mecanico} respons�vel</label>
                         <select value={rapida.mecanico_id} onChange={e=>setRapida(r=>({...r,mecanico_id:e.target.value}))}>
                           <option value="">Sem {t.mecanico.toLowerCase()}</option>
                           {mecanicos.map(m=><option key={m.id} value={m.id}>{m.nome}</option>)}
@@ -1785,7 +1833,7 @@ export default function AppOS() {
                     )}
                     {!isFuncionario && (
                       <div className="form-group" style={{marginBottom:0}}>
-                        <label>Mão de obra (R$)</label>
+                        <label>M�o de obra (R$)</label>
                         <input type="number" step="0.01" min="0" placeholder="0,00" value={rapida.valor_mo} onChange={e=>setRapida(r=>({...r,valor_mo:e.target.value}))} />
                       </div>
                     )}
@@ -1795,7 +1843,7 @@ export default function AppOS() {
                 <div className="form-actions">
                   <button type="button" className="btn btn-outline" onClick={()=>setModal(null)}>Cancelar</button>
                   <button type="submit" className="btn btn-primary" disabled={rapidaSaving}>
-                    {rapidaSaving ? 'Criando…' : '⚡ Criar OS'}
+                    {rapidaSaving ? 'Criando�' : '? Criar OS'}
                   </button>
                 </div>
               </form>
