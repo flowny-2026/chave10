@@ -156,10 +156,10 @@ export default function Checklists() {
       };
 
       if (editando) {
-        await api.put(`/app/checklists/modelos/${editando.id}`, payload);
+        await api.app.checklists.update(editando.id, payload);
         showToast('Checklist atualizado!');
       } else {
-        await api.post('/app/checklists/modelos', payload);
+        await api.app.checklists.create(payload);
         showToast('Checklist criado!');
       }
       fecharModal();
@@ -172,7 +172,7 @@ export default function Checklists() {
   async function deletar(modelo) {
     if (!window.confirm(`Deletar "${modelo.nome}"?`)) return;
     try {
-      await api.delete(`/app/checklists/modelos/${modelo.id}`);
+      await api.app.checklists.remove(modelo.id);
       showToast('Checklist deletado!');
       carregar();
     } catch (err) {
