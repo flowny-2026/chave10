@@ -970,6 +970,12 @@ export default function AppOS() {
                     {pendingCount} operação{pendingCount > 1 ? 'ções' : ''} sendo processada{pendingCount > 1 ? 's' : ''}
                   </div>
                 </div>
+                <button
+                  onClick={() => { offlineManager.clearQueue(); load(statusFiltro, periodoTipo); }}
+                  style={{ background:'rgba(255,255,255,.2)', border:'1px solid rgba(255,255,255,.4)', color:'#fff', borderRadius:6, padding:'4px 10px', fontSize:12, cursor:'pointer', flexShrink:0 }}
+                  title="Descartar operações pendentes">
+                  Limpar fila
+                </button>
               </div>
             )}
             
@@ -1091,7 +1097,7 @@ export default function AppOS() {
                         <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
                           <div style={{display:'flex',alignItems:'center',gap:4}}>
                             <label style={{fontSize:11,fontWeight:600,color:'var(--gray-500)',whiteSpace:'nowrap'}}>Qtd</label>
-                            <input type="number" min="1" value={p.qtd} onChange={e=>setPeca(p.id,'qtd',e.target.value)} placeholder="1" style={{padding:'6px 8px',fontSize:12,textAlign:'center',width:60}} />
+                            <input type="number" min="0.001" step="0.001" value={p.qtd} onChange={e=>setPeca(p.id,'qtd',e.target.value)} placeholder="1" style={{padding:'6px 8px',fontSize:12,textAlign:'center',width:60}} />
                           </div>
                           <div style={{display:'flex',alignItems:'center',gap:4,flex:1}}>
                             <label style={{fontSize:11,fontWeight:600,color:'var(--gray-500)',whiteSpace:'nowrap'}}>Valor un. R$</label>

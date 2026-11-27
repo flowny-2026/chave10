@@ -162,6 +162,12 @@ export default function AppOrcamentos() {
   const [viewFotos, setViewFotos] = useState([]);
   const [toast, setToast]       = useState({ msg:'', type:'' });
   const [pendingPhotos, setPendingPhotos] = useState([]);
+  const [novoClienteOpen, setNovoClienteOpen] = useState(false);
+  const [novoClienteForm, setNovoClienteForm] = useState({ nome:'', telefone:'', email:'', endereco:'' });
+  const [novoClienteSaving, setNovoClienteSaving] = useState(false);
+  const [novoVeiculoOpen, setNovoVeiculoOpen] = useState(false);
+  const [novoVeiculoForm, setNovoVeiculoForm] = useState({ marca:'', modelo:'', placa:'', ano:'', km:'' });
+  const [novoVeiculoSaving, setNovoVeiculoSaving] = useState(false);
 
   function openView(orc) {
     setViewing(orc);
@@ -183,6 +189,52 @@ export default function AppOrcamentos() {
   }
 
   function showToast(msg, type='success') { setToast({msg,type}); setTimeout(()=>setToast({msg:'',type:''}),3000); }
+
+  async function criarClienteInline(e) {
+    if (e?.preventDefault) e.preventDefault();
+    if (!novoClienteForm.nome.trim()) { showToast('Nome é obrigatório','error'); return; }
+    setNovoClienteSaving(true);
+    try {
+      const novo = await api.app.clientes.create({ nome: novoClienteForm.nome.trim(), telefone: novoClienteForm.telefone.trim() || null, endereco: novoClienteForm.endereco.trim() || null });
+      const lista = await api.app.clientes.list();
+      setClientes(lista);
+      setForm(f => ({ ...f, cliente_id: String(novo.id), veiculo_id: '' }));
+      setNovoClienteForm({ nome:'', telefone:'', endereco:'' });
+      setNovoClienteOpen(false);
+      showToast('Cliente criado!');
+    } catch (err) {
+      showToast(err?.error || 'Erro ao criar cliente','error');
+    } finally {
+      setNovoClienteSaving(false);
+    }
+  }
+
+  async function criarVeiculoInline(e) {
+    if (e?.preventDefault) e.preventDefault();
+    if (!novoVeiculoForm.modelo.trim()) { showToast('Modelo é obrigatório','error'); return; }
+    setNovoVeiculoSaving(true);
+    try {
+      const clienteId = form.cliente_id || null;
+      const novo = await api.app.veiculos.create({
+        cliente_id: clienteId ? +clienteId : null,
+        marca:  novoVeiculoForm.marca.trim() || 'Outro',
+        modelo: novoVeiculoForm.modelo.trim(),
+        placa:  novoVeiculoForm.placa.trim().toUpperCase() || null,
+        ano:    novoVeiculoForm.ano.trim() || null,
+        km:     novoVeiculoForm.km ? parseInt(novoVeiculoForm.km) || null : null,
+      });
+      const lista = await api.app.veiculos.list();
+      setVeiculos(lista);
+      setForm(f => ({ ...f, veiculo_id: String(novo.id) }));
+      setNovoVeiculoForm({ marca:'', modelo:'', placa:'', ano:'', km:'' });
+      setNovoVeiculoOpen(false);
+      showToast('Veículo criado!');
+    } catch (err) {
+      showToast(err?.error || 'Erro ao criar veículo','error');
+    } finally {
+      setNovoVeiculoSaving(false);
+    }
+  }
 
   async function load() {
     try { const data = await api.app.orcamentos.list(); setLista(data); }
@@ -540,18 +592,56 @@ export default function AppOrcamentos() {
               <form onSubmit={save}>
                 <div className="form-grid">
                   <div className="form-group">
-                    <label>Cliente</label>
-                    <select value={form.cliente_id} onChange={e=>setForm(f=>({...f,cliente_id:e.target.value,veiculo_id:''}))}>
-                      <option value="">Selecionar...</option>
-                      {clientes.map(c=><option key={c.id} value={c.id}>{c.nome}</option>)}
-                    </select>
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
+                      <label style={{marginBottom:0}}>Cliente</label>
+                      <button type="button" onClick={()=>{setNovoClienteOpen(o=>!o);setNovoVeiculoOpen(false);}} className="btn btn-primary btn-sm" style={{fontSize:12,fontWeight:700,padding:'4px 10px',lineHeight:1.4}}>
+                        {novoClienteOpen ? '✕ Cancelar' : '+ Novo'}
+                      </button>
+                    </div>
+                    {novoClienteOpen ? (
+                      <div style={{background:'var(--gray-50)',border:'1px solid var(--brand)',borderRadius:8,padding:'10px 12px',display:'flex',flexDirection:'column',gap:8}}>
+                        <input placeholder="Nome *" value={novoClienteForm.nome} onChange={e=>setNovoClienteForm(f=>({...f,nome:e.target.value}))} autoFocus style={{padding:'7px 10px',fontSize:13}} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();criarClienteInline();}}} />
+                        <input placeholder="Telefone" value={novoClienteForm.telefone} onChange={e=>setNovoClienteForm(f=>({...f,telefone:e.target.value}))} style={{padding:'7px 10px',fontSize:13}} />
+                        <input placeholder="Endereço" value={novoClienteForm.endereco} onChange={e=>setNovoClienteForm(f=>({...f,endereco:e.target.value}))} style={{padding:'7px 10px',fontSize:13}} />
+                        <button type="button" className="btn btn-primary btn-sm" disabled={novoClienteSaving}
+                          onClick={criarClienteInline} style={{alignSelf:'flex-end'}}>
+                          {novoClienteSaving ? 'Salvando...' : 'Criar cliente'}
+                        </button>
+                      </div>
+                    ) : (
+                      <select value={form.cliente_id} onChange={e=>setForm(f=>({...f,cliente_id:e.target.value,veiculo_id:''}))}>
+                        <option value="">Selecionar...</option>
+                        {clientes.map(c=><option key={c.id} value={c.id}>{c.nome}</option>)}
+                      </select>
+                    )}
                   </div>
                   <div className="form-group">
-                    <label>{t.veiculo}</label>
-                    <select value={form.veiculo_id} onChange={e=>setForm(f=>({...f,veiculo_id:e.target.value}))}>
-                      <option value="">Selecionar...</option>
-                      {veiculosFiltrados.map(v=><option key={v.id} value={v.id}>{v.marca} {v.modelo} — {v.placa}</option>)}
-                    </select>
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
+                      <label style={{marginBottom:0}}>{t.veiculo}</label>
+                      <button type="button" onClick={()=>{setNovoVeiculoOpen(o=>!o);setNovoClienteOpen(false);}} className="btn btn-primary btn-sm" style={{fontSize:12,fontWeight:700,padding:'4px 10px',lineHeight:1.4}}>
+                        {novoVeiculoOpen ? '✕ Cancelar' : '+ Novo'}
+                      </button>
+                    </div>
+                    {novoVeiculoOpen ? (
+                      <div style={{background:'var(--gray-50)',border:'1px solid var(--brand)',borderRadius:8,padding:'10px 12px',display:'flex',flexDirection:'column',gap:8}}>
+                        <input placeholder={`${t.modelo} *`} value={novoVeiculoForm.modelo} onChange={e=>setNovoVeiculoForm(f=>({...f,modelo:e.target.value}))} autoFocus style={{padding:'7px 10px',fontSize:13}} />
+                        <input placeholder={t.marca} value={novoVeiculoForm.marca} onChange={e=>setNovoVeiculoForm(f=>({...f,marca:e.target.value}))} style={{padding:'7px 10px',fontSize:13}} />
+                        <input placeholder={`${t.placa} (opcional)`} value={novoVeiculoForm.placa} onChange={e=>setNovoVeiculoForm(f=>({...f,placa:e.target.value.toUpperCase()}))} style={{padding:'7px 10px',fontSize:13,textTransform:'uppercase'}} />
+                        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+                          <input placeholder={t.ano} value={novoVeiculoForm.ano} onChange={e=>setNovoVeiculoForm(f=>({...f,ano:e.target.value}))} style={{padding:'7px 10px',fontSize:13}} />
+                          <input type="number" placeholder={t.kmPlaceholder||`${t.kmAbrev} atual`} value={novoVeiculoForm.km} onChange={e=>setNovoVeiculoForm(f=>({...f,km:e.target.value}))} style={{padding:'7px 10px',fontSize:13}} min="0" />
+                        </div>
+                        <button type="button" className="btn btn-primary btn-sm" disabled={novoVeiculoSaving}
+                          onClick={criarVeiculoInline} style={{alignSelf:'flex-end'}}>
+                          {novoVeiculoSaving ? 'Salvando...' : `Criar ${t.veiculo.toLowerCase()}`}
+                        </button>
+                      </div>
+                    ) : (
+                      <select value={form.veiculo_id} onChange={e=>setForm(f=>({...f,veiculo_id:e.target.value}))}>
+                        <option value="">Selecionar...</option>
+                        {veiculosFiltrados.map(v=><option key={v.id} value={v.id}>{v.marca} {v.modelo} — {v.placa}</option>)}
+                      </select>
+                    )}
                   </div>
                   <div className="form-group full"><label>Descrição / Problema</label><textarea value={form.descricao} onChange={e=>setForm(f=>({...f,descricao:e.target.value}))} placeholder="Descreva o problema ou serviço solicitado..." /></div>
                   <div className="form-group full"><label>Serviços</label><textarea value={form.servicos} onChange={e=>setForm(f=>({...f,servicos:e.target.value}))} placeholder="Liste os serviços a realizar..." /></div>
@@ -577,7 +667,7 @@ export default function AppOrcamentos() {
                         <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
                           <div style={{display:'flex',alignItems:'center',gap:4}}>
                             <label style={{fontSize:11,fontWeight:600,color:'var(--gray-500)',whiteSpace:'nowrap'}}>Qtd</label>
-                            <input type="number" min="1" value={p.qtd} onChange={e=>setPeca(p.id,'qtd',e.target.value)} placeholder="1" style={{padding:'6px 8px',fontSize:12,textAlign:'center',width:60}} />
+                            <input type="number" min="0.001" step="0.001" value={p.qtd} onChange={e=>setPeca(p.id,'qtd',e.target.value)} placeholder="1" style={{padding:'6px 8px',fontSize:12,textAlign:'center',width:60}} />
                           </div>
                           <div style={{display:'flex',alignItems:'center',gap:4,flex:1}}>
                             <label style={{fontSize:11,fontWeight:600,color:'var(--gray-500)',whiteSpace:'nowrap'}}>Valor un. R$</label>

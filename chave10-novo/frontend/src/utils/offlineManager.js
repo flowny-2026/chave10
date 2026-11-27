@@ -188,8 +188,18 @@ class OfflineManager {
         console.log('✅ Operação sincronizada:', operation.type);
       } catch (error) {
         console.error('❌ Erro ao sincronizar operação:', operation.type, error);
-        operation.status = OPERATION_STATUS.FAILED;
-        operation.error = error.message;
+        // Erros 4xx (validação, auth) — descarta imediatamente, não adianta retentar
+        // Erros 5xx ou de rede — mantém para nova tentativa (máx 3)
+        const httpStatus = error?.status || 0;
+        const isClientError = httpStatus >= 400 && httpStatus < 500;
+        const maxAttempts = 3;
+        if (isClientError || operation.attempts >= maxAttempts) {
+          operation.status = OPERATION_STATUS.SUCCESS; // remove da fila
+          console.warn('🗑️ Operação descartada (erro permanente):', operation.type, httpStatus);
+        } else {
+          operation.status = OPERATION_STATUS.FAILED;
+          operation.error = error.message;
+        }
         failedCount++;
       }
 
