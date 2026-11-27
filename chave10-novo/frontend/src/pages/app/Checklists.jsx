@@ -192,34 +192,14 @@ export default function Checklists() {
         </button>
       </div>
 
-      {/* Seletor de Segmento */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
-        {SEGMENTOS.map(seg => (
-          <button
-            key={seg}
-            onClick={() => setSegmento(seg)}
-            style={{
-              padding: '10px 18px',
-              borderRadius: 8,
-              border: 'none',
-              background: segmento === seg ? '#1e3a8a' : '#e5e7eb',
-              color: segmento === seg ? '#fff' : '#374151',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
-          >
-            {SEGMENTO_LABELS[seg]}
-          </button>
-        ))}
-      </div>
+
 
       {/* Lista de Modelos */}
       {loading ? (
         <div style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>Carregando...</div>
       ) : modelos.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>
-          Nenhum checklist para {SEGMENTO_LABELS[segmento]}
+          Nenhum checklist disponível
         </div>
       ) : (
         <div style={{ display: 'grid', gap: 12 }}>
@@ -272,7 +252,7 @@ export default function Checklists() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontSize: 24 }}>📋</span>
                 <h2 style={{ fontSize: 18, fontWeight: 700, color: '#1f2937', margin: 0 }}>
-                  {modal === 'criar' ? 'Criar Checklist' : 'Editar Checklist'}
+                  {editando ? 'Editar Checklist' : 'Criar Checklist'}
                 </h2>
               </div>
               <button className="modal-close" onClick={fecharModal}>✕</button>
