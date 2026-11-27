@@ -210,6 +210,7 @@ export default function AppOS() {
   const [veiculos, setVeiculos] = useState([]);
   const [mecanicos, setMecanicos] = useState([]);
   const [estoquePecas, setEstoquePecas] = useState([]);
+  const [servicos, setServicos] = useState([]);
   const [search, setSearch]     = useState(() => searchParams.get('q') || '');
   const [statusFiltro, setStatusFiltro] = useState('');
 
@@ -453,7 +454,8 @@ export default function AppOS() {
       api.app.veiculos.list(),
       api.app.mecanicos.ativos().catch(() => []),
       api.app.estoque.list('peca').catch(() => []),
-    ]).then(([c,v,m,e])=>{ setClientes(c); setVeiculos(v); setMecanicos(m||[]); setEstoquePecas(Array.isArray(e)?e:[]); }).catch(()=>{});
+      api.app.servicos.list().catch(() => []),
+    ]).then(([c,v,m,e,s])=>{ setClientes(c); setVeiculos(v); setMecanicos(m||[]); setEstoquePecas(Array.isArray(e)?e:[]); setServicos(Array.isArray(s)?s:[]); }).catch(()=>{});
     // Carrega config da oficina para saber se repassar taxa ao cliente
     api.app.config.get().then(cfg => {
       if (cfg) {
@@ -504,6 +506,10 @@ export default function AppOS() {
   function setMO(id, field, val) { setForm(f=>({...f, mo_itens: f.mo_itens.map(m=>m.id===id?{...m,[field]:val}:m)})); }
   function addMO()    { setForm(f=>({...f, mo_itens:[...f.mo_itens, novaMO()]})); }
   function removeMO(id) { setForm(f=>({...f, mo_itens: f.mo_itens.filter(m=>m.id!==id)})); }
+  function addMOFromServico(servico) {
+    setForm(f=>({...f, mo_itens:[...f.mo_itens, {id:Date.now()+Math.random(), descricao:servico.nome, valor:String(servico.valor)}]}));
+    setModal('form');
+  }
   const totalMOForm = (form.mo_itens||[]).reduce((s,m)=>s+(parseFloat(m.valor)||0),0);
 
   async function save(e) {
@@ -1129,7 +1135,27 @@ export default function AppOS() {
                   <div className="form-group full">
                     <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
                       <label style={{marginBottom:0,fontWeight:700}}>Mão de obra</label>
-                      <button type="button" className="btn btn-outline btn-sm" onClick={addMO}>+ Adicionar serviço</button>
+                      <div style={{display:'flex',gap:6}}>
+                        <button type="button" className="btn btn-outline btn-sm" onClick={addMO}>+ Novo</button>
+                        {servicos.length > 0 && (
+                          <select 
+                            className="btn btn-outline btn-sm" 
+                            onChange={(e) => {
+                              if (e.target.value) {
+                                const s = servicos.find(x => x.id === parseInt(e.target.value));
+                                if (s) addMOFromServico(s);
+                                e.target.value = '';
+                              }
+                            }}
+                            style={{padding:'5px 8px',fontSize:13,cursor:'pointer'}}
+                          >
+                            <option value="">Usar cadastrado...</option>
+                            {servicos.map(s => (
+                              <option key={s.id} value={s.id}>{s.nome} ({fmt.currency(s.valor)})</option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
                     </div>
                     <div style={{background:'var(--gray-50)',borderRadius:'var(--r-sm)',overflow:'hidden',border:'1px solid var(--gray-200)'}}>
                       {(form.mo_itens||[]).map((m)=>(
