@@ -31,6 +31,8 @@ export default function Mecanicos() {
   const [confirmDesativar, setConfirmDesativar] = useState(null);
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [filtroAtivo, setFiltroAtivo] = useState('todos'); // 'todos' | 'ativos' | 'inativos'
+  const [confirmResetSenha, setConfirmResetSenha] = useState(null);
+  const [resettingSenha, setResettingSenha] = useState(false);
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
@@ -140,6 +142,20 @@ export default function Mecanicos() {
       carregar();
     } catch (e) {
       showToast(e?.error || 'Erro ao alterar status', 'error');
+    }
+  }
+
+  async function resetarSenha(mec) {
+    setResettingSenha(true);
+    try {
+      const response = await api.patch('/app/usuarios/' + mec.id + '/reset-senha');
+      showToast(`Senha resetada! Nova senha temporária: ${response.senha_temporaria}`, 'success');
+      setConfirmResetSenha(null);
+      carregar();
+    } catch (e) {
+      showToast(e?.error || 'Erro ao resetar senha', 'error');
+    } finally {
+      setResettingSenha(false);
     }
   }
 
@@ -267,13 +283,26 @@ export default function Mecanicos() {
               </div>
 
               {/* Ações */}
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <button
                   className="btn btn-outline"
-                  style={{ flex: 1, fontSize: 13, padding: '8px 0' }}
+                  style={{ flex: 1, fontSize: 13, padding: '8px 0', minWidth: '70px' }}
                   onClick={() => abrirEditar(mec)}
                 >
                   Editar
+                </button>
+                <button
+                  onClick={() => setConfirmResetSenha(mec)}
+                  style={{
+                    flex: 1, fontSize: 13, padding: '8px 0', borderRadius: 8,
+                    border: '1.5px solid #fef08a',
+                    background: '#fffacd',
+                    color: '#854d0e',
+                    fontWeight: 600, cursor: 'pointer', minWidth: '70px'
+                  }}
+                  title="Reseta senha do usuário"
+                >
+                  🔑 Reset
                 </button>
                 <button
                   onClick={() => setConfirmDesativar(mec)}
@@ -508,6 +537,47 @@ export default function Mecanicos() {
                 }}
               >
                 {confirmDesativar.ativo ? 'Desativar' : 'Ativar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal confirmar reset de senha */}
+      {confirmResetSenha && (
+        <div className="modal-overlay open" onClick={() => setConfirmResetSenha(null)}>
+          <div className="modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 style={{ fontSize: 'var(--font-lg)', fontWeight: 'var(--fw-bold)', color: 'var(--gray-900)' }}>
+                🔑 Resetar Senha
+              </h2>
+              <button className="modal-close" onClick={() => setConfirmResetSenha(null)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 14, color: 'var(--gray-600)', lineHeight: 1.6 }}>
+                Resetar a senha de <strong>{confirmResetSenha.nome}</strong>? Uma nova senha temporária será gerada e exibida aqui.
+              </p>
+              <div style={{ marginTop: 16, padding: '12px', background: '#f3f4f6', borderRadius: 8, borderLeft: '3px solid #f59e0b' }}>
+                <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 8px 0', fontWeight: 600 }}>⚠️ Importante:</p>
+                <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>
+                  Copie a nova senha e compartilhe com o usuário. Ele poderá alterar para uma senha de sua escolha ao acessar o perfil.
+                </p>
+              </div>
+            </div>
+            <div className="form-actions" style={{ display: 'flex', gap: 10 }}>
+              <button className="btn btn-outline" onClick={() => setConfirmResetSenha(null)} style={{ flex: 1 }} disabled={resettingSenha}>
+                Cancelar
+              </button>
+              <button
+                onClick={() => resetarSenha(confirmResetSenha)}
+                disabled={resettingSenha}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 8, border: 'none', fontWeight: 700,
+                  background: resettingSenha ? '#d1d5db' : '#f59e0b',
+                  color: '#fff', cursor: resettingSenha ? 'default' : 'pointer', fontSize: 14,
+                }}
+              >
+                {resettingSenha ? 'Resetando...' : '🔑 Resetar Senha'}
               </button>
             </div>
           </div>

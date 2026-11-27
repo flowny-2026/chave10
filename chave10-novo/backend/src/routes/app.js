@@ -2354,5 +2354,59 @@ router.patch('/meu-perfil/senha', authMiddleware, async (req, res) => {
   }
 });
 
+// PATCH /app/usuarios/:id/reset-senha — admin reseta senha de um usuário
+router.patch('/usuarios/:id/reset-senha', authMiddleware, naoFuncionario, async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const adminId = req.user.id;
+    const oficina_id = oid(req);
+
+    if (!userId || userId <= 0) {
+      return res.status(400).json({ error: 'ID de usuário inválido' });
+    }
+
+    // Busca o usuário a ser resetado
+    const usuario = await queryOne(
+      'SELECT id, oficina_id, nome, email FROM usuarios WHERE id=$1 AND oficina_id=$2',
+      [userId, oficina_id]
+    );
+    if (!usuario) {
+      return res.status(404).json({ error: 'Usuário não encontrado' });
+    }
+
+    // Gera uma senha temporária aleatória (8 caracteres)
+    const senhaTemp = Math.random().toString(36).substring(2, 10).toUpperCase();
+    
+    // Hash da senha temporária
+    const bcrypt = require('bcryptjs');
+    const novaHash = await bcrypt.hash(senhaTemp, 10);
+
+    // Atualiza no banco
+    await run(
+      'UPDATE usuarios SET senha_hash=$1 WHERE id=$2 AND oficina_id=$3',
+      [novaHash, userId, oficina_id]
+    );
+
+    // Log de auditoria
+    audit(req, 'RESETAR_SENHA_USUARIO', 'usuarios', userId, { 
+      admin_id: adminId, 
+      usuario_nome: usuario.nome,
+      acao: 'senha resetada por admin' 
+    });
+    log.info('senha_resetada_admin', { usuario_id: userId, admin_id: adminId });
+
+    res.json({ 
+      ok: true, 
+      message: 'Senha resetada com sucesso',
+      senha_temporaria: senhaTemp,
+      usuario_nome: usuario.nome
+    });
+  } catch (err) {
+    log.error('reset_senha', err.message || err);
+    res.status(500).json({ error: 'Erro ao resetar senha' });
+  }
+});
+
 module.exports = router;
+
 
