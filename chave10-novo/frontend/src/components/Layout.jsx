@@ -541,6 +541,7 @@ export default function Layout({ area }) {
     { to: '/app/lembretes',    label: 'Lembretes',         icon: IC.lembretes,     soNaoMecanico: true },
     { to: '/app/estoque',      label: 'Estoque',           icon: IC.estoque,       soNaoMecanico: true },
     { to: '/app/servicos',     label: 'Serviços',          icon: IC.mensagens,     soNaoMecanico: true },
+    { to: '/app/checklists',   label: 'Checklists',        icon: IC.lembretes,     soNaoMecanico: true },
     { to: '/app/mecanicos',    label: t.mecanicos,         icon: appNavGestao_ICON_MECANICOS, soNaoFuncionario: true, soNaoMecanico: true, badge: 'Novo' },
     { to: '/app/comissoes',    label: 'Comissões',         icon: appNavGestao_ICON_COMISSOES, soNaoFuncionario: true, soNaoMecanico: true, badge: 'Novo' },
     { to: '/app/pos-venda',    label: 'Pós-venda',         icon: IC.mensagens,     soNaoFuncionario: true, soNaoMecanico: true, badge: 'Novo' },

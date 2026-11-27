@@ -189,6 +189,15 @@ export const api = {
       update:  (id, data)            => put('/app/servicos/'+id, data),
       remove:  (id)                  => del('/app/servicos/'+id),
     },
+    checklists: {
+      modelos:    (segmento)         => get('/app/checklists/modelos/'+segmento),
+      create:     (data)             => post('/app/checklists/modelos', data),
+      update:     (id, data)         => put('/app/checklists/modelos/'+id, data),
+      remove:     (id)               => del('/app/checklists/modelos/'+id),
+      osGet:      (os_id)            => get('/app/checklists/os/'+os_id),
+      osCreate:   (data)             => post('/app/checklists/os', data),
+      osUpdate:   (id, data)         => patch('/app/checklists/os/'+id, data),
+    },
     despesas: {
       list:    (inicio, fim)         => get('/app/despesas' + (inicio||fim ? '?'+(inicio?'inicio='+inicio:'')+(inicio&&fim?'&':'')+(fim?'fim='+fim:'') : '')),
       create:  (data)                => post('/app/despesas', data),

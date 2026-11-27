@@ -42,6 +42,7 @@ const AppConfiguracoes = lazy(() => import('./pages/app/Configuracoes'));
 const AppPlanos        = lazy(() => import('./pages/app/Planos'));
 const AppNotificacoes  = lazy(() => import('./pages/app/Notificacoes'));
 const AppServicos      = lazy(() => import('./pages/app/Servicos'));
+const AppChecklists    = lazy(() => import('./pages/app/Checklists'));
 const AppDashboardV2   = lazy(() => import('./pages/app/DashboardV2'));
 const AppMecanicos       = lazy(() => import('./pages/app/Mecanicos'));
 const AppMecanicoComissoes = lazy(() => import('./pages/app/MecanicoComissoes'));
@@ -367,6 +368,7 @@ export default function App() {
             <Route path="lembretes"     element={<PrivateRoute noMecanico><AppLembretes /></PrivateRoute>} />
             <Route path="estoque"       element={<PrivateRoute noMecanico><AppEstoque /></PrivateRoute>} />
             <Route path="servicos"      element={<PrivateRoute noMecanico><AppServicos /></PrivateRoute>} />
+            <Route path="checklists"    element={<PrivateRoute noMecanico><AppChecklists /></PrivateRoute>} />
             <Route path="configuracoes" element={<PrivateRoute noFuncionario><AppConfiguracoes /></PrivateRoute>} />
             <Route path="notificacoes"  element={<AppNotificacoes />} />
             <Route path="planos"        element={<PrivateRoute noMecanico><AppPlanos /></PrivateRoute>} />

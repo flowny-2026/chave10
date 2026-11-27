@@ -225,6 +225,34 @@ async function initDB() {
     );
   `);
 
+  // ── Tabelas de Checklist ────────────────────────────────────
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS checklist_modelos (
+      id SERIAL PRIMARY KEY,
+      oficina_id INTEGER NOT NULL REFERENCES oficinas(id) ON DELETE CASCADE,
+      segmento TEXT NOT NULL,
+      nome TEXT NOT NULL,
+      itens JSONB DEFAULT '[]'::jsonb,
+      ativo INTEGER DEFAULT 1,
+      criado_em TEXT DEFAULT CURRENT_TIMESTAMP,
+      atualizado_em TEXT DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(oficina_id, segmento, nome)
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS checklist_os (
+      id SERIAL PRIMARY KEY,
+      os_id INTEGER NOT NULL REFERENCES ordens_servico(id) ON DELETE CASCADE,
+      oficina_id INTEGER NOT NULL REFERENCES oficinas(id) ON DELETE CASCADE,
+      modelo_id INTEGER REFERENCES checklist_modelos(id) ON DELETE SET NULL,
+      itens JSONB DEFAULT '[]'::jsonb,
+      concluido INTEGER DEFAULT 0,
+      criado_em TEXT DEFAULT CURRENT_TIMESTAMP,
+      atualizado_em TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
   // ── Tabela de auditoria ─────────────────────────────────────
   await pool.query(`
     CREATE TABLE IF NOT EXISTS audit_logs (
