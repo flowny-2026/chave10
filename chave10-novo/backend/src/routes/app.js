@@ -2310,4 +2310,49 @@ router.get('/pos-venda', naoFuncionario, async (req, res) => {
   }
 });
 
+// PATCH /app/meu-perfil/senha — altera senha do usuário
+router.patch('/meu-perfil/senha', authMiddleware, async (req, res) => {
+  try {
+    const { senha_atual, nova_senha } = req.body;
+    const userId = req.user.id;
+
+    if (!senha_atual || !nova_senha) {
+      return res.status(400).json({ error: 'Senha atual e nova senha são obrigatórias' });
+    }
+
+    if (nova_senha.length < 6) {
+      return res.status(400).json({ error: 'Nova senha deve ter no mínimo 6 caracteres' });
+    }
+
+    // Busca usuário no banco
+    const usuario = await queryOne('SELECT id, senha_hash FROM usuarios WHERE id=$1', [userId]);
+    if (!usuario) {
+      return res.status(404).json({ error: 'Usuário não encontrado' });
+    }
+
+    // Valida senha atual
+    const bcrypt = require('bcryptjs');
+    const senhaValida = await bcrypt.compare(senha_atual, usuario.senha_hash);
+    if (!senhaValida) {
+      return res.status(401).json({ error: 'Senha atual incorreta' });
+    }
+
+    // Hash nova senha
+    const novaHash = await bcrypt.hash(nova_senha, 10);
+
+    // Atualiza no banco
+    await run('UPDATE usuarios SET senha_hash=$1 WHERE id=$2', [novaHash, userId]);
+
+    // Log de auditoria
+    audit(req, 'ALTERAR_SENHA', 'usuarios', userId, { action: 'senha alterada' });
+    log.info('senha_alterada', { usuario_id: userId });
+
+    res.json({ ok: true, message: 'Senha alterada com sucesso' });
+  } catch (err) {
+    log.error('alterar_senha', err.message || err);
+    res.status(500).json({ error: 'Erro ao alterar senha' });
+  }
+});
+
 module.exports = router;
+
