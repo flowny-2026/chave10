@@ -326,16 +326,16 @@ export default function AppConfiguracoes() {
                 { value: 'proximo_dia',     label: 'Próximo dia útil (D+1)', desc: 'Cartão cai no dia seguinte. Padrão da maioria das maquininhas.' },
                 { value: 'agenda_parcelas', label: 'Agenda de parcelas',    desc: 'Cada parcela do crédito entra no mês correspondente.' },
               ].map(opt => (
-                <label key={opt.value} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10, cursor: 'pointer' }}>
+                <label key={opt.value} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, cursor: 'pointer' }}>
                   <input
                     type="radio"
                     name="recebimento_cartao"
                     value={opt.value}
                     checked={(of.recebimento_cartao || 'proximo_dia') === opt.value}
                     onChange={() => setOf(o => ({ ...o, recebimento_cartao: opt.value }))}
-                    style={{ marginTop: 3, accentColor: '#F97316', flexShrink: 0 }}
+                    style={{ accentColor: '#F97316', flexShrink: 0, margin: 0 }}
                   />
-                  <div>
+                  <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>{opt.label}</div>
                     <div style={{ fontSize: 12, color: '#9ca3af' }}>{opt.desc}</div>
                   </div>
