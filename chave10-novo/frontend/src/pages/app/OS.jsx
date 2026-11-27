@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../../api';
 import { offlineManager, OPERATION_TYPES, useOfflineManager } from '../../utils/offlineManager';
 import FotoUploader from '../../components/FotoUploader';
+import ChecklistOS from '../../components/ChecklistOS';
 import { useSegmento, getTermosSegmento } from '../../hooks/useSegmento';
 import { IcoView, IcoEdit, IcoTrash, IcoPrint, IcoWhatsApp } from '../../components/ActionIcons';
 import { printHTML } from '../../utils/printHTML';
@@ -355,6 +356,7 @@ export default function AppOS() {
     }
   }
   const [viewing, setViewing]   = useState(null);
+  const [viewTab, setViewTab]   = useState('detalhes'); // 'detalhes' | 'checklist'
   const [toast, setToast]       = useState({ msg:'', type:'' });
   const [pagForm, setPagForm]   = useState({ os_id:null, forma:'', valor_total:0, parcelas:1, bandeira:'', taxa_maquininha:'', observacao:'', boleto_vencimento:'', boleto_recebido_em:'' });
   const [pagSaving, setPagSaving] = useState(false);
@@ -762,6 +764,7 @@ export default function AppOS() {
 
   function openView(os) {
     setViewing(os);
+    setViewTab('detalhes');
     setModal('ver');
     // Carrega pagamentos e fotos da OS
     api.app.os.pagamentos(os.id).then(data => setViewPagamentos(data||[])).catch(()=>setViewPagamentos([]));
@@ -1267,7 +1270,54 @@ export default function AppOS() {
                 <h2>OS #{viewing.numero || String(viewing.id).padStart(4,'0')}</h2>
                 <button className="modal-close" onClick={()=>setModal(null)}>✕</button>
               </div>
+              
+              {/* Abas */}
+              <div style={{
+                display: 'flex',
+                gap: 0,
+                borderBottom: '1px solid #e5e7eb',
+                background: '#f9fafb',
+                padding: '0 20px'
+              }}>
+                <button
+                  type="button"
+                  onClick={() => setViewTab('detalhes')}
+                  style={{
+                    padding: '12px 16px',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: viewTab === 'detalhes' ? '#1e3a8a' : '#6b7280',
+                    borderBottom: viewTab === 'detalhes' ? '2px solid #1e3a8a' : '2px solid transparent',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  Detalhes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewTab('checklist')}
+                  style={{
+                    padding: '12px 16px',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: viewTab === 'checklist' ? '#1e3a8a' : '#6b7280',
+                    borderBottom: viewTab === 'checklist' ? '2px solid #1e3a8a' : '2px solid transparent',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  📋 Checklist
+                </button>
+              </div>
+              
               <div className="modal-body">
+                {viewTab === 'detalhes' && (
+                <>
                 <div className="os-view-fields">
                   {[
                     {l:'Cliente',v:viewing.cliente_nome||'—'},
@@ -1416,6 +1466,14 @@ export default function AppOS() {
                   {viewing.status==='em_andamento'&&<button className="btn btn-success" onClick={()=>finalizar(viewing.id)}>Finalizar</button>}
                   {viewing.status==='finalizado'&&<button className="btn btn-outline" onClick={()=>reabrir(viewing.id)}>? Reabrir</button>}
                 </div>
+                </>
+                )}
+                
+                {viewTab === 'checklist' && (
+                  <div style={{ padding: '12px 0' }}>
+                    <ChecklistOS osId={viewing.id} segmento={(() => { try { return JSON.parse(localStorage.getItem('c10_user'))?.segmento || 'moto'; } catch { return 'moto'; } })()}  />
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -163,7 +163,7 @@ export default function ChecklistOS({ osId, segmento }) {
       {itens.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 32, background: '#f9fafb', borderRadius: 8 }}>
           <p style={{ color: '#9ca3af', marginBottom: 16 }}>Nenhum checklist adicionado</p>
-          {modelos.length > 0 && (
+          {modelos.length > 0 ? (
             <div>
               <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 12 }}>
                 Importar um modelo disponível:
@@ -188,6 +188,37 @@ export default function ChecklistOS({ osId, segmento }) {
                   </button>
                 ))}
               </div>
+            </div>
+          ) : (
+            <div>
+              <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 12 }}>
+                Nenhum modelo de checklist disponível para este segmento.
+              </p>
+              <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 16 }}>
+                Crie um modelo na página de Checklists primeiro.
+              </p>
+              <button
+                onClick={() => {
+                  const novoChecklist = { itens: [], concluido: 0 };
+                  if (!checklist?.id) {
+                    api.app.checklists.osCreate({ os_id: osId, modelo_id: null })
+                      .then(result => setChecklist(result))
+                      .catch(err => showToast(err?.error || 'Erro ao criar', 'error'));
+                  }
+                }}
+                style={{
+                  padding: '8px 16px',
+                  background: 'var(--brand)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  fontSize: 12,
+                  fontWeight: 600
+                }}
+              >
+                + Criar checklist vazio
+              </button>
             </div>
           )}
         </div>

@@ -35,6 +35,14 @@ export default function Checklists() {
 
   // Para drag and drop
   const [dragSource, setDragSource] = useState(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  // Detecta mudanças de tamanho de janela
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
@@ -258,10 +266,15 @@ export default function Checklists() {
               <button className="modal-close" onClick={fecharModal}>✕</button>
             </div>
 
-            <div className="modal-body" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20, padding: '20px' }}>
+            <div className="modal-body" style={{ 
+              display: 'grid', 
+              gridTemplateColumns: isMobile ? '1fr' : '1fr 320px',
+              gap: 20, 
+              padding: '20px' 
+            }}>
               
               {/* COLUNA ESQUERDA: Itens */}
-              <div>
+              <div style={{ order: isMobile ? 1 : 0 }}>
                 {/* Nome e Categoria */}
                 <div style={{ marginBottom: 20 }}>
                   <div className="form-group full">
@@ -395,7 +408,7 @@ export default function Checklists() {
               </div>
 
               {/* COLUNA DIREITA: Configurações */}
-              <div>
+              <div style={{ order: isMobile ? 2 : 1 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: '#1f2937', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
                   ⚙️ Configurações
                 </div>
