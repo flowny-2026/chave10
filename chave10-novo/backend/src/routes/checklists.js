@@ -31,16 +31,16 @@ router.get('/modelos/:segmento', async (req, res) => {
 router.post('/modelos', naoFuncionario, async (req, res) => {
   try {
     const oficina_id = oid(req);
-    const { segmento, nome, itens } = req.body;
+    const { segmento, nome, categoria, tipo, status_inicial, descricao, itens } = req.body;
     
     if (!segmento || !nome || !Array.isArray(itens)) {
       return res.status(400).json({ error: 'Segmento, nome e itens são obrigatórios' });
     }
 
     const result = await queryOne(
-      `INSERT INTO checklist_modelos (oficina_id, segmento, nome, itens) 
-       VALUES ($1, $2, $3, $4) RETURNING id, nome, itens`,
-      [oficina_id, segmento, nome, JSON.stringify(itens)]
+      `INSERT INTO checklist_modelos (oficina_id, segmento, nome, categoria, tipo, status_inicial, descricao, itens) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [oficina_id, segmento, nome, categoria || 'Outro', tipo || 'veiculo', status_inicial || 'ativo', descricao || '', JSON.stringify(itens)]
     );
     res.status(201).json(result);
   } catch (err) {
@@ -56,16 +56,16 @@ router.put('/modelos/:id', naoFuncionario, async (req, res) => {
   try {
     const oficina_id = oid(req);
     const { id } = req.params;
-    const { nome, itens } = req.body;
+    const { nome, categoria, tipo, status_inicial, descricao, itens } = req.body;
     
     if (!nome || !Array.isArray(itens)) {
       return res.status(400).json({ error: 'Nome e itens são obrigatórios' });
     }
 
     const result = await queryOne(
-      `UPDATE checklist_modelos SET nome=$1, itens=$2, atualizado_em=CURRENT_TIMESTAMP
-       WHERE id=$3 AND oficina_id=$4 RETURNING id, nome, itens`,
-      [nome, JSON.stringify(itens), id, oficina_id]
+      `UPDATE checklist_modelos SET nome=$1, categoria=$2, tipo=$3, status_inicial=$4, descricao=$5, itens=$6, atualizado_em=CURRENT_TIMESTAMP
+       WHERE id=$7 AND oficina_id=$8 RETURNING *`,
+      [nome, categoria || 'Outro', tipo || 'veiculo', status_inicial || 'ativo', descricao || '', JSON.stringify(itens), id, oficina_id]
     );
 
     if (!result) {
