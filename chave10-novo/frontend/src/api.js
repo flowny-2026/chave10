@@ -183,6 +183,12 @@ export const api = {
       update:  (id, data)            => put('/app/estoque/'+id, data),
       remove:  (id)                  => del('/app/estoque/'+id),
     },
+    servicos: {
+      list:    ()                    => get('/app/servicos'),
+      create:  (data)                => post('/app/servicos', data),
+      update:  (id, data)            => put('/app/servicos/'+id, data),
+      remove:  (id)                  => del('/app/servicos/'+id),
+    },
     despesas: {
       list:    (inicio, fim)         => get('/app/despesas' + (inicio||fim ? '?'+(inicio?'inicio='+inicio:'')+(inicio&&fim?'&':'')+(fim?'fim='+fim:'') : '')),
       create:  (data)                => post('/app/despesas', data),

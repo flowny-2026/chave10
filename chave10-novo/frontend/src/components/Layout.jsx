@@ -540,6 +540,7 @@ export default function Layout({ area }) {
     { to: '/app/relatorios',   label: 'Relatórios',        icon: IC.relatorios,    soNaoMecanico: true, soNaoFuncionario: true },
     { to: '/app/lembretes',    label: 'Lembretes',         icon: IC.lembretes,     soNaoMecanico: true },
     { to: '/app/estoque',      label: 'Estoque',           icon: IC.estoque,       soNaoMecanico: true },
+    { to: '/app/servicos',     label: 'Serviços',          icon: IC.mensagens,     soNaoMecanico: true },
     { to: '/app/mecanicos',    label: t.mecanicos,         icon: appNavGestao_ICON_MECANICOS, soNaoFuncionario: true, soNaoMecanico: true, badge: 'Novo' },
     { to: '/app/comissoes',    label: 'Comissões',         icon: appNavGestao_ICON_COMISSOES, soNaoFuncionario: true, soNaoMecanico: true, badge: 'Novo' },
     { to: '/app/pos-venda',    label: 'Pós-venda',         icon: IC.mensagens,     soNaoFuncionario: true, soNaoMecanico: true, badge: 'Novo' },
@@ -723,7 +724,7 @@ export default function Layout({ area }) {
                 .map(item => <NavItem key={item.to} item={item} />)}
             </nav>
             {/* Botão de assinar — só aparece no trial para admin/gerente */}
-            {(user?.plano === 'trial' || !user?.plano) && user?.perfil !== 'master_admin' && user?.perfil !== 'mecanico' && user?.perfil !== 'funcionario' && (
+            {(user?.plano === 'trial' || !user?.plano) && user?.status_assinatura !== 'active' && user?.perfil !== 'master_admin' && user?.perfil !== 'mecanico' && user?.perfil !== 'funcionario' && (
               <div style={{ padding: '10px 12px 4px' }}>
                 <NavLink
                   to="/app/planos"

@@ -1542,7 +1542,7 @@ router.get('/financeiro-resumo', naoFuncionario, async (req,res) => {
 router.get('/boletos-pendentes', async (req,res) => {
   try {
     const rows = await query(
-      `SELECT p.id, p.os_id, p.valor_total, p.valor_liquido, p.boleto_vencimento, p.data_pagamento,
+      `SELECT p.id, p.os_id, p.valor_total, p.valor_liquido, p.boleto_vencimento, p.boleto_recebido_em as data_recebimento, p.data_pagamento,
               c.nome as cliente_nome, os.numero as os_numero,
               v.placa, v.modelo as veiculo_modelo
        FROM pagamentos_os p

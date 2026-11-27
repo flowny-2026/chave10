@@ -502,6 +502,7 @@ app.use('/api/app/mecanicos',     writeLimiter, require('./routes/mecanicos'));
 app.use('/api/app/meu-perfil',    writeLimiter, require('./routes/mecanico-perfil'));
 app.use('/api/app/referral',      writeLimiter, require('./routes/referral'));
 app.use('/api/app',               writeLimiter, cacheMiddleware(15), require('./routes/app'));
+app.use('/api/app',               writeLimiter, require('./routes/servicos'));
 app.use('/api/backup',            writeLimiter, require('./routes/backup'));
 app.use('/api/approval',          writeLimiter, require('./routes/approval'));
 

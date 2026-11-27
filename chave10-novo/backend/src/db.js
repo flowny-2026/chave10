@@ -186,6 +186,14 @@ async function initDB() {
       criado_em TEXT DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS servicos (
+      id SERIAL PRIMARY KEY,
+      oficina_id INTEGER NOT NULL REFERENCES oficinas(id) ON DELETE CASCADE,
+      nome TEXT NOT NULL,
+      valor REAL NOT NULL,
+      criado_em TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE TABLE IF NOT EXISTS pagamentos_os (
       id SERIAL PRIMARY KEY,
       oficina_id INTEGER NOT NULL REFERENCES oficinas(id) ON DELETE CASCADE,
