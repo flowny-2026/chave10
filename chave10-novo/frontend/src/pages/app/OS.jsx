@@ -428,7 +428,7 @@ export default function AppOS() {
     if (modal === 'form' && !editing) {
       const draft = offlineManager.getDraft('os', DRAFT_ID);
       if (draft && (draft.descricao || draft.servicos)) {
-        const shouldRecover = window.confirm('VocÛ tem um rascunho salvo. Deseja recuperá-lo?');
+        const shouldRecover = window.confirm('Você tem um rascunho salvo. Deseja recuperá-lo?');
         if (shouldRecover) {
           setForm(draft);
           showToast('Rascunho recuperado!', 'success');
@@ -583,7 +583,7 @@ export default function AppOS() {
         offlineManager.removeDraft('os', DRAFT_ID);
         
         setModal(null);
-        showToast('VocÛ está offline! OS salva e será enviada automaticamente quando voltar online.', 'info');
+        showToast('Você está offline! OS salva e será enviada automaticamente quando voltar online.', 'info');
       }
     } catch (err) {
       // Se falhar mesmo online, adiciona Ó fila
@@ -790,14 +790,14 @@ export default function AppOS() {
       <div className="page-header">
         <div><div className="page-title">{t.oss}</div><div className="page-subtitle">{listaFiltrada.length} ordem(ns)</div></div>
         <div style={{display:'flex',gap:8}}>
-          <button className="btn btn-outline" onClick={()=>{setRapida(RAPIDA_EMPTY);setModal('rapida');}}>? OS Rápida</button>
+          <button className="btn btn-outline" onClick={()=>{setRapida(RAPIDA_EMPTY);setModal('rapida');}}>⚡ OS Rápida</button>
           <button className="btn btn-primary" onClick={openCreate}>+ {t.novaOs}</button>
         </div>
       </div>
       <div className="search-bar">
         <div className="search-input-wrap">
           <svg className="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" placeholder={`Buscar por cliente, ${t.veiculo.toLowerCase()} ou n║ OS...`} value={search} onChange={e=>setSearch(e.target.value)} />
+          <input type="text" placeholder={`Buscar por cliente, ${t.veiculo.toLowerCase()} ou nº OS...`} value={search} onChange={e=>setSearch(e.target.value)} />
         </div>
         <select className="dash-select" value={periodoTipo} onChange={e=>{
           const tipo = e.target.value;
@@ -805,10 +805,10 @@ export default function AppOS() {
           if (tipo !== 'custom') load(statusFiltro||undefined, tipo);
         }}>
           <option value="hoje">Hoje</option>
-          <option value="7">┌ltimos 7 dias</option>
-          <option value="30">┌ltimos 30 dias</option>
-          <option value="mes_atual">MÛs atual</option>
-          <option value="mes_anterior">MÛs anterior</option>
+          <option value="7">Últimos 7 dias</option>
+          <option value="30">Últimos 30 dias</option>
+          <option value="mes_atual">Mês atual</option>
+          <option value="mes_anterior">Mês anterior</option>
           <option value="todos">Todos</option>
           <option value="custom">Personalizado</option>
         </select>
@@ -940,7 +940,7 @@ export default function AppOS() {
                 </svg>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>
-                    VocÛ está offline
+                    Você está offline
                   </div>
                   <div style={{ fontSize: 12, color: 'rgba(255,255,255,.8)' }}>
                     A OS será salva localmente e sincronizada quando a conexão voltar
@@ -1412,9 +1412,9 @@ export default function AppOS() {
                   <div style={{background:'var(--brand-light,#f0f6ff)',border:'1px solid var(--brand-200,#c7d9f0)',borderRadius:'var(--r-md,8px)',padding:'16px 18px',marginBottom:20}}>
                     <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
                       <span style={{fontSize:12,fontWeight:700,color:'var(--brand)',textTransform:'uppercase',letterSpacing:'.5px'}}>
-                        OS N║ {comprovante.os.numero || String(comprovante.os.id).padStart(4,'0')}
+                        OS Nº {comprovante.os.numero || String(comprovante.os.id).padStart(4,'0')}
                       </span>
-                      <span style={{display:'inline-block',padding:'2px 10px',borderRadius:20,fontSize:11,fontWeight:700,background:'#f0fdf4',color:'#16a34a',border:'1px solid #bbf7d0'}}>? Finalizado</span>
+                      <span style={{display:'inline-block',padding:'2px 10px',borderRadius:20,fontSize:11,fontWeight:700,background:'#f0fdf4',color:'#16a34a',border:'1px solid #bbf7d0'}}>✓ Finalizado</span>
                     </div>
                     <div style={{fontSize:14,fontWeight:600,color:'var(--gray-800)',marginBottom:4}}>
                       {comprovante.os.cliente_nome || '—'}
@@ -1631,7 +1631,7 @@ export default function AppOS() {
                             </>
                           ) : (
                             <>
-                              <span>VocÛ recebe</span>
+                              <span>Você recebe</span>
                               <span style={{color:'var(--success)'}}>{fmt.currency(liquidoOficina)}</span>
                             </>
                           )}
@@ -1699,7 +1699,7 @@ export default function AppOS() {
                           {repassarTaxaOs ? (
                             <><span style={{color:'var(--accent)'}}>Total cobrado do cliente</span><span style={{color:'var(--accent)'}}>{fmt.currency(totalComTaxa)}</span></>
                           ) : (
-                            <><span>VocÛ recebe</span><span style={{color:'var(--success)'}}>{fmt.currency(liquidoOficina)}</span></>
+                            <><span>Você recebe</span><span style={{color:'var(--success)'}}>{fmt.currency(liquidoOficina)}</span></>
                           )}
                         </div>
                         {repassarTaxaOs && <div style={{fontSize:11,color:'var(--gray-400)',marginTop:4}}>Receita da oficina: {fmt.currency(pagForm.valor_total)}</div>}
@@ -1752,7 +1752,7 @@ export default function AppOS() {
           <div className="modal" style={{maxWidth: 520}}>
             <div className="modal-header">
               <div>
-                <h2>? OS Rápida</h2>
+                <h2>⚡ OS Rápida</h2>
                 <div style={{fontSize:12,color:'var(--gray-400)',marginTop:2}}>Preencha e crie cliente, {t.veiculo.toLowerCase()} e OS de uma vez</div>
               </div>
               <button className="modal-close" onClick={()=>setModal(null)}>✕</button>
