@@ -34,6 +34,18 @@ function Toast({ msg, type }) {
   return <div className={`toast show ${type}`} style={{position:'fixed',bottom:24,right:24,zIndex:300}}>{msg}</div>;
 }
 
+function getSegmentoAtual() {
+  try {
+    const oficina = JSON.parse(localStorage.getItem('c10_oficina'));
+    if (oficina?.segmento) return oficina.segmento;
+    const user = JSON.parse(localStorage.getItem('c10_user'));
+    if (user?.segmento) return user.segmento;
+    return 'carro';
+  } catch {
+    return 'carro';
+  }
+}
+
 // Gera HTML para impressão/PDF — recebe `t` para termos do segmento
 function gerarHTMLOS(os, clientes, veiculos, oficina, t) {
   const c = clientes.find(x=>x.id===os.cliente_id);
@@ -1471,7 +1483,7 @@ export default function AppOS() {
                 
                 {viewTab === 'checklist' && (
                   <div style={{ padding: '12px 0' }}>
-                    <ChecklistOS osId={viewing.id} segmento={(() => { try { return JSON.parse(localStorage.getItem('c10_user'))?.segmento || 'moto'; } catch { return 'moto'; } })()}  />
+                    <ChecklistOS osId={viewing.id} segmento={getSegmentoAtual()} />
                   </div>
                 )}
               </div>
